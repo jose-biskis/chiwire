@@ -103,11 +103,20 @@ can be deployed with:
 npm run deploy:avila
 ```
 
+The self-hosted MCP servers app uses `apps/mcps/deploy.json` and can be
+deployed the same way:
+
+```sh
+./scripts/deploy-app.sh apps/mcps
+npm run deploy:mcps
+```
+
 For one-off changes, prefer CLI overrides instead of editing the file:
 
 ```sh
 ./scripts/deploy-app.sh apps/hello-http --visibility internal
 ./scripts/deploy-app.sh apps/hello-http --visibility domain --domain app.example.com
+./scripts/deploy-app.sh apps/mcps --visibility domain --domain mcps.example.com
 ```
 
 Use `--dry-run` to inspect the generated commands without building, uploading,

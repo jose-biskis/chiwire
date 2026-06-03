@@ -15,7 +15,9 @@
     "deploy:avila": "./scripts/deploy-app.sh apps/avila-labs",
     "dev:avila": "npm run dev --workspace @chiwire/avila-labs",
     "deploy:hello": "./scripts/deploy-app.sh apps/hello-http",
+    "deploy:mcps": "./scripts/deploy-app.sh apps/mcps",
     "start:hello": "npm run start --workspace @chiwire/hello-http",
+    "start:mcps": "npm run start --workspace @chiwire/mcps",
     "test:deploy-settings": "node --test scripts/deploy-app.test.mjs",
     "typecheck": "npm run typecheck --workspaces",
     "typecheck:watch": "tsc --build --watch"
