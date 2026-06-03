@@ -12,8 +12,9 @@
     "build": "npm run build --workspaces",
     "dependency-map": "node scripts/dependency-map.mjs",
     "affected": "node scripts/dependency-map.mjs --affected",
+    "dev:avila": "npm run dev --workspace @chiwire/avila-labs",
     "start:hello": "npm run start --workspace @chiwire/hello-http",
-    "typecheck": "tsc --build",
+    "typecheck": "npm run typecheck --workspaces",
     "typecheck:watch": "tsc --build --watch"
   },
   "devDependencies": {

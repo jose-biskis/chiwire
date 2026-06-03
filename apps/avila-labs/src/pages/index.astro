@@ -1,0 +1,173 @@
+---
+import "../styles/global.css";
+
+const services = [
+  {
+    title: "Product labs",
+    body: "Fast prototypes, validation loops, and polished launch paths for teams with bold ideas.",
+  },
+  {
+    title: "AI workflows",
+    body: "Useful automation, model-backed interfaces, and internal tools that feel simple to use.",
+  },
+  {
+    title: "Web worlds",
+    body: "Immersive sites and apps that combine story, performance, and crisp implementation.",
+  },
+];
+
+const stats = [
+  ["0034", "concepts explored"],
+  ["2511", "creative signals"],
+  ["4x", "faster launch rhythm"],
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="AvilaLabs builds immersive digital products, AI workflows, and web experiences." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AvilaLabs | Mountain-born digital product lab</title>
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="site-header">
+        <a class="brand" href="#top" aria-label="AvilaLabs home">
+          <span class="brand__mark">A</span>
+          <span>AvilaLabs</span>
+        </a>
+        <nav class="nav" aria-label="Main navigation">
+          <a href="#services">Services</a>
+          <a href="#approach">Approach</a>
+          <a href="#contact">Contact</a>
+        </nav>
+      </header>
+
+      <main id="top">
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="macaw-field" aria-hidden="true">
+            <div class="macaw macaw--one">
+              <svg viewBox="0 0 180 96" role="img">
+                <path class="macaw__wing macaw__wing--left" d="M87 41 8 12l48 54 43-10Z" />
+                <path class="macaw__wing macaw__wing--right" d="M94 43 172 9l-43 59-43-12Z" />
+                <path class="macaw__body" d="M64 34h52l18 16-19 17H66L45 50Z" />
+                <path class="macaw__belly" d="M82 53h36l-13 22H82Z" />
+                <path class="macaw__head" d="M116 30h24l16 14-16 13h-25Z" />
+                <path class="macaw__beak" d="M145 39h31l-28 17Z" />
+                <circle class="macaw__eye" cx="136" cy="42" r="3" />
+                <path class="macaw__tail" d="M48 43 9 50l40 12 21-10Z" />
+              </svg>
+            </div>
+            <div class="macaw macaw--two">
+              <svg viewBox="0 0 180 96" role="img">
+                <path class="macaw__wing macaw__wing--left" d="M87 41 8 12l48 54 43-10Z" />
+                <path class="macaw__wing macaw__wing--right" d="M94 43 172 9l-43 59-43-12Z" />
+                <path class="macaw__body" d="M64 34h52l18 16-19 17H66L45 50Z" />
+                <path class="macaw__belly" d="M82 53h36l-13 22H82Z" />
+                <path class="macaw__head" d="M116 30h24l16 14-16 13h-25Z" />
+                <path class="macaw__beak" d="M145 39h31l-28 17Z" />
+                <circle class="macaw__eye" cx="136" cy="42" r="3" />
+                <path class="macaw__tail" d="M48 43 9 50l40 12 21-10Z" />
+              </svg>
+            </div>
+            <div class="macaw macaw--three">
+              <svg viewBox="0 0 180 96" role="img">
+                <path class="macaw__wing macaw__wing--left" d="M87 41 8 12l48 54 43-10Z" />
+                <path class="macaw__wing macaw__wing--right" d="M94 43 172 9l-43 59-43-12Z" />
+                <path class="macaw__body" d="M64 34h52l18 16-19 17H66L45 50Z" />
+                <path class="macaw__belly" d="M82 53h36l-13 22H82Z" />
+                <path class="macaw__head" d="M116 30h24l16 14-16 13h-25Z" />
+                <path class="macaw__beak" d="M145 39h31l-28 17Z" />
+                <circle class="macaw__eye" cx="136" cy="42" r="3" />
+                <path class="macaw__tail" d="M48 43 9 50l40 12 21-10Z" />
+              </svg>
+            </div>
+          </div>
+
+          <div class="hero__copy">
+            <p class="eyebrow">Caracas mountain energy meets playful product craft</p>
+            <h1 id="hero-title">Digital products that feel alive from the first click.</h1>
+            <p class="hero__lead">
+              AvilaLabs designs and builds immersive web experiences, AI-powered tools, and launch-ready products with a bold, game-like visual signature.
+            </p>
+            <div class="hero__actions">
+              <a class="button button--primary" href="#contact">Start a lab sprint</a>
+              <a class="button button--ghost" href="#services">Explore capabilities</a>
+            </div>
+          </div>
+
+          <div class="hero__scene" aria-label="Low-poly mountain scene with a human 3D character">
+            <canvas id="hero-canvas"></canvas>
+            <div class="score-card score-card--top">0034</div>
+            <div class="score-card score-card--side">AVILA XP</div>
+            <div class="speech-card">
+              <strong>Allez, on se dit tout...</strong>
+              <span>your next product can look sharper, move faster, and ship with style.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="stats" aria-label="AvilaLabs highlights">
+          {stats.map(([value, label]) => (
+            <article class="stat-card">
+              <strong>{value}</strong>
+              <span>{label}</span>
+            </article>
+          ))}
+        </section>
+
+        <section id="services" class="panel-section" aria-labelledby="services-title">
+          <div class="section-heading">
+            <p class="eyebrow">What we build</p>
+            <h2 id="services-title">A compact lab for high-signal products.</h2>
+          </div>
+          <div class="service-grid">
+            {services.map((service) => (
+              <article class="service-card">
+                <span class="service-card__icon" aria-hidden="true"></span>
+                <h3>{service.title}</h3>
+                <p>{service.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="approach" class="approach">
+          <div class="approach__mountain" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div>
+            <p class="eyebrow">How it moves</p>
+            <h2>From rough idea to playable launch path.</h2>
+            <p>
+              We shape each engagement like a level: discover the terrain, prototype the mechanic, polish the interaction, and ship the version that earns the next stage.
+            </p>
+          </div>
+          <ol class="level-list">
+            <li><span>01</span> Map the opportunity</li>
+            <li><span>02</span> Prototype the experience</li>
+            <li><span>03</span> Build the launch system</li>
+            <li><span>04</span> Tune, measure, repeat</li>
+          </ol>
+        </section>
+
+        <section id="contact" class="cta-panel">
+          <p class="eyebrow">Ready player one?</p>
+          <h2>Bring AvilaLabs your next digital challenge.</h2>
+          <a class="button button--primary" href="mailto:hello@avilalabs.com">hello@avilalabs.com</a>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <span>AvilaLabs</span>
+        <span>Mountain-born digital product lab.</span>
+      </footer>
+    </div>
+
+    <script src="../scripts/landing.ts"></script>
+  </body>
+</html>
