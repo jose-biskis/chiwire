@@ -11,20 +11,26 @@ container.
 The remote SSH user must be able to run `docker` commands in a non-interactive
 SSH session.
 
-### Load deploy settings
+### Load deploy settings with direnv
 
-Create a local deploy env file from the example:
+Enable direnv for Bash if it is not already hooked into your shell:
+
+```sh
+echo 'eval "$(direnv hook bash)"' >> ~/.bashrc && source ~/.bashrc
+```
+
+Then use the committed `.envrc` to load local deployment settings
+automatically:
 
 ```sh
 cp .env.deploy.example .env.deploy.local
 $EDITOR .env.deploy.local
+direnv allow
 ```
 
 `.env.deploy.local` is ignored by git and should contain your real deploy host,
-user, and optional password or SSH key path. The deploy scripts source this file
-automatically when it exists. If you use direnv, the committed `.envrc` also maps
-these local settings into the variables used by the deploy scripts after you run
-`direnv allow`:
+user, and optional password or SSH key path. The `.envrc` maps these local
+settings into the variables used by the deploy scripts:
 
 | Local variable | Exported variable | Description |
 | --- | --- | --- |
@@ -33,9 +39,6 @@ these local settings into the variables used by the deploy scripts after you run
 | `DEPLOY_SSH_PORT` | `SSH_PORT` | SSH port. |
 | `DEPLOY_SSH_IDENTITY_FILE` | `SSH_IDENTITY_FILE` | SSH private key path. |
 | `DEPLOY_SSH_PASSWORD` | `SSHPASS` | Password used by `sshpass -e`. |
-
-Set `DEPLOY_SSH_ENV_FILE=/path/to/file` to load deploy settings from a different
-file.
 
 Prefer SSH keys when possible. If you use `DEPLOY_SSH_PASSWORD`, install
 `sshpass` locally first; the deploy script will fail with a clear message if
@@ -63,7 +66,7 @@ Run this from the repository root:
   --env PORT=3000
 ```
 
-If you do not use `.env.deploy.local`, pass `--host deploy@example.com` or export
+If you are not using `direnv`, pass `--host deploy@example.com` or export
 `SSH_HOST`, `DEPLOY_SSH_TARGET`, or both `DEPLOY_SSH_USER` and
 `DEPLOY_SSH_HOST` before running the command. `--ssh-port` is also optional when
 `SSH_PORT` or `DEPLOY_SSH_PORT` is set.
