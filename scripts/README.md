@@ -13,7 +13,14 @@ SSH session.
 
 ### Load deploy settings with direnv
 
-Use the committed `.envrc` to load local deployment settings automatically:
+Enable direnv for Bash if it is not already hooked into your shell:
+
+```sh
+echo 'eval "$(direnv hook bash)"' >> ~/.bashrc && source ~/.bashrc
+```
+
+Then use the committed `.envrc` to load local deployment settings
+automatically:
 
 ```sh
 cp .env.deploy.example .env.deploy.local
