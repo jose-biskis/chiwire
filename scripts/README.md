@@ -8,7 +8,8 @@ Use `deploy-docker-ssh.sh` to build a Docker image locally, upload it to a
 remote server over SSH, load it into Docker on the server, and replace a running
 container.
 
-The remote SSH user must be able to run `docker` commands.
+The remote SSH user must be able to run `docker` commands in a non-interactive
+SSH session.
 
 ### Deploy the hello HTTP test app directly
 
@@ -68,3 +69,19 @@ see all supported build, run, and SSH options:
 ```sh
 ./scripts/deploy-docker-ssh.sh --help
 ```
+
+### Troubleshooting
+
+If deployment fails with a message like `bash: line 4: docker: command not
+found`, Docker is missing from the remote host's non-interactive SSH `PATH`.
+Install Docker on the remote host, or connect as a user whose SSH session can run
+`docker`.
+
+If Docker is installed but the deploy user cannot access the daemon, verify this
+from your local machine:
+
+```sh
+ssh deploy@example.com 'docker info'
+```
+
+The command must succeed without `sudo` for this script to deploy the container.

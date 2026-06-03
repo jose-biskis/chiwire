@@ -59,6 +59,22 @@ require_command() {
   fi
 }
 
+remote_docker_check_script() {
+  cat <<'REMOTE_DOCKER_CHECK'
+if ! command -v docker >/dev/null 2>&1; then
+  echo "error: docker is required on the remote host but was not found in PATH" >&2
+  echo "Install Docker or connect as a user whose non-interactive SSH session can run docker." >&2
+  exit 1
+fi
+
+if ! docker info >/dev/null 2>&1; then
+  echo "error: docker is installed on the remote host, but this SSH user cannot use the Docker daemon" >&2
+  echo "Add the user to the docker group, configure rootless Docker, or deploy with a user that can run docker." >&2
+  exit 1
+fi
+REMOTE_DOCKER_CHECK
+}
+
 HOST=""
 IMAGE=""
 CONTAINER=""
@@ -178,6 +194,26 @@ require_command gzip
 require_command scp
 require_command ssh
 
+SSH_COMMAND=(ssh -p "$SSH_PORT")
+SCP_COMMAND=(scp -P "$SSH_PORT")
+
+if [[ -n "$IDENTITY_FILE" ]]; then
+  SSH_COMMAND+=(-i "$IDENTITY_FILE")
+  SCP_COMMAND+=(-i "$IDENTITY_FILE")
+fi
+
+for option in "${SSH_OPTIONS[@]}"; do
+  [[ -n "$option" ]] || fail "--ssh-option cannot be empty"
+  SSH_COMMAND+=(-o "$option")
+  SCP_COMMAND+=(-o "$option")
+done
+
+SSH_COMMAND+=("$HOST")
+REMOTE_DOCKER_CHECK="$(remote_docker_check_script)"
+
+echo "Checking remote Docker access on $HOST"
+"${SSH_COMMAND[@]}" "bash -s" <<< "$REMOTE_DOCKER_CHECK"
+
 FULL_IMAGE="${IMAGE}:${TAG}"
 ARCHIVE_SAFE_NAME="$(printf '%s-%s' "$CONTAINER" "$TAG" | tr -c 'A-Za-z0-9_.-' '-')"
 LOCAL_ARCHIVE="$(mktemp "${TMPDIR:-/tmp}/${ARCHIVE_SAFE_NAME}.XXXXXX.tar.gz")"
@@ -203,22 +239,6 @@ echo "Building $FULL_IMAGE from $DOCKERFILE"
 
 echo "Saving $FULL_IMAGE to $LOCAL_ARCHIVE"
 docker save "$FULL_IMAGE" | gzip > "$LOCAL_ARCHIVE"
-
-SSH_COMMAND=(ssh -p "$SSH_PORT")
-SCP_COMMAND=(scp -P "$SSH_PORT")
-
-if [[ -n "$IDENTITY_FILE" ]]; then
-  SSH_COMMAND+=(-i "$IDENTITY_FILE")
-  SCP_COMMAND+=(-i "$IDENTITY_FILE")
-fi
-
-for option in "${SSH_OPTIONS[@]}"; do
-  [[ -n "$option" ]] || fail "--ssh-option cannot be empty"
-  SSH_COMMAND+=(-o "$option")
-  SCP_COMMAND+=(-o "$option")
-done
-
-SSH_COMMAND+=("$HOST")
 
 echo "Creating remote upload directory $REMOTE_TMP_DIR"
 "${SSH_COMMAND[@]}" "mkdir -p $(quote "$REMOTE_TMP_DIR")"
@@ -252,6 +272,8 @@ printf -v REMOTE_RUN_COMMAND '%q ' "${RUN_COMMAND[@]}"
 
 REMOTE_SCRIPT=$(cat <<REMOTE_SCRIPT
 set -Eeuo pipefail
+
+$REMOTE_DOCKER_CHECK
 
 echo "Loading $FULL_IMAGE"
 docker load -i $(quote "$REMOTE_ARCHIVE")
