@@ -18,7 +18,10 @@ Then smoke test the service:
 ```sh
 curl http://localhost:3000/
 curl http://localhost:3000/health
-curl http://localhost:3000/trello
+curl -X POST http://localhost:3000/trello \
+  -H "content-type: application/json" \
+  -H "accept: application/json, text/event-stream" \
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
 ## Trello MCP tools

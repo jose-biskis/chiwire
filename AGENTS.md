@@ -27,7 +27,7 @@ See `README.md` for full details. Common commands:
 - hello-http: `npm run build --workspace @chiwire/hello-http` then `npm run start:hello`
 - MCP servers: `npm run build --workspace @chiwire/mcps` then `npm run start:mcps`
 - Verify hello-http: `curl http://localhost:3000/` and `curl http://localhost:3000/health`
-- Verify MCP servers: `curl http://localhost:3000/`, `curl http://localhost:3000/health`, and `curl http://localhost:3000/trello`
+- Verify MCP servers: `curl http://localhost:3000/`, `curl http://localhost:3000/health`, and `curl -X POST http://localhost:3000/trello -H "content-type: application/json" -H "accept: application/json, text/event-stream" --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'`
 
 ### Running dev servers
 
