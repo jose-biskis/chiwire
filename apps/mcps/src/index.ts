@@ -160,12 +160,13 @@ function listMcpEndpoints(): Array<Omit<McpEndpoint, "createServer">> {
 
 function readMcpEndpoint(pathname: string): McpEndpoint | undefined {
   const pathSegments = pathname.split("/").filter(Boolean);
+  const endpointName = pathSegments[0];
 
-  if (pathSegments.length !== 1) {
+  if (pathSegments.length !== 1 || endpointName === undefined) {
     return undefined;
   }
 
-  return mcpEndpoints[pathSegments[0]];
+  return mcpEndpoints[endpointName];
 }
 
 async function handleMcpRequest(
