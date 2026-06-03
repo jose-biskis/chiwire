@@ -100,17 +100,6 @@ function okResult(key: string, value: unknown): CallToolResult {
   };
 }
 
-function messageResult(message: string): CallToolResult {
-  return {
-    content: [
-      {
-        type: "text",
-        text: message,
-      },
-    ],
-  };
-}
-
 function errorResult(error: unknown): CallToolResult {
   const message =
     error instanceof Error ? error.message : "An unknown Trello MCP error occurred.";
@@ -213,7 +202,7 @@ export function registerTrelloMcp(server: McpServer): void {
     },
     async ({ boardId, listId, includeClosed }) => {
       if (Boolean(boardId) === Boolean(listId)) {
-        return messageResult("Provide exactly one of boardId or listId.");
+        return errorResult(new Error("Provide exactly one of boardId or listId."));
       }
 
       const containerPath = boardId
@@ -322,7 +311,7 @@ export function registerTrelloMcp(server: McpServer): void {
       };
 
       if (Object.values(updates).every((value) => value === undefined)) {
-        return messageResult("Provide at least one field to update.");
+        return errorResult(new Error("Provide at least one field to update."));
       }
 
       return runTrelloTool("card", () =>
