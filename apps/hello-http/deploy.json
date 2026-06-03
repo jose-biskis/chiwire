@@ -8,7 +8,11 @@
   },
   "runtime": {
     "containerPort": 3000,
-    "visibility": "public",
-    "hostPort": 8080
+    "visibility": "domain",
+    "hostPort": 8000
+  },
+  "proxy": {
+    "type": "caddy",
+    "domain": "helloworld.avilalabs.dev"
   }
 }

@@ -8,8 +8,11 @@
   },
   "runtime": {
     "containerPort": 80,
-    "visibility": "internal",
-    "hostPort": 3000,
-    "setPortEnv": false
+    "visibility": "domain",
+    "hostPort": 8001
+  },
+  "proxy": {
+    "type": "caddy",
+    "domain": "avilalabs.dev"	
   }
 }
