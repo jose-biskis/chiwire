@@ -8,7 +8,11 @@
   },
   "runtime": {
     "containerPort": 3000,
-    "visibility": "internal",
+    "visibility": "domain",
     "hostPort": 8010
+  },
+  "proxy": {
+    "type": "caddy",
+    "domain": "mcps.avilalabs.dev"	
   }
 }
