@@ -78,6 +78,23 @@ curl http://example.com:8080/
 # Hello, world!
 ```
 
+### Deploy the AvilaLabs Astro landing page directly
+
+The AvilaLabs app builds to static files and is served from an nginx container.
+Run this from the repository root:
+
+```sh
+./scripts/deploy-docker-ssh.sh \
+  --image chiwire/avila-labs \
+  --tag latest \
+  --container avila-labs \
+  --dockerfile apps/avila-labs/Dockerfile \
+  --context . \
+  --port 127.0.0.1:3000:80
+```
+
+Then configure the reverse proxy with `--upstream 127.0.0.1:3000`.
+
 ### Use the example wrapper script
 
 Copy the example script, then configure it with environment variables or the
@@ -93,7 +110,19 @@ HOST_PORT=8080 \
 ./deploy-hello-http.sh
 ```
 
-The example supports these environment variables:
+For AvilaLabs:
+
+```sh
+cp scripts/examples/deploy-avila-labs.example.sh deploy-avila-labs.sh
+chmod +x deploy-avila-labs.sh
+
+SSH_HOST=deploy@example.com \
+SSH_PORT=22 \
+HOST_PORT=127.0.0.1:3000 \
+./deploy-avila-labs.sh
+```
+
+The examples support these environment variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
@@ -104,11 +133,11 @@ The example supports these environment variables:
 | `DEPLOY_SSH_PORT` | unset | SSH port used when `SSH_PORT` is unset. |
 | `SSH_IDENTITY_FILE` | unset | Optional SSH private key path. |
 | `SSHPASS` | unset | Optional password used through `sshpass -e`. |
-| `IMAGE_NAME` | `chiwire/hello-http` | Docker image name to build and deploy. |
+| `IMAGE_NAME` | `chiwire/hello-http` or `chiwire/avila-labs` | Docker image name to build and deploy. |
 | `IMAGE_TAG` | `latest` | Docker image tag. |
-| `CONTAINER_NAME` | `hello-http` | Remote Docker container name. |
-| `HOST_PORT` | `8080` | Remote host port to publish. |
-| `CONTAINER_PORT` | `3000` | Container port used by the app. |
+| `CONTAINER_NAME` | `hello-http` or `avila-labs` | Remote Docker container name. |
+| `HOST_PORT` | `8080` for hello, `127.0.0.1:3000` for AvilaLabs | Remote host port to publish. |
+| `CONTAINER_PORT` | `3000` for hello, `80` for AvilaLabs | Container port used by the app. |
 
 ### Serve the app from a root domain or subdomain
 
