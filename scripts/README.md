@@ -11,6 +11,32 @@ container.
 The remote SSH user must be able to run `docker` commands in a non-interactive
 SSH session.
 
+### Load deploy settings with direnv
+
+Use the committed `.envrc` to load local deployment settings automatically:
+
+```sh
+cp .env.deploy.example .env.deploy.local
+$EDITOR .env.deploy.local
+direnv allow
+```
+
+`.env.deploy.local` is ignored by git and should contain your real deploy host,
+user, and optional password or SSH key path. The `.envrc` maps these local
+settings into the variables used by the deploy scripts:
+
+| Local variable | Exported variable | Description |
+| --- | --- | --- |
+| `DEPLOY_SSH_TARGET` | `SSH_HOST` | Full SSH target, for example `deploy@example.com`. |
+| `DEPLOY_SSH_USER` + `DEPLOY_SSH_HOST` | `SSH_HOST` | User and host values used to build `user@host`. |
+| `DEPLOY_SSH_PORT` | `SSH_PORT` | SSH port. |
+| `DEPLOY_SSH_IDENTITY_FILE` | `SSH_IDENTITY_FILE` | SSH private key path. |
+| `DEPLOY_SSH_PASSWORD` | `SSHPASS` | Password used by `sshpass -e`. |
+
+Prefer SSH keys when possible. If you use `DEPLOY_SSH_PASSWORD`, install
+`sshpass` locally first; the deploy script will fail with a clear message if
+`SSHPASS` is set and `sshpass` is unavailable.
+
 ### Deploy the hello HTTP test app directly
 
 Run this from the repository root:
@@ -37,7 +63,8 @@ curl http://example.com:8080/
 
 ### Use the example wrapper script
 
-Copy the example script, then configure it with environment variables:
+Copy the example script, then configure it with environment variables or the
+direnv workflow above:
 
 ```sh
 cp scripts/examples/deploy-hello-http.example.sh deploy-hello-http.sh
@@ -55,6 +82,8 @@ The example supports these environment variables:
 | --- | --- | --- |
 | `SSH_HOST` | `deploy@example.com` | SSH target for the remote Docker host. |
 | `SSH_PORT` | `22` | SSH port. |
+| `SSH_IDENTITY_FILE` | unset | Optional SSH private key path. |
+| `SSHPASS` | unset | Optional password used through `sshpass -e`. |
 | `IMAGE_NAME` | `chiwire/hello-http` | Docker image name to build and deploy. |
 | `IMAGE_TAG` | `latest` | Docker image tag. |
 | `CONTAINER_NAME` | `hello-http` | Remote Docker container name. |

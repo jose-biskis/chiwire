@@ -29,6 +29,11 @@ SSH options:
   --ssh-option OPTION       Extra ssh/scp -o option; repeatable
   --remote-tmp-dir PATH     Remote upload directory (default: /tmp)
 
+Environment:
+  SSH_PORT                  Default for --ssh-port
+  SSH_IDENTITY_FILE         Default for --identity-file
+  SSHPASS                   Use sshpass -e for password auth when set
+
 Other:
   -h, --help                Show this help
 
@@ -85,7 +90,7 @@ SSH_PORT="${SSH_PORT:-22}"
 REMOTE_TMP_DIR="${REMOTE_TMP_DIR:-/tmp}"
 RESTART_POLICY="${RESTART_POLICY:-unless-stopped}"
 PLATFORM="${PLATFORM:-}"
-IDENTITY_FILE=""
+IDENTITY_FILE="${SSH_IDENTITY_FILE:-}"
 NETWORK=""
 
 BUILD_ARGS=()
@@ -193,6 +198,9 @@ require_command docker
 require_command gzip
 require_command scp
 require_command ssh
+if [[ -n "${SSHPASS:-}" ]]; then
+  require_command sshpass
+fi
 
 SSH_COMMAND=(ssh -p "$SSH_PORT")
 SCP_COMMAND=(scp -P "$SSH_PORT")
@@ -207,6 +215,11 @@ for option in "${SSH_OPTIONS[@]}"; do
   SSH_COMMAND+=(-o "$option")
   SCP_COMMAND+=(-o "$option")
 done
+
+if [[ -n "${SSHPASS:-}" ]]; then
+  SSH_COMMAND=(sshpass -e "${SSH_COMMAND[@]}")
+  SCP_COMMAND=(sshpass -e "${SCP_COMMAND[@]}")
+fi
 
 SSH_COMMAND+=("$HOST")
 REMOTE_DOCKER_CHECK="$(remote_docker_check_script)"
