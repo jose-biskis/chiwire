@@ -58,9 +58,9 @@ function createMacaw() {
   rightWing.name = "rightWing";
 
   bird.add(body, chest, head, beak, tail, leftEye, rightEye, leftWing, rightWing);
-  bird.position.set(0, 0.72, 1.7);
-  bird.rotation.set(-0.06, -0.55, -0.08);
-  bird.scale.setScalar(1.25);
+  bird.position.set(1.95, 1.05, 1.35);
+  bird.rotation.set(-0.05, -0.78, -0.08);
+  bird.scale.setScalar(1.45);
 
   return bird;
 }
@@ -139,16 +139,17 @@ function createScene(canvas: HTMLCanvasElement) {
     const flap = Math.sin(elapsed * 7.2);
     const drift = Math.sin(elapsed * 0.72);
 
-    bird.position.y = 0.72 + Math.sin(elapsed * 1.8) * 0.12;
-    bird.rotation.z = -0.08 + drift * 0.05;
-    bird.rotation.y = -0.55 + Math.sin(elapsed * 0.9) * 0.08;
+    bird.position.x = 1.95 + Math.sin(elapsed * 0.8) * 0.42;
+    bird.position.y = 1.05 + Math.sin(elapsed * 1.8) * 0.22;
+    bird.rotation.z = -0.08 + drift * 0.12;
+    bird.rotation.y = -0.78 + Math.sin(elapsed * 0.9) * 0.16;
     ridge.rotation.y = Math.sin(elapsed * 0.18) * 0.025;
 
     if (leftWing && rightWing) {
-      leftWing.rotation.z = -0.25 + flap * 0.58;
-      leftWing.rotation.x = 0.1 + flap * 0.2;
-      rightWing.rotation.z = 0.25 - flap * 0.58;
-      rightWing.rotation.x = -0.1 - flap * 0.2;
+      leftWing.rotation.z = -0.25 + flap * 0.95;
+      leftWing.rotation.x = 0.1 + flap * 0.34;
+      rightWing.rotation.z = 0.25 - flap * 0.95;
+      rightWing.rotation.x = -0.1 - flap * 0.34;
     }
 
     renderer.render(scene, camera);
@@ -174,13 +175,13 @@ function animateDetails() {
   });
 
   [
-    { selector: ".tiny-macaw--one", duration: 18000, delay: 1000, y: ["0vh", "5vh", "-4vh", "3vh"] },
-    { selector: ".tiny-macaw--two", duration: 22000, delay: 6200, y: ["4vh", "-5vh", "3vh", "-3vh"] },
+    { selector: ".tiny-macaw--one", duration: 7800, delay: 0, y: ["0vh", "8vh", "-6vh", "4vh"] },
+    { selector: ".tiny-macaw--two", duration: 9800, delay: 900, y: ["4vh", "-7vh", "5vh", "-4vh"] },
   ].forEach((flight) => {
     animate(flight.selector, {
-      translateX: ["-20vw", "120vw"],
+      translateX: ["-24vw", "124vw"],
       translateY: flight.y,
-      rotateZ: ["-5deg", "4deg", "-2deg", "5deg"],
+      rotateZ: ["-8deg", "8deg", "-5deg", "7deg"],
       duration: flight.duration,
       delay: flight.delay,
       loop: true,
