@@ -174,26 +174,16 @@ function animateDetails() {
     ease: "outExpo",
   });
 
-  [
-    { selector: ".tiny-macaw--one", duration: 7800, delay: 0, y: ["0vh", "8vh", "-6vh", "4vh"] },
-    { selector: ".tiny-macaw--two", duration: 9800, delay: 900, y: ["4vh", "-7vh", "5vh", "-4vh"] },
-  ].forEach((flight) => {
-    animate(flight.selector, {
-      translateX: ["-24vw", "124vw"],
-      translateY: flight.y,
-      rotateZ: ["-8deg", "8deg", "-5deg", "7deg"],
-      duration: flight.duration,
-      delay: flight.delay,
-      loop: true,
-      ease: "inOutSine",
-    });
-  });
 }
 
 function init() {
   const canvas = document.querySelector<HTMLCanvasElement>("#hero-canvas");
   if (canvas) {
-    createScene(canvas);
+    try {
+      createScene(canvas);
+    } catch (error) {
+      console.warn("WebGL macaw scene could not start; keeping CSS macaw animations.", error);
+    }
   }
 
   animateDetails();

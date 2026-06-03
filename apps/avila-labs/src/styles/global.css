@@ -214,7 +214,7 @@ h1 {
 
 .tiny-macaw {
   position: absolute;
-  left: -20vw;
+  left: -12vw;
   z-index: 7;
   width: clamp(124px, 18vw, 245px);
   filter: drop-shadow(0 14px 16px rgb(16 42 34 / 30%));
@@ -223,11 +223,13 @@ h1 {
 
 .tiny-macaw--one {
   top: 10vh;
+  animation: fly-one 7.8s linear infinite;
 }
 
 .tiny-macaw--two {
   top: 68vh;
   width: clamp(92px, 13vw, 178px);
+  animation: fly-two 9.8s linear 1s infinite;
 }
 
 .tiny-macaw svg {
@@ -272,6 +274,42 @@ h1 {
 
   to {
     transform: rotateX(56deg) scaleY(0.62);
+  }
+}
+
+@keyframes fly-one {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(-8deg);
+  }
+
+  28% {
+    transform: translate3d(36vw, 8vh, 0) rotate(8deg);
+  }
+
+  58% {
+    transform: translate3d(72vw, -6vh, 0) rotate(-5deg);
+  }
+
+  100% {
+    transform: translate3d(136vw, 4vh, 0) rotate(7deg);
+  }
+}
+
+@keyframes fly-two {
+  0% {
+    transform: translate3d(0, 4vh, 0) rotate(7deg);
+  }
+
+  30% {
+    transform: translate3d(42vw, -7vh, 0) rotate(-7deg);
+  }
+
+  62% {
+    transform: translate3d(84vw, 5vh, 0) rotate(5deg);
+  }
+
+  100% {
+    transform: translate3d(136vw, -4vh, 0) rotate(-6deg);
   }
 }
 
