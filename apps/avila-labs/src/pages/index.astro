@@ -9,25 +9,65 @@ import "../styles/global.css";
     <meta name="description" content="AvilaLabs is preparing a new mountain-born digital experience." />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AvilaLabs | Something is coming</title>
+    <script is:inline>
+      (() => {
+        const params = new URLSearchParams(location.search);
+        const lowpoly = params.get("lowpoly");
+        const enabled =
+          lowpoly !== null &&
+          (lowpoly === "" || ["1", "true", "yes"].includes(lowpoly.toLowerCase()));
+        const inState = (params.get("state") ?? "")
+          .split(",")
+          .some((part) => part.trim().toLowerCase() === "lowpoly");
+        if (enabled || inState) {
+          document.documentElement.classList.add("is-low-poly");
+        }
+
+        const root = document.documentElement;
+        root.style.setProperty("--sun-travel", "0");
+        root.style.setProperty("--moon-travel", "-0.28");
+        root.style.setProperty("--sun-opacity", "1");
+        root.style.setProperty("--moon-opacity", "0");
+        root.style.setProperty("--sky-t", "0");
+        root.style.setProperty("--sunset", "0");
+        root.style.setProperty("--sunrise", "0");
+        root.style.setProperty("--sunrise-travel", "0");
+      })();
+    </script>
   </head>
   <body>
     <main class="coming-soon" aria-labelledby="page-title">
-      <canvas id="hero-canvas" aria-label="A stylized macaw flying in front of El Avila mountain"></canvas>
+      <canvas
+        id="hero-canvas-back"
+        aria-hidden="true"
+        aria-label="Low-poly mountain ridge"></canvas>
+      <canvas
+        id="hero-canvas-front"
+        aria-hidden="true"
+        aria-label="Low-poly macaws flying across the scene"></canvas>
 
-      <div class="night-sky" aria-hidden="true"></div>
-      <div class="sky-glow" aria-hidden="true"></div>
-      <div class="celestial" aria-hidden="true">
-        <span class="sun-disc"></span>
-        <span class="moon-disc"></span>
+      <div class="scene-backdrop">
+        <div class="night-sky" aria-hidden="true"></div>
+        <div class="sunset-haze" aria-hidden="true"></div>
+        <div class="sunrise-haze" aria-hidden="true"></div>
+        <div class="celestial celestial--sun" aria-hidden="true">
+          <span class="sun-disc"></span>
+        </div>
+        <div class="celestial celestial--moon" aria-hidden="true">
+          <span class="moon-disc"></span>
+        </div>
+        <div class="tree-line" aria-hidden="true"></div>
+        <div class="rain-layer" aria-hidden="true"></div>
       </div>
-      <div class="mountain mountain--back" aria-hidden="true"></div>
-      <div class="mountain mountain--front" aria-hidden="true"></div>
-      <div class="tree-line" aria-hidden="true"></div>
-      <div class="rain-layer" aria-hidden="true"></div>
+
+      <div class="scene-2d-only">
+        <div class="mountain mountain--back" aria-hidden="true"></div>
+        <div class="mountain mountain--front" aria-hidden="true"></div>
+      </div>
 
       <h1 id="page-title" class="wordmark">AvilaLabs</h1>
 
-      <div class="tiny-macaw tiny-macaw--one" aria-hidden="true">
+      <div class="scene-2d-only tiny-macaw tiny-macaw--one" aria-hidden="true">
         <svg viewBox="0 0 180 96">
           <path class="tiny-macaw__wing tiny-macaw__wing--left" d="M87 41 8 12l48 54 43-10Z" />
           <path class="tiny-macaw__wing tiny-macaw__wing--right" d="M94 43 172 9l-43 59-43-12Z" />
@@ -39,7 +79,7 @@ import "../styles/global.css";
           <path class="tiny-macaw__tail" d="M48 43 9 50l40 12 21-10Z" />
         </svg>
       </div>
-      <div class="tiny-macaw tiny-macaw--two" aria-hidden="true">
+      <div class="scene-2d-only tiny-macaw tiny-macaw--two" aria-hidden="true">
         <svg viewBox="0 0 180 96">
           <path class="tiny-macaw__wing tiny-macaw__wing--left" d="M87 41 8 12l48 54 43-10Z" />
           <path class="tiny-macaw__wing tiny-macaw__wing--right" d="M94 43 172 9l-43 59-43-12Z" />
