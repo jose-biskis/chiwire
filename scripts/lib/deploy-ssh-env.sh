@@ -1,3 +1,19 @@
+deploy_ssh_load_local_env() {
+  local env_file="${DEPLOY_SSH_ENV_FILE:-}"
+
+  if [[ -z "$env_file" ]]; then
+    local lib_dir repo_root
+    lib_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+    repo_root="$(cd -- "$lib_dir/../.." && pwd)"
+    env_file="$repo_root/.env.deploy.local"
+  fi
+
+  [[ -f "$env_file" ]] || return 0
+
+  # shellcheck source=/dev/null
+  source "$env_file"
+}
+
 deploy_ssh_resolve_host() {
   local explicit_host="${1:-}"
 

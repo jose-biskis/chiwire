@@ -18,6 +18,8 @@ Options:
   -h, --help                Show this help
 
 Environment:
+  DEPLOY_SSH_ENV_FILE       Deploy env file to source before resolving values
+                            (default: .env.deploy.local in the repo root)
   SSH_HOST                  Default for --host
   DEPLOY_SSH_TARGET         Default for --host when SSH_HOST is unset
   DEPLOY_SSH_USER           Used with DEPLOY_SSH_HOST for --host defaults
@@ -49,6 +51,7 @@ require_command() {
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/deploy-ssh-env.sh"
+deploy_ssh_load_local_env
 
 HOST=""
 SSH_PORT_OPTION=""
