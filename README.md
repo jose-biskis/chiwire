@@ -68,38 +68,8 @@ curl http://localhost:3000/
 
 ## Deploy Docker over SSH
 
-Use `scripts/deploy-docker-ssh.sh` to build a Docker image locally, upload it to
-a remote server over SSH, load it into Docker on the server, and replace a
-running container.
-
-The remote SSH user must be able to run `docker` commands.
-
-Deploy the hello test app:
-
-```sh
-./scripts/deploy-docker-ssh.sh \
-  --host deploy@example.com \
-  --image chiwire/hello-http \
-  --tag latest \
-  --container hello-http \
-  --dockerfile apps/hello-http/Dockerfile \
-  --context . \
-  --port 8080:3000
-```
-
-Then test the remote service:
-
-```sh
-curl http://example.com:8080/
-# Hello, world!
-```
-
-The script is reusable for other Dockerized apps. Run the help command to see
-all supported build, run, and SSH options:
-
-```sh
-./scripts/deploy-docker-ssh.sh --help
-```
+See [`scripts/README.md`](scripts/README.md) for the reusable SSH-based Docker
+deployment script, including a copy-pasteable hello app deployment example.
 
 ## Workspaces
 
