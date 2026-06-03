@@ -10,6 +10,8 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces",
+    "dependency-map": "node scripts/dependency-map.mjs",
+    "affected": "node scripts/dependency-map.mjs --affected",
     "start:hello": "npm run start --workspace @chiwire/hello-http",
     "typecheck": "tsc --build",
     "typecheck:watch": "tsc --build --watch"
