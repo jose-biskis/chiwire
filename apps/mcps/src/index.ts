@@ -11,8 +11,14 @@ import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { registerTrelloMcp, type TrelloMcpConfig } from "./trello.js";
 
 const DEFAULT_PORT = 3000;
-const MCP_PATH = "/mcp";
 const JSON_CONTENT_TYPE = "application/json; charset=utf-8";
+
+type McpEndpoint = {
+  name: string;
+  path: string;
+  description: string;
+  createServer(request: IncomingMessage): McpServer;
+};
 
 function readPort(): number {
   const configuredPort = process.env.PORT ?? String(DEFAULT_PORT);
@@ -74,17 +80,17 @@ function writeJson(response: ServerResponse, statusCode: number, body: unknown):
   response.end(`${JSON.stringify(body, null, 2)}\n`);
 }
 
-function createMcpServer(trelloConfig: TrelloMcpConfig): McpServer {
+function createTrelloMcpServer(trelloConfig: TrelloMcpConfig): McpServer {
   const server = new McpServer({
-    name: "chiwire-mcps",
+    name: "chiwire-trello-mcp",
     version: "0.1.0",
   });
 
   server.registerTool(
     "server-info",
     {
-      title: "Server info",
-      description: "Describe this self-hosted Chiwire MCP server.",
+      title: "Trello server info",
+      description: "Describe this self-hosted Trello MCP server.",
       annotations: {
         readOnlyHint: true,
       },
@@ -94,8 +100,8 @@ function createMcpServer(trelloConfig: TrelloMcpConfig): McpServer {
         {
           type: "text",
           text: [
-            "Chiwire MCPs is a deployable workspace for self-hosted Model Context Protocol servers.",
-            "This server includes Trello tools for listing boards, lists, and cards; creating cards; updating cards; and adding comments.",
+            "Chiwire Trello MCP is available at `/trello`.",
+            "It includes tools for listing boards, lists, and cards; creating cards; updating cards; and adding comments.",
             "Send x-trello-api-key and x-trello-token headers with MCP requests, or set TRELLO_API_KEY and TRELLO_TOKEN in the server environment before using Trello tools.",
           ].join("\n"),
         },
@@ -121,7 +127,8 @@ function createMcpServer(trelloConfig: TrelloMcpConfig): McpServer {
           text: [
             "# Chiwire MCPs",
             "",
-            "This workspace exposes MCP servers over Streamable HTTP at `/mcp`.",
+            "This workspace exposes MCP servers over Streamable HTTP at dynamic `/{server}` paths.",
+            "The Trello MCP server is available at `/trello`.",
             "Use `PORT` to choose the listen port and `MCP_ALLOWED_ORIGIN` to restrict browser clients.",
             "Trello tools accept `x-trello-api-key` and `x-trello-token` request headers, then fall back to `TRELLO_API_KEY` and `TRELLO_TOKEN` environment variables.",
             "Deploy with `npm run deploy:mcps` after configuring your SSH deployment environment.",
@@ -134,10 +141,41 @@ function createMcpServer(trelloConfig: TrelloMcpConfig): McpServer {
   return server;
 }
 
-async function handleMcpRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
+const mcpEndpoints: Record<string, McpEndpoint> = {
+  trello: {
+    name: "trello",
+    path: "/trello",
+    description: "Trello boards, lists, cards, and comments.",
+    createServer: (request) => createTrelloMcpServer(readTrelloMcpConfig(request)),
+  },
+};
+
+function listMcpEndpoints(): Array<Omit<McpEndpoint, "createServer">> {
+  return Object.values(mcpEndpoints).map(({ name, path, description }) => ({
+    name,
+    path,
+    description,
+  }));
+}
+
+function readMcpEndpoint(pathname: string): McpEndpoint | undefined {
+  const pathSegments = pathname.split("/").filter(Boolean);
+
+  if (pathSegments.length !== 1) {
+    return undefined;
+  }
+
+  return mcpEndpoints[pathSegments[0]];
+}
+
+async function handleMcpRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  endpoint: McpEndpoint,
+): Promise<void> {
   Object.entries(corsHeaders()).forEach(([header, value]) => response.setHeader(header, value));
 
-  const server = createMcpServer(readTrelloMcpConfig(request));
+  const server = endpoint.createServer(request);
   // The SDK documents `undefined` as stateless mode, but its published option
   // type is narrower when `exactOptionalPropertyTypes` is enabled.
   const statelessOptions = {
@@ -186,7 +224,7 @@ const server = createServer((request, response) => {
       description: "Self-hosted Model Context Protocol servers.",
       endpoints: {
         health: "/health",
-        mcp: MCP_PATH,
+        mcps: listMcpEndpoints(),
       },
     });
     return;
@@ -197,8 +235,10 @@ const server = createServer((request, response) => {
     return;
   }
 
-  if (url.pathname === MCP_PATH && (method === "GET" || method === "POST")) {
-    void handleMcpRequest(request, response);
+  const endpoint = readMcpEndpoint(url.pathname);
+
+  if (endpoint !== undefined && (method === "GET" || method === "POST")) {
+    void handleMcpRequest(request, response, endpoint);
     return;
   }
 

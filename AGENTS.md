@@ -27,7 +27,7 @@ See `README.md` for full details. Common commands:
 - hello-http: `npm run build --workspace @chiwire/hello-http` then `npm run start:hello`
 - MCP servers: `npm run build --workspace @chiwire/mcps` then `npm run start:mcps`
 - Verify hello-http: `curl http://localhost:3000/` and `curl http://localhost:3000/health`
-- Verify MCP servers: `curl http://localhost:3000/` and `curl http://localhost:3000/health`
+- Verify MCP servers: `curl http://localhost:3000/`, `curl http://localhost:3000/health`, and `curl http://localhost:3000/trello`
 
 ### Running dev servers
 

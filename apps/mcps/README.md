@@ -1,8 +1,8 @@
 # Chiwire MCPs
 
 `apps/mcps` is a deployable workspace for self-hosted Model Context Protocol
-servers. It exposes a Streamable HTTP MCP endpoint at `/mcp`, plus simple
-`/` and `/health` endpoints for deployment smoke tests.
+servers. It exposes Streamable HTTP MCP endpoints at dynamic `/{server}` paths,
+plus simple `/` and `/health` endpoints for deployment smoke tests.
 
 ## Run locally
 
@@ -18,6 +18,7 @@ Then smoke test the service:
 ```sh
 curl http://localhost:3000/
 curl http://localhost:3000/health
+curl http://localhost:3000/trello
 ```
 
 ## Trello MCP tools
@@ -29,6 +30,9 @@ This workspace includes Trello MCP tools for:
 - creating a card
 - updating or moving a card
 - adding a card comment
+
+The Trello MCP endpoint is `/trello`, so a deployed server can be used as
+`https://mcps.example.dev/trello`.
 
 Send these headers with MCP requests:
 
@@ -59,8 +63,9 @@ capabilities:
 - `server.registerResource(...)` for data the model can read.
 - `server.registerPrompt(...)` for reusable prompt templates.
 
-The server includes a `server-info` tool, a `deployment-guide` resource, and a
-`trello-setup` resource so MCP clients can verify the endpoint and Trello setup.
+The Trello server includes a `server-info` tool, a `deployment-guide` resource,
+and a `trello-setup` resource so MCP clients can verify the endpoint and Trello
+setup.
 
 ## Deploy to your own server
 
