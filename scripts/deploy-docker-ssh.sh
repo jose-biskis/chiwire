@@ -6,11 +6,13 @@ usage() {
 Deploy a locally built Docker image to a remote host over SSH.
 
 Required:
-  --host USER@HOST          SSH target that can run Docker commands
   --image IMAGE             Docker image name, without the tag
   --container NAME          Remote container name
 
 Common options:
+  --host USER@HOST          SSH target that can run Docker commands
+                            Defaults from SSH_HOST, DEPLOY_SSH_TARGET, or
+                            DEPLOY_SSH_USER + DEPLOY_SSH_HOST
   --tag TAG                 Image tag (default: latest)
   --context PATH            Docker build context (default: .)
   --dockerfile PATH         Dockerfile path (default: Dockerfile)
@@ -30,9 +32,17 @@ SSH options:
   --remote-tmp-dir PATH     Remote upload directory (default: /tmp)
 
 Environment:
+  SSH_HOST                  Default for --host
+  DEPLOY_SSH_TARGET         Default for --host when SSH_HOST is unset
+  DEPLOY_SSH_USER           Used with DEPLOY_SSH_HOST for --host defaults
+  DEPLOY_SSH_HOST           Used with DEPLOY_SSH_USER for --host defaults
   SSH_PORT                  Default for --ssh-port
+  DEPLOY_SSH_PORT           Default for --ssh-port when SSH_PORT is unset
   SSH_IDENTITY_FILE         Default for --identity-file
+  DEPLOY_SSH_IDENTITY_FILE  Default for --identity-file when SSH_IDENTITY_FILE
+                            is unset
   SSHPASS                   Use sshpass -e for password auth when set
+  DEPLOY_SSH_PASSWORD       Default for SSHPASS when SSHPASS is unset
 
 Other:
   -h, --help                Show this help
@@ -53,6 +63,9 @@ fail() {
   echo "error: $*" >&2
   exit 1
 }
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/deploy-ssh-env.sh"
 
 quote() {
   printf '%q' "$1"
@@ -86,11 +99,11 @@ CONTAINER=""
 TAG="${TAG:-latest}"
 CONTEXT="."
 DOCKERFILE="Dockerfile"
-SSH_PORT="${SSH_PORT:-22}"
+SSH_PORT_OPTION=""
 REMOTE_TMP_DIR="${REMOTE_TMP_DIR:-/tmp}"
 RESTART_POLICY="${RESTART_POLICY:-unless-stopped}"
 PLATFORM="${PLATFORM:-}"
-IDENTITY_FILE="${SSH_IDENTITY_FILE:-}"
+IDENTITY_FILE_OPTION=""
 NETWORK=""
 
 BUILD_ARGS=()
@@ -159,11 +172,11 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --ssh-port)
-      SSH_PORT="${2:-}"
+      SSH_PORT_OPTION="${2:-}"
       shift 2
       ;;
     --identity-file)
-      IDENTITY_FILE="${2:-}"
+      IDENTITY_FILE_OPTION="${2:-}"
       shift 2
       ;;
     --ssh-option)
@@ -184,7 +197,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -n "$HOST" ]] || fail "--host is required"
+if ! HOST="$(deploy_ssh_resolve_host "$HOST")"; then
+  fail "--host is required when SSH_HOST, DEPLOY_SSH_TARGET, or DEPLOY_SSH_USER + DEPLOY_SSH_HOST are not set"
+fi
+SSH_PORT="$(deploy_ssh_resolve_port "$SSH_PORT_OPTION")"
+IDENTITY_FILE="$(deploy_ssh_resolve_identity_file "$IDENTITY_FILE_OPTION")"
+deploy_ssh_export_password_from_env
+
 [[ -n "$IMAGE" ]] || fail "--image is required"
 [[ -n "$CONTAINER" ]] || fail "--container is required"
 [[ -n "$TAG" ]] || fail "--tag cannot be empty"
