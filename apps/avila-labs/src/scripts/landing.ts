@@ -218,7 +218,7 @@ function createScene(canvas: HTMLCanvasElement) {
   resizeObserver.observe(canvas);
   resize();
 
-  const clock = new THREE.Clock();
+  const startedAt = performance.now();
   const leftArm = mascot.getObjectByName("leftArm");
   const rightArm = mascot.getObjectByName("rightArm");
   const leftLeg = mascot.getObjectByName("leftLeg");
@@ -227,7 +227,7 @@ function createScene(canvas: HTMLCanvasElement) {
   const rightShoe = mascot.getObjectByName("rightShoe");
 
   const render = () => {
-    const elapsed = clock.getElapsedTime();
+    const elapsed = (performance.now() - startedAt) / 1000;
     const stride = Math.sin(elapsed * 5.2);
     const bounce = Math.abs(Math.sin(elapsed * 5.2)) * 0.08;
 
