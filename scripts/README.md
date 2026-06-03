@@ -110,6 +110,72 @@ The example supports these environment variables:
 | `HOST_PORT` | `8080` | Remote host port to publish. |
 | `CONTAINER_PORT` | `3000` | Container port used by the app. |
 
+### Serve the app from a root domain or subdomain
+
+Direct port publishing serves plain HTTP, for example `http://example.com:8080/`.
+To serve `.dev` domains or any production-style URL over HTTPS, publish the
+container on localhost and configure a host-level reverse proxy:
+
+```sh
+HOST_PORT=127.0.0.1:3000 ./deploy-hello-http.sh
+```
+
+Then point DNS for the root domain (`host.dev`) or subdomain (`app.host.dev`) to
+the deploy host and run `configure-reverse-proxy-ssh.sh`.
+
+#### Caddy
+
+Caddy obtains and renews Let's Encrypt certificates automatically:
+
+```sh
+./scripts/configure-reverse-proxy-ssh.sh \
+  --proxy caddy \
+  --domain host.dev \
+  --upstream 127.0.0.1:3000
+```
+
+Use a subdomain by changing only the domain:
+
+```sh
+./scripts/configure-reverse-proxy-ssh.sh \
+  --proxy caddy \
+  --domain app.host.dev \
+  --upstream 127.0.0.1:3000
+```
+
+The remote host must already have Caddy installed and reachable on ports 80 and
+443. The SSH user must be able to run `sudo` without an interactive password, or
+you can connect as root with `--no-sudo`.
+
+#### nginx
+
+The nginx mode writes an HTTP reverse proxy site, validates nginx, reloads it,
+and then uses certbot's nginx plugin to request and install HTTPS:
+
+```sh
+./scripts/configure-reverse-proxy-ssh.sh \
+  --proxy nginx \
+  --domain app.host.dev \
+  --upstream 127.0.0.1:3000 \
+  --email admin@host.dev
+```
+
+The remote host must already have nginx, certbot, and the certbot nginx plugin
+installed. If you only want HTTP, pass `--skip-tls`.
+
+The proxy script accepts the same SSH target options as the deploy script:
+`--host`, `--ssh-port`, `--identity-file`, and repeatable `--ssh-option`.
+
+You can also configure it with environment variables:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PROXY_TYPE` | `caddy` | Reverse proxy to configure: `caddy` or `nginx`. |
+| `PROXY_DOMAIN` | unset | Root domain or subdomain to serve. |
+| `PROXY_UPSTREAM` | `127.0.0.1:3000` | Local upstream address for the container. |
+| `PROXY_TLS_EMAIL` | unset | Let's Encrypt email used by nginx/certbot. |
+| `PROXY_SKIP_TLS` | unset | Set to `1`, `true`, or `yes` to configure HTTP only. |
+
 ### Connect to the deploy host over SSH
 
 Use `connect-deploy-ssh.sh` to open an SSH session with the same deploy

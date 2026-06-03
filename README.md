@@ -69,7 +69,9 @@ curl http://localhost:3000/
 ## Deploy Docker over SSH
 
 See [`scripts/README.md`](scripts/README.md) for the reusable SSH-based Docker
-deployment script, including a copy-pasteable hello app deployment example.
+deployment script, including a copy-pasteable hello app deployment example and
+reverse proxy setup for serving apps from a root domain or subdomain with Caddy
+or nginx.
 
 ## Dependency map
 
