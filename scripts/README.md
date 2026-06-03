@@ -37,14 +37,19 @@ Prefer SSH keys when possible. If you use `DEPLOY_SSH_PASSWORD`, install
 `sshpass` locally first; the deploy script will fail with a clear message if
 `SSHPASS` is set and `sshpass` is unavailable.
 
+The deploy scripts resolve the SSH target in this order:
+
+1. `--host USER@HOST`
+2. `SSH_HOST`
+3. `DEPLOY_SSH_TARGET`
+4. `DEPLOY_SSH_USER` + `DEPLOY_SSH_HOST`
+
 ### Deploy the hello HTTP test app directly
 
 Run this from the repository root:
 
 ```sh
 ./scripts/deploy-docker-ssh.sh \
-  --host deploy@example.com \
-  --ssh-port 22 \
   --image chiwire/hello-http \
   --tag latest \
   --container hello-http \
@@ -53,6 +58,11 @@ Run this from the repository root:
   --port 8080:3000 \
   --env PORT=3000
 ```
+
+If you are not using `direnv`, pass `--host deploy@example.com` or export
+`SSH_HOST`, `DEPLOY_SSH_TARGET`, or both `DEPLOY_SSH_USER` and
+`DEPLOY_SSH_HOST` before running the command. `--ssh-port` is also optional when
+`SSH_PORT` or `DEPLOY_SSH_PORT` is set.
 
 Then test the remote service:
 
@@ -81,7 +91,10 @@ The example supports these environment variables:
 | Variable | Default | Description |
 | --- | --- | --- |
 | `SSH_HOST` | `deploy@example.com` | SSH target for the remote Docker host. |
+| `DEPLOY_SSH_TARGET` | unset | SSH target used when `SSH_HOST` is unset. |
+| `DEPLOY_SSH_USER` + `DEPLOY_SSH_HOST` | unset | User and host values used when `SSH_HOST` and `DEPLOY_SSH_TARGET` are unset. |
 | `SSH_PORT` | `22` | SSH port. |
+| `DEPLOY_SSH_PORT` | unset | SSH port used when `SSH_PORT` is unset. |
 | `SSH_IDENTITY_FILE` | unset | Optional SSH private key path. |
 | `SSHPASS` | unset | Optional password used through `sshpass -e`. |
 | `IMAGE_NAME` | `chiwire/hello-http` | Docker image name to build and deploy. |
@@ -89,6 +102,24 @@ The example supports these environment variables:
 | `CONTAINER_NAME` | `hello-http` | Remote Docker container name. |
 | `HOST_PORT` | `8080` | Remote host port to publish. |
 | `CONTAINER_PORT` | `3000` | Container port used by the app. |
+
+### Connect to the deploy host over SSH
+
+Use `connect-deploy-ssh.sh` to open an SSH session with the same deploy
+variables:
+
+```sh
+./scripts/connect-deploy-ssh.sh
+```
+
+You can also run a remote command by placing it after `--`:
+
+```sh
+./scripts/connect-deploy-ssh.sh -- docker ps
+```
+
+The script accepts the same SSH target options as the deploy script:
+`--host`, `--ssh-port`, `--identity-file`, and repeatable `--ssh-option`.
 
 ### More options
 

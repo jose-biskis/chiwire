@@ -7,8 +7,13 @@ set -Eeuo pipefail
 #   cp scripts/examples/deploy-hello-http.example.sh deploy-hello-http.sh
 #   SSH_HOST=deploy@example.com ./deploy-hello-http.sh
 
-SSH_HOST="${SSH_HOST:-deploy@example.com}"
-SSH_PORT="${SSH_PORT:-22}"
+if [[ -z "${SSH_HOST:-}" && -z "${DEPLOY_SSH_TARGET:-}" &&
+  ( -z "${DEPLOY_SSH_USER:-}" || -z "${DEPLOY_SSH_HOST:-}" ) ]]; then
+  export SSH_HOST="deploy@example.com"
+fi
+if [[ -z "${SSH_PORT:-}" && -z "${DEPLOY_SSH_PORT:-}" ]]; then
+  export SSH_PORT="22"
+fi
 IMAGE_NAME="${IMAGE_NAME:-chiwire/hello-http}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 CONTAINER_NAME="${CONTAINER_NAME:-hello-http}"
@@ -16,8 +21,6 @@ HOST_PORT="${HOST_PORT:-8080}"
 CONTAINER_PORT="${CONTAINER_PORT:-3000}"
 
 ./scripts/deploy-docker-ssh.sh \
-  --host "$SSH_HOST" \
-  --ssh-port "$SSH_PORT" \
   --image "$IMAGE_NAME" \
   --tag "$IMAGE_TAG" \
   --container "$CONTAINER_NAME" \
