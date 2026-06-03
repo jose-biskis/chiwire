@@ -71,6 +71,13 @@ curl http://localhost:3000/
 See [`scripts/README.md`](scripts/README.md) for the reusable SSH-based Docker
 deployment script, including a copy-pasteable hello app deployment example.
 
+## Dependency map
+
+Use `npm run dependency-map` to generate a source dependency map, or
+`npm run affected -- --base origin/main` to list changed files plus every file
+that depends on them. See [`docs/dependency-map.md`](docs/dependency-map.md) for
+details and the future test-targeting workflow.
+
 ## Workspaces
 
 This repository uses npm workspaces:
