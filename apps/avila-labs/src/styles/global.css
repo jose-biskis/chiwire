@@ -148,68 +148,19 @@ body {
     linear-gradient(180deg, transparent 0 24%, var(--valley) 25%);
 }
 
-.message-card {
+.wordmark {
   position: relative;
   z-index: 5;
-  width: min(760px, calc(100vw - 32px));
   margin-top: -7vh;
-  padding: clamp(28px, 5vw, 56px);
-  border: 2px solid rgb(255 246 220 / 42%);
-  border-radius: clamp(26px, 4vw, 46px);
   text-align: center;
-  background: linear-gradient(145deg, rgb(23 50 37 / 58%), rgb(23 50 37 / 30%));
-  box-shadow: 0 30px 80px rgb(18 47 39 / 28%);
-  backdrop-filter: blur(18px);
-}
-
-.brand,
-.subtitle,
-h1 {
-  margin: 0;
-}
-
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
-  font-size: clamp(1rem, 2vw, 1.28rem);
+  color: var(--cream);
+  font-size: clamp(4.5rem, 15vw, 13rem);
   font-weight: 950;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.brand::before,
-.brand::after {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  content: "";
-}
-
-.brand::before {
-  background: var(--red);
-  box-shadow: 16px 0 0 var(--yellow), 32px 0 0 var(--blue);
-}
-
-.brand::after {
-  background: var(--yellow);
-}
-
-h1 {
-  font-size: clamp(3.3rem, 9vw, 8.8rem);
   line-height: 0.86;
   letter-spacing: -0.08em;
-  text-wrap: balance;
-  text-shadow: 0 10px 28px rgb(23 50 37 / 30%);
-}
-
-.subtitle {
-  max-width: 560px;
-  margin: 22px auto 0;
-  color: rgb(255 246 220 / 82%);
-  font-size: clamp(1rem, 2.2vw, 1.35rem);
-  line-height: 1.45;
+  text-shadow:
+    0 12px 34px rgb(23 50 37 / 42%),
+    0 2px 0 rgb(23 50 37 / 18%);
 }
 
 .tiny-macaw {
@@ -318,13 +269,9 @@ h1 {
     min-height: 520px;
   }
 
-  .message-card {
+  .wordmark {
     margin-top: -12vh;
-    padding: 28px 22px;
-  }
-
-  .subtitle {
-    max-width: 320px;
+    font-size: clamp(3.7rem, 19vw, 7rem);
   }
 }
 

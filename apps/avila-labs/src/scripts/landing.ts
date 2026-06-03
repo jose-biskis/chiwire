@@ -1,4 +1,3 @@
-import { animate } from "animejs";
 import * as THREE from "three";
 
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -162,20 +161,6 @@ function createScene(canvas: HTMLCanvasElement) {
   }
 }
 
-function animateDetails() {
-  if (prefersReducedMotion.matches) {
-    return;
-  }
-
-  animate(".message-card", {
-    translateY: [18, 0],
-    opacity: [0, 1],
-    duration: 1100,
-    ease: "outExpo",
-  });
-
-}
-
 function init() {
   const canvas = document.querySelector<HTMLCanvasElement>("#hero-canvas");
   if (canvas) {
@@ -186,7 +171,6 @@ function init() {
     }
   }
 
-  animateDetails();
 }
 
 if (document.readyState === "loading") {
