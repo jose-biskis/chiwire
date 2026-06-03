@@ -1,0 +1,14 @@
+{
+  "image": "chiwire/hello-http",
+  "tag": "latest",
+  "container": "hello-http",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 3000,
+    "visibility": "public",
+    "hostPort": 8080
+  }
+}
