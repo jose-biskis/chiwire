@@ -15,6 +15,14 @@ if [[ -z "${SSH_PORT:-}" && -z "${DEPLOY_SSH_PORT:-}" ]]; then
   export SSH_PORT="22"
 fi
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+
+if [[ -f "$SCRIPT_DIR/scripts/deploy-app.sh" ]]; then
+  REPO_ROOT="$SCRIPT_DIR"
+elif [[ -f "$SCRIPT_DIR/../deploy-app.sh" ]]; then
+  REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+else
+  echo "error: run this script from a copy in the repository root or from scripts/examples" >&2
+  exit 1
+fi
 
 "$REPO_ROOT/scripts/deploy-app.sh" "$REPO_ROOT/apps/hello-http" "$@"
