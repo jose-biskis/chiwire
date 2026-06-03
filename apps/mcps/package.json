@@ -1,0 +1,15 @@
+{
+  "name": "@chiwire/mcps",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted Model Context Protocol servers.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --build --pretty false"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  }
+}

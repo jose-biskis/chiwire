@@ -1,0 +1,14 @@
+{
+  "image": "chiwire/mcps",
+  "tag": "latest",
+  "container": "mcps",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 3000,
+    "visibility": "internal",
+    "hostPort": 8010
+  }
+}

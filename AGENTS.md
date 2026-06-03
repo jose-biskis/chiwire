@@ -12,6 +12,7 @@ Chiwire is an npm workspaces monorepo with two independent apps and no shared ba
 |-----|-----------|-------------|--------------|
 | AvilaLabs landing page | `@chiwire/avila-labs` | `npm run dev:avila` | 4321 |
 | hello-http smoke-test API | `@chiwire/hello-http` | build then `npm run start:hello` | 3000 |
+| self-hosted MCP servers | `@chiwire/mcps` | build then `npm run start:mcps` | 3000 |
 
 There is no `docker-compose`, Makefile, or `.devcontainer`. Local development only requires Node.js and npm.
 
@@ -24,7 +25,9 @@ See `README.md` for full details. Common commands:
 - Deploy script tests: `npm run test:deploy-settings`
 - AvilaLabs dev server: `npm run dev:avila`
 - hello-http: `npm run build --workspace @chiwire/hello-http` then `npm run start:hello`
+- MCP servers: `npm run build --workspace @chiwire/mcps` then `npm run start:mcps`
 - Verify hello-http: `curl http://localhost:3000/` and `curl http://localhost:3000/health`
+- Verify MCP servers: `curl http://localhost:3000/` and `curl http://localhost:3000/health`
 
 ### Running dev servers
 
@@ -35,11 +38,16 @@ Start long-running dev servers in tmux (not as one-shot background shell jobs):
 npm run build --workspace @chiwire/hello-http
 npm run start:hello
 
+# MCP servers (after building)
+npm run build --workspace @chiwire/mcps
+npm run start:mcps
+
 # AvilaLabs
 npm run dev:avila
 ```
 
-hello-http must be built before `npm run start:hello` — it runs `node dist/index.js`.
+hello-http and MCP servers must be built before their start scripts — they run
+`node dist/index.js`.
 
 ### Lint / test notes
 

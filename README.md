@@ -10,7 +10,8 @@ single baseline for TypeScript configuration and developer scripts.
 .
 ├── apps/              # Deployable apps and experiments
 │   ├── avila-labs/    # Astro landing page for AvilaLabs
-│   └── hello-http/    # Minimal HTTP service for Docker deployment testing
+│   ├── hello-http/    # Minimal HTTP service for Docker deployment testing
+│   └── mcps/          # Self-hosted Model Context Protocol servers
 ├── packages/          # Shared libraries, utilities, and project modules
 ├── scripts/           # Reusable local development and deployment scripts
 ├── package.json       # Root workspace metadata and scripts
@@ -83,6 +84,30 @@ Run the container locally:
 docker run --rm -p 3000:3000 chiwire/hello-http:latest
 curl http://localhost:3000/
 ```
+
+## MCP servers
+
+The `apps/mcps` workspace is a deployable home for self-hosted Model Context
+Protocol servers. It exposes Streamable HTTP at `/mcp`, plus `/` and `/health`
+endpoints for deployment checks.
+
+Run it locally:
+
+```sh
+npm run build --workspace @chiwire/mcps
+npm run start:mcps
+```
+
+Deploy it to your own server:
+
+```sh
+npm run deploy:mcps
+```
+
+Add custom MCP tools, resources, and prompts in
+[`apps/mcps/src/index.ts`](apps/mcps/src/index.ts). See
+[`apps/mcps/README.md`](apps/mcps/README.md) for extension and deployment
+details.
 
 ## Deploy Docker over SSH
 
