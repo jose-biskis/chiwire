@@ -1,0 +1,15 @@
+{
+  "image": "chiwire/avila-labs",
+  "tag": "latest",
+  "container": "avila-labs",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 80,
+    "visibility": "internal",
+    "hostPort": 3000,
+    "setPortEnv": false
+  }
+}

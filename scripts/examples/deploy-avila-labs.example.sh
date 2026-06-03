@@ -14,16 +14,15 @@ fi
 if [[ -z "${SSH_PORT:-}" && -z "${DEPLOY_SSH_PORT:-}" ]]; then
   export SSH_PORT="22"
 fi
-IMAGE_NAME="${IMAGE_NAME:-chiwire/avila-labs}"
-IMAGE_TAG="${IMAGE_TAG:-latest}"
-CONTAINER_NAME="${CONTAINER_NAME:-avila-labs}"
-HOST_PORT="${HOST_PORT:-127.0.0.1:3000}"
-CONTAINER_PORT="${CONTAINER_PORT:-80}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-./scripts/deploy-docker-ssh.sh \
-  --image "$IMAGE_NAME" \
-  --tag "$IMAGE_TAG" \
-  --container "$CONTAINER_NAME" \
-  --dockerfile apps/avila-labs/Dockerfile \
-  --context . \
-  --port "${HOST_PORT}:${CONTAINER_PORT}"
+if [[ -f "$SCRIPT_DIR/scripts/deploy-app.sh" ]]; then
+  REPO_ROOT="$SCRIPT_DIR"
+elif [[ -f "$SCRIPT_DIR/../deploy-app.sh" ]]; then
+  REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+else
+  echo "error: run this script from a copy in the repository root or from scripts/examples" >&2
+  exit 1
+fi
+
+"$REPO_ROOT/scripts/deploy-app.sh" "$REPO_ROOT/apps/avila-labs" "$@"
