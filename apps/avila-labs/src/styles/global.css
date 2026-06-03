@@ -2,6 +2,9 @@
   --sky-top: #0787c4;
   --sky-mid: #6fc0d7;
   --sky-low: #f1c27a;
+  --sky-top-night: #071a3d;
+  --sky-mid-night: #123257;
+  --sky-low-night: #3b4f61;
   --sun: #ffd98c;
   --mountain-deep: #284c2d;
   --mountain: #3f7137;
@@ -12,6 +15,17 @@
   --red: #dc3344;
   --blue: #1558c8;
   --yellow: #f7c84b;
+  --sky-t: 0;
+  --sunset: 0;
+  --sunrise: 0;
+  --sun-travel: 0;
+  /* travel 0 = entering left; travel 1 = exiting right (see landing.ts SKY_TRAVEL_*) */
+  --sun-glow-x: calc(-9vw + var(--sun-travel) * 118vw);
+  --sun-glow-y: calc(8vh + 9vw);
+  --moon-travel: -0.28;
+  --sunrise-travel: 0;
+  --sun-opacity: 1;
+  --moon-opacity: 0;
   font-family:
     "Arial Rounded MT Bold",
     "Trebuchet MS",
@@ -36,8 +50,18 @@ body {
 body {
   min-width: 320px;
   background:
-    radial-gradient(circle at 72% 20%, rgb(255 217 140 / 72%) 0 9rem, transparent 18rem),
-    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--sky-low) 100%);
+    radial-gradient(
+      circle at var(--sun-glow-x) var(--sun-glow-y),
+      rgb(255 217 140 / calc(52% * var(--sun-opacity) * (1 - var(--sky-t)))) 0,
+      rgb(255 217 140 / calc(24% * var(--sun-opacity) * (1 - var(--sky-t)))) 14rem,
+      transparent 24rem
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--sky-top) calc((1 - var(--sky-t)) * 100%), var(--sky-top-night)) 0%,
+      color-mix(in srgb, var(--sky-mid) calc((1 - var(--sky-t)) * 100%), var(--sky-mid-night)) 45%,
+      color-mix(in srgb, var(--sky-low) calc((1 - var(--sky-t)) * 100%), var(--sky-low-night)) 100%
+    );
 }
 
 .coming-soon {
@@ -49,27 +73,54 @@ body {
   place-items: center;
   overflow: hidden;
   isolation: isolate;
+  user-select: none;
 }
 
-#hero-canvas {
+#hero-canvas-back,
+#hero-canvas-front {
   position: absolute;
   inset: 0;
-  z-index: 6;
   width: 100%;
   height: 100%;
   pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
 }
 
-.sky-glow {
-  position: absolute;
-  inset: -12% -8% auto auto;
-  z-index: 0;
-  width: min(58vw, 660px);
-  aspect-ratio: 1;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgb(255 236 174 / 72%) 0 16%, rgb(255 206 118 / 30%) 34%, transparent 68%);
-  filter: blur(8px);
-  transition: opacity 26s ease, transform 26s ease;
+html.is-low-poly #hero-canvas-back {
+  z-index: 4;
+  visibility: visible;
+  opacity: 1;
+}
+
+html.is-low-poly #hero-canvas-front {
+  z-index: 9;
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 700ms ease;
+}
+
+html.is-low-poly .scene-2d-only {
+  display: none;
+}
+
+html.is-low-poly .tree-line {
+  display: none;
+}
+
+html.is-low-poly .wordmark {
+  position: relative;
+  z-index: 6;
+  color: #fff;
+  paint-order: stroke fill;
+  -webkit-text-stroke: clamp(2px, 0.35vw, 5px) var(--ink);
+  text-shadow:
+    3px 0 0 #e8eef5,
+    4px 2px 0 #c5d0dc,
+    2px 4px 0 #8fa0b0,
+    5px 5px 0 rgb(23 50 37 / 55%),
+    7px 9px 0 rgb(23 50 37 / 38%),
+    9px 12px 18px rgb(23 50 37 / 42%);
 }
 
 .night-sky {
@@ -77,27 +128,76 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0;
+  opacity: var(--sky-t, 0);
   background:
     radial-gradient(circle at 18% 22%, rgb(255 246 220 / 72%) 0 1px, transparent 2px),
     radial-gradient(circle at 32% 14%, rgb(255 246 220 / 60%) 0 1px, transparent 2px),
     radial-gradient(circle at 48% 26%, rgb(255 246 220 / 54%) 0 1px, transparent 2px),
     radial-gradient(circle at 64% 16%, rgb(255 246 220 / 66%) 0 1px, transparent 2px),
     radial-gradient(circle at 78% 30%, rgb(255 246 220 / 58%) 0 1px, transparent 2px),
-    linear-gradient(180deg, #071a3d 0%, #123257 50%, #26415a 100%);
-  transition: opacity 26s ease;
+    linear-gradient(180deg, var(--sky-top-night) 0%, var(--sky-mid-night) 50%, #26415a 100%);
+}
+
+.sunset-haze,
+.sunrise-haze {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.sunset-haze {
+  opacity: var(--sunset, 0);
+  background:
+    radial-gradient(
+      ellipse 95% 58% at calc(-9vw + var(--sun-travel) * 118vw) 20%,
+      rgb(255 196 110 / 58%) 0 36%,
+      transparent 64%
+    ),
+    linear-gradient(
+      180deg,
+      rgb(255 170 90 / 0) 0%,
+      rgb(235 115 75 / 42%) 46%,
+      rgb(130 75 105 / 30%) 100%
+    );
+}
+
+.sunrise-haze {
+  opacity: var(--sunrise, 0);
+  background:
+    radial-gradient(
+      ellipse 92% 56% at calc(-9vw + var(--sunrise-travel) * 118vw) 26%,
+      rgb(255 220 165 / 42%) 0 42%,
+      transparent 68%
+    ),
+    linear-gradient(
+      180deg,
+      rgb(130 85 120 / 16%) 0%,
+      rgb(255 180 115 / 28%) 52%,
+      rgb(140 200 230 / 0) 100%
+    );
 }
 
 .celestial {
   position: absolute;
   top: 8vh;
-  right: 18vw;
+  left: 0;
   z-index: 1;
   width: clamp(110px, 18vw, 250px);
   aspect-ratio: 1;
   pointer-events: none;
-  transform: translate3d(0, 0, 0);
-  transition: transform 30s ease-in-out;
+  transform: translate3d(calc(-18vw + var(--travel, 0) * 118vw), 0, 0);
+  will-change: transform;
+}
+
+.celestial--sun {
+  --travel: var(--sun-travel);
+  opacity: var(--sun-opacity, 1);
+}
+
+.celestial--moon {
+  --travel: var(--moon-travel);
+  opacity: var(--moon-opacity, 0);
 }
 
 .sun-disc,
@@ -105,50 +205,18 @@ body {
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  transition: opacity 24s ease, transform 30s ease-in-out, box-shadow 24s ease;
 }
 
 .sun-disc {
   background: radial-gradient(circle, #fff2a8 0 18%, #ffd98c 42%, rgb(255 217 140 / 0) 72%);
-  box-shadow: 0 0 80px rgb(255 217 140 / 65%);
+  box-shadow: 0 0 20px rgb(255 217 140 / 28%);
 }
 
 .moon-disc {
-  opacity: 0;
-  transform: scale(0.72);
   background:
     radial-gradient(circle at 62% 38%, rgb(7 26 61 / 95%) 0 30%, transparent 31%),
     radial-gradient(circle, #fff6dc 0 42%, rgb(255 246 220 / 0) 62%);
   box-shadow: 0 0 46px rgb(255 246 220 / 42%);
-}
-
-body.is-night {
-  background:
-    radial-gradient(circle at 18% 18%, rgb(255 246 220 / 20%) 0 7rem, transparent 18rem),
-    linear-gradient(180deg, #071a3d 0%, #123257 50%, #3b4f61 100%);
-}
-
-body.is-night .night-sky {
-  opacity: 1;
-}
-
-body.is-night .sky-glow {
-  opacity: 0.15;
-  transform: translate3d(-50vw, 8vh, 0) scale(0.72);
-}
-
-body.is-night .celestial {
-  transform: translate3d(-52vw, 9vh, 0);
-}
-
-body.is-night .sun-disc {
-  opacity: 0;
-  transform: scale(0.65);
-}
-
-body.is-night .moon-disc {
-  opacity: 1;
-  transform: scale(1);
 }
 
 .mountain {
@@ -204,28 +272,32 @@ body.is-night .moon-disc {
   );
   background:
     linear-gradient(160deg, rgb(255 255 255 / 13%) 0 18%, transparent 19%),
-    linear-gradient(180deg, #527f39, #315b31 50%, #203f2a 100%);
+    linear-gradient(180deg, #527f39, #315b31 50%, var(--valley) 88%, #152a1c 100%);
 }
 
 .tree-line {
   position: absolute;
-  right: -4vw;
-  bottom: -3vh;
-  left: -4vw;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 2;
-  height: 17vh;
-  min-height: 110px;
+  height: clamp(72px, 11vh, 128px);
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(30 59 40 / 0) 0%, var(--valley) 38%, #152a1c 100%);
+}
+
+.tree-line::before {
+  position: absolute;
+  inset: 0 0 42%;
   background:
-    radial-gradient(circle at 5% 10%, var(--valley) 0 1.4rem, transparent 1.45rem),
-    radial-gradient(circle at 12% 0%, var(--valley) 0 2.1rem, transparent 2.15rem),
-    radial-gradient(circle at 20% 16%, var(--valley) 0 1.7rem, transparent 1.75rem),
-    radial-gradient(circle at 30% 4%, var(--valley) 0 2.2rem, transparent 2.25rem),
-    radial-gradient(circle at 42% 12%, var(--valley) 0 1.8rem, transparent 1.85rem),
-    radial-gradient(circle at 55% 0%, var(--valley) 0 2.3rem, transparent 2.35rem),
-    radial-gradient(circle at 68% 14%, var(--valley) 0 1.9rem, transparent 1.95rem),
-    radial-gradient(circle at 78% 2%, var(--valley) 0 2.1rem, transparent 2.15rem),
-    radial-gradient(circle at 91% 11%, var(--valley) 0 1.8rem, transparent 1.85rem),
-    linear-gradient(180deg, transparent 0 24%, var(--valley) 25%);
+    radial-gradient(ellipse 140% 90% at 8% 100%, rgb(23 50 37 / 55%) 0 32%, transparent 33%),
+    radial-gradient(ellipse 120% 85% at 28% 100%, rgb(23 50 37 / 45%) 0 28%, transparent 29%),
+    radial-gradient(ellipse 130% 88% at 52% 100%, rgb(23 50 37 / 50%) 0 30%, transparent 31%),
+    radial-gradient(ellipse 125% 86% at 74% 100%, rgb(23 50 37 / 48%) 0 29%, transparent 30%),
+    radial-gradient(ellipse 135% 90% at 92% 100%, rgb(23 50 37 / 52%) 0 31%, transparent 32%);
+  content: "";
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .rain-layer {
@@ -236,7 +308,7 @@ body.is-night .moon-disc {
   pointer-events: none;
   opacity: 0;
   background: linear-gradient(180deg, rgb(7 26 61 / 12%), rgb(7 26 61 / 22%));
-  transition: opacity 1.2s ease;
+  transition: opacity 1.4s ease;
 }
 
 .raindrop {
@@ -257,8 +329,18 @@ body.is-raining .rain-layer {
   opacity: 1;
 }
 
+body.is-raining.is-rain-ending .rain-layer {
+  opacity: 0;
+  transition: opacity 2.2s ease-out;
+}
+
 body.is-raining .raindrop {
   animation-play-state: running;
+}
+
+body.is-raining.is-rain-ending .raindrop {
+  opacity: 0.35;
+  transition: opacity 2.2s ease-out;
 }
 
 .wordmark {
@@ -274,6 +356,34 @@ body.is-raining .raindrop {
   text-shadow:
     0 12px 34px rgb(23 50 37 / 42%),
     0 2px 0 rgb(23 50 37 / 18%);
+  transition: text-shadow 2s ease-out;
+}
+
+body.is-raining .wordmark {
+  text-shadow: none;
+  transition: text-shadow 1.2s ease;
+}
+
+html.is-low-poly body.is-raining .wordmark {
+  text-shadow: none;
+}
+
+body.is-raining.is-rain-ending .wordmark {
+  text-shadow:
+    0 12px 34px rgb(23 50 37 / 42%),
+    0 2px 0 rgb(23 50 37 / 18%);
+  transition: text-shadow 2.2s ease-out;
+}
+
+html.is-low-poly body.is-raining.is-rain-ending .wordmark {
+  text-shadow:
+    3px 0 0 #e8eef5,
+    4px 2px 0 #c5d0dc,
+    2px 4px 0 #8fa0b0,
+    5px 5px 0 rgb(23 50 37 / 55%),
+    7px 9px 0 rgb(23 50 37 / 38%),
+    9px 12px 18px rgb(23 50 37 / 42%);
+  transition: text-shadow 2.2s ease-out;
 }
 
 .tiny-macaw {
@@ -329,11 +439,6 @@ body.is-raining .raindrop {
   fill: var(--ink);
 }
 
-body.is-raining .tiny-macaw {
-  opacity: 0;
-  transition: opacity 700ms ease;
-}
-
 @keyframes flap {
   from {
     transform: rotateX(0deg) scaleY(1);
@@ -362,20 +467,6 @@ body.is-raining .tiny-macaw {
   .wordmark {
     margin-top: -12vh;
     font-size: clamp(3.7rem, 19vw, 7rem);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-
-  .tiny-macaw {
-    display: none;
   }
 }
 
