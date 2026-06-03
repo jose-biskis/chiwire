@@ -1,3 +1,4 @@
+import { animate } from "animejs";
 import * as THREE from "three";
 
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -13,6 +14,13 @@ const palette = {
   mountainDark: 0x294f2e,
   sky: 0x74c7dc,
 };
+
+const RAIN_DROP_COUNT = 90;
+const DAY_NIGHT_INTERVAL_MS = 52000;
+const FIRST_RAIN_MIN_MS = 9000;
+const FIRST_RAIN_MAX_MS = 52000;
+
+type FlightAnimation = ReturnType<typeof animate>;
 
 function material(color: number, roughness = 0.72) {
   return new THREE.MeshStandardMaterial({
@@ -161,7 +169,132 @@ function createScene(canvas: HTMLCanvasElement) {
   }
 }
 
+function randomBetween(min: number, max: number) {
+  return min + Math.random() * (max - min);
+}
+
+function createRainLayer() {
+  const layer = document.querySelector<HTMLElement>(".rain-layer");
+  if (!layer || layer.children.length > 0) {
+    return;
+  }
+
+  const drops = Array.from({ length: RAIN_DROP_COUNT }, () => {
+    const drop = document.createElement("span");
+    drop.className = "raindrop";
+    drop.style.left = `${randomBetween(-8, 108).toFixed(2)}vw`;
+    drop.style.animationDuration = `${randomBetween(620, 1180).toFixed(0)}ms`;
+    drop.style.animationDelay = `${randomBetween(-1800, 0).toFixed(0)}ms`;
+    drop.style.opacity = randomBetween(0.32, 0.86).toFixed(2);
+    return drop;
+  });
+
+  layer.append(...drops);
+}
+
+function startMacawFlights() {
+  if (prefersReducedMotion.matches) {
+    return [];
+  }
+
+  return [
+    animate(".tiny-macaw--one", {
+      translateX: ["-16vw", "136vw"],
+      translateY: ["0vh", "8vh", "-6vh", "4vh"],
+      rotateZ: ["-8deg", "8deg", "-5deg", "7deg"],
+      duration: 8200,
+      loop: true,
+      ease: "inOutSine",
+    }),
+    animate(".tiny-macaw--two", {
+      translateX: ["-16vw", "136vw"],
+      translateY: ["4vh", "-7vh", "5vh", "-4vh"],
+      rotateZ: ["7deg", "-7deg", "5deg", "-6deg"],
+      duration: 10400,
+      delay: 1200,
+      loop: true,
+      ease: "inOutSine",
+    }),
+  ];
+}
+
+function pauseMacaws(flights: FlightAnimation[]) {
+  flights.forEach((flight) => flight.pause());
+}
+
+function resumeMacaws(flights: FlightAnimation[]) {
+  flights.forEach((flight) => flight.resume());
+}
+
+function setRaining(isRaining: boolean, flights: FlightAnimation[], immediate = false) {
+  document.body.classList.toggle("is-raining", isRaining);
+
+  if (isRaining) {
+    pauseMacaws(flights);
+  } else {
+    resumeMacaws(flights);
+  }
+
+  if (!prefersReducedMotion.matches) {
+    animate(".tiny-macaw", {
+      opacity: isRaining ? 0 : 1,
+      duration: immediate ? 1 : 700,
+      ease: "outExpo",
+    });
+  }
+}
+
+function scheduleRain(flights: FlightAnimation[], initial = false) {
+  const delay = initial
+    ? randomBetween(FIRST_RAIN_MIN_MS, FIRST_RAIN_MAX_MS)
+    : randomBetween(18000, 56000);
+
+  window.setTimeout(() => {
+    const duration = randomBetween(9000, 17000);
+    setRaining(true, flights);
+
+    window.setTimeout(() => {
+      setRaining(false, flights);
+      scheduleRain(flights);
+    }, duration);
+  }, delay);
+}
+
+function startDayNightCycle() {
+  if (prefersReducedMotion.matches) {
+    return;
+  }
+
+  window.setInterval(() => {
+    document.body.classList.toggle("is-night");
+  }, DAY_NIGHT_INTERVAL_MS);
+}
+
+function applyForcedState(flights: FlightAnimation[]) {
+  const params = new URLSearchParams(window.location.search);
+  const state = params.get("state");
+
+  if (!state) {
+    return false;
+  }
+
+  document.body.classList.add("is-snapshot");
+
+  if (state.includes("night")) {
+    document.body.classList.add("is-night");
+  }
+
+  if (state.includes("rain")) {
+    setRaining(true, flights, true);
+  }
+
+  return true;
+}
+
 function init() {
+  createRainLayer();
+  const flights = startMacawFlights();
+  const forcedState = applyForcedState(flights);
   const canvas = document.querySelector<HTMLCanvasElement>("#hero-canvas");
   if (canvas) {
     try {
@@ -171,6 +304,10 @@ function init() {
     }
   }
 
+  if (!forcedState) {
+    startDayNightCycle();
+    scheduleRain(flights, true);
+  }
 }
 
 if (document.readyState === "loading") {

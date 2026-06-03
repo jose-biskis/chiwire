@@ -15,6 +15,7 @@
     "@types/three": "^0.184.1"
   },
   "dependencies": {
+    "animejs": "^4.4.1",
     "astro": "^6.4.3",
     "three": "^0.184.0"
   }
