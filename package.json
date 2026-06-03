@@ -1,0 +1,18 @@
+{
+  "name": "chiwire",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TypeScript monorepo for personal and business idea projects.",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "tsc --build",
+    "typecheck:watch": "tsc --build --watch"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
