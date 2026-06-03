@@ -8,7 +8,7 @@ import {
 } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
-import { registerTrelloMcp } from "./trello.js";
+import { registerTrelloMcp, type TrelloMcpConfig } from "./trello.js";
 
 const DEFAULT_PORT = 3000;
 const MCP_PATH = "/mcp";
@@ -27,10 +27,43 @@ function readPort(): number {
 
 function corsHeaders(): Record<string, string> {
   return {
-    "access-control-allow-headers": "accept, authorization, content-type, mcp-protocol-version",
+    "access-control-allow-headers":
+      "accept, authorization, content-type, mcp-protocol-version, x-trello-api-key, x-trello-token, x-trello-api-base-url",
     "access-control-allow-methods": "GET, POST, OPTIONS",
     "access-control-allow-origin": process.env.MCP_ALLOWED_ORIGIN ?? "*",
   };
+}
+
+function readHeader(request: IncomingMessage, name: string): string | undefined {
+  const value = request.headers[name];
+  const rawValue = Array.isArray(value) ? value[0] : value;
+
+  if (rawValue === undefined || rawValue.trim() === "") {
+    return undefined;
+  }
+
+  return rawValue;
+}
+
+function readTrelloMcpConfig(request: IncomingMessage): TrelloMcpConfig {
+  const config: TrelloMcpConfig = {};
+  const apiKey = readHeader(request, "x-trello-api-key");
+  const token = readHeader(request, "x-trello-token");
+  const baseUrl = readHeader(request, "x-trello-api-base-url");
+
+  if (apiKey !== undefined) {
+    config.apiKey = apiKey;
+  }
+
+  if (token !== undefined) {
+    config.token = token;
+  }
+
+  if (baseUrl !== undefined) {
+    config.baseUrl = baseUrl;
+  }
+
+  return config;
 }
 
 function writeJson(response: ServerResponse, statusCode: number, body: unknown): void {
@@ -41,7 +74,7 @@ function writeJson(response: ServerResponse, statusCode: number, body: unknown):
   response.end(`${JSON.stringify(body, null, 2)}\n`);
 }
 
-function createMcpServer(): McpServer {
+function createMcpServer(trelloConfig: TrelloMcpConfig): McpServer {
   const server = new McpServer({
     name: "chiwire-mcps",
     version: "0.1.0",
@@ -63,14 +96,14 @@ function createMcpServer(): McpServer {
           text: [
             "Chiwire MCPs is a deployable workspace for self-hosted Model Context Protocol servers.",
             "This server includes Trello tools for listing boards, lists, and cards; creating cards; updating cards; and adding comments.",
-            "Set TRELLO_API_KEY and TRELLO_TOKEN in the server environment before using Trello tools.",
+            "Send x-trello-api-key and x-trello-token headers with MCP requests, or set TRELLO_API_KEY and TRELLO_TOKEN in the server environment before using Trello tools.",
           ].join("\n"),
         },
       ],
     }),
   );
 
-  registerTrelloMcp(server);
+  registerTrelloMcp(server, trelloConfig);
 
   server.registerResource(
     "deployment-guide",
@@ -90,7 +123,7 @@ function createMcpServer(): McpServer {
             "",
             "This workspace exposes MCP servers over Streamable HTTP at `/mcp`.",
             "Use `PORT` to choose the listen port and `MCP_ALLOWED_ORIGIN` to restrict browser clients.",
-            "Trello tools require `TRELLO_API_KEY` and `TRELLO_TOKEN` in the server environment.",
+            "Trello tools accept `x-trello-api-key` and `x-trello-token` request headers, then fall back to `TRELLO_API_KEY` and `TRELLO_TOKEN` environment variables.",
             "Deploy with `npm run deploy:mcps` after configuring your SSH deployment environment.",
           ].join("\n"),
         },
@@ -104,7 +137,7 @@ function createMcpServer(): McpServer {
 async function handleMcpRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
   Object.entries(corsHeaders()).forEach(([header, value]) => response.setHeader(header, value));
 
-  const server = createMcpServer();
+  const server = createMcpServer(readTrelloMcpConfig(request));
   // The SDK documents `undefined` as stateless mode, but its published option
   // type is narrower when `exactOptionalPropertyTypes` is enabled.
   const statelessOptions = {

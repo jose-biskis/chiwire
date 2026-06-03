@@ -30,12 +30,22 @@ This workspace includes Trello MCP tools for:
 - updating or moving a card
 - adding a card comment
 
-Set these environment variables before using Trello tools:
+Send these headers with MCP requests:
+
+```sh
+x-trello-api-key: your-trello-api-key
+x-trello-token: your-trello-token
+```
+
+The server falls back to these environment variables when headers are absent:
 
 ```sh
 TRELLO_API_KEY=your-trello-api-key
 TRELLO_TOKEN=your-trello-token
 ```
+
+Optionally send `x-trello-api-base-url` or set `TRELLO_API_BASE_URL` to override
+the Trello API base URL.
 
 Generate both from [trello.com/app-key](https://trello.com/app-key) while signed
 in to Trello.

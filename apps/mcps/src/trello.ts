@@ -16,6 +16,12 @@ type TrelloRequestOptions = {
   query?: Record<string, TrelloQueryValue>;
 };
 
+export type TrelloMcpConfig = {
+  apiKey?: string;
+  token?: string;
+  baseUrl?: string;
+};
+
 class TrelloApiError extends Error {
   constructor(
     readonly statusCode: number,
@@ -27,18 +33,26 @@ class TrelloApiError extends Error {
   }
 }
 
-function readTrelloCredentials(): { apiKey: string; token: string; baseUrl: string } {
-  const apiKey = process.env.TRELLO_API_KEY;
-  const token = process.env.TRELLO_TOKEN;
+function firstConfiguredValue(...values: Array<string | undefined>): string | undefined {
+  return values.find((value) => value !== undefined && value.trim() !== "");
+}
+
+function readTrelloCredentials(config: TrelloMcpConfig): { apiKey: string; token: string; baseUrl: string } {
+  const apiKey = firstConfiguredValue(config.apiKey, process.env.TRELLO_API_KEY);
+  const token = firstConfiguredValue(config.token, process.env.TRELLO_TOKEN);
 
   if (!apiKey || !token) {
-    throw new Error("Set TRELLO_API_KEY and TRELLO_TOKEN before using Trello MCP tools.");
+    throw new Error(
+      "Send x-trello-api-key and x-trello-token headers or set TRELLO_API_KEY and TRELLO_TOKEN before using Trello MCP tools.",
+    );
   }
 
   return {
     apiKey,
     token,
-    baseUrl: process.env.TRELLO_API_BASE_URL ?? DEFAULT_TRELLO_API_BASE_URL,
+    baseUrl:
+      firstConfiguredValue(config.baseUrl, process.env.TRELLO_API_BASE_URL) ??
+      DEFAULT_TRELLO_API_BASE_URL,
   };
 }
 
@@ -54,8 +68,12 @@ function trelloUrl(baseUrl: string, path: string, query: Record<string, TrelloQu
   return url;
 }
 
-async function trelloRequest(path: string, options: TrelloRequestOptions = {}): Promise<unknown> {
-  const { apiKey, token, baseUrl } = readTrelloCredentials();
+async function trelloRequest(
+  config: TrelloMcpConfig,
+  path: string,
+  options: TrelloRequestOptions = {},
+): Promise<unknown> {
+  const { apiKey, token, baseUrl } = readTrelloCredentials(config);
   const url = trelloUrl(baseUrl, path, {
     ...options.query,
     key: apiKey,
@@ -135,7 +153,7 @@ function stringList(values: string[] | undefined): string | undefined {
   return values.join(",");
 }
 
-export function registerTrelloMcp(server: McpServer): void {
+export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {}): void {
   server.registerTool(
     "trello-list-boards",
     {
@@ -151,7 +169,7 @@ export function registerTrelloMcp(server: McpServer): void {
     },
     async ({ includeClosed }) =>
       runTrelloTool("boards", () =>
-        trelloRequest("members/me/boards", {
+        trelloRequest(config, "members/me/boards", {
           query: {
             filter: includeClosed ? "all" : "open",
             fields: "id,name,url,closed,dateLastActivity",
@@ -176,7 +194,7 @@ export function registerTrelloMcp(server: McpServer): void {
     },
     async ({ boardId, includeClosed }) =>
       runTrelloTool("lists", () =>
-        trelloRequest(`boards/${encodeURIComponent(boardId)}/lists`, {
+        trelloRequest(config, `boards/${encodeURIComponent(boardId)}/lists`, {
           query: {
             filter: includeClosed ? "all" : "open",
             fields: "id,name,closed,pos",
@@ -210,7 +228,7 @@ export function registerTrelloMcp(server: McpServer): void {
         : `lists/${encodeURIComponent(listId as string)}`;
 
       return runTrelloTool("cards", () =>
-        trelloRequest(`${containerPath}/cards`, {
+        trelloRequest(config, `${containerPath}/cards`, {
           query: {
             filter: cardFilter(includeClosed),
             fields: "id,name,desc,due,idList,labels,url,closed,pos,dateLastActivity",
@@ -236,7 +254,7 @@ export function registerTrelloMcp(server: McpServer): void {
     },
     async ({ cardId, includeComments }) =>
       runTrelloTool("card", () =>
-        trelloRequest(`cards/${encodeURIComponent(cardId)}`, {
+        trelloRequest(config, `cards/${encodeURIComponent(cardId)}`, {
           query: {
             fields: "all",
             actions: includeComments ? "commentCard" : undefined,
@@ -266,7 +284,7 @@ export function registerTrelloMcp(server: McpServer): void {
     },
     async ({ listId, name, description, due, labelIds, position }) =>
       runTrelloTool("card", () =>
-        trelloRequest("cards", {
+        trelloRequest(config, "cards", {
           method: "POST",
           query: {
             idList: listId,
@@ -315,7 +333,7 @@ export function registerTrelloMcp(server: McpServer): void {
       }
 
       return runTrelloTool("card", () =>
-        trelloRequest(`cards/${encodeURIComponent(cardId)}`, {
+        trelloRequest(config, `cards/${encodeURIComponent(cardId)}`, {
           method: "PUT",
           query: updates,
         }),
@@ -340,7 +358,7 @@ export function registerTrelloMcp(server: McpServer): void {
     },
     async ({ cardId, text }) =>
       runTrelloTool("comment", () =>
-        trelloRequest(`cards/${encodeURIComponent(cardId)}/actions/comments`, {
+        trelloRequest(config, `cards/${encodeURIComponent(cardId)}/actions/comments`, {
           method: "POST",
           query: {
             text,
@@ -365,7 +383,8 @@ export function registerTrelloMcp(server: McpServer): void {
           text: [
             "# Trello MCP",
             "",
-            "Set `TRELLO_API_KEY` and `TRELLO_TOKEN` in the MCP server environment.",
+            "Send `x-trello-api-key` and `x-trello-token` headers with MCP requests, or set `TRELLO_API_KEY` and `TRELLO_TOKEN` in the MCP server environment.",
+            "Optionally send `x-trello-api-base-url`, or set `TRELLO_API_BASE_URL`, to override the Trello API base URL.",
             "Generate them from https://trello.com/app-key while signed in to Trello.",
             "",
             "Available tools:",

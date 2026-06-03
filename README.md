@@ -92,8 +92,9 @@ Protocol servers. It exposes Streamable HTTP at `/mcp`, plus `/` and `/health`
 endpoints for deployment checks.
 
 It includes Trello MCP tools for listing boards, lists, and cards; fetching a
-card; creating or updating cards; and adding card comments. Configure
-`TRELLO_API_KEY` and `TRELLO_TOKEN` in the server environment before using them.
+card; creating or updating cards; and adding card comments. Send
+`x-trello-api-key` and `x-trello-token` MCP request headers, or configure
+`TRELLO_API_KEY` and `TRELLO_TOKEN` in the server environment as a fallback.
 
 Run it locally:
 
