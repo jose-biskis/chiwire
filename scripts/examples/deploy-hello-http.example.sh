@@ -14,17 +14,7 @@ fi
 if [[ -z "${SSH_PORT:-}" && -z "${DEPLOY_SSH_PORT:-}" ]]; then
   export SSH_PORT="22"
 fi
-IMAGE_NAME="${IMAGE_NAME:-chiwire/hello-http}"
-IMAGE_TAG="${IMAGE_TAG:-latest}"
-CONTAINER_NAME="${CONTAINER_NAME:-hello-http}"
-HOST_PORT="${HOST_PORT:-8080}"
-CONTAINER_PORT="${CONTAINER_PORT:-3000}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 
-./scripts/deploy-docker-ssh.sh \
-  --image "$IMAGE_NAME" \
-  --tag "$IMAGE_TAG" \
-  --container "$CONTAINER_NAME" \
-  --dockerfile apps/hello-http/Dockerfile \
-  --context . \
-  --port "${HOST_PORT}:${CONTAINER_PORT}" \
-  --env "PORT=${CONTAINER_PORT}"
+"$REPO_ROOT/scripts/deploy-app.sh" "$REPO_ROOT/apps/hello-http" "$@"

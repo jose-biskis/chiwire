@@ -51,7 +51,71 @@ The deploy scripts resolve the SSH target in this order:
 3. `DEPLOY_SSH_TARGET`
 4. `DEPLOY_SSH_USER` + `DEPLOY_SSH_HOST`
 
+### Deploy an app from project settings
+
+Each app can keep non-secret deployment defaults in a committed `deploy.json`
+file. For example, `apps/hello-http/deploy.json` defines the Docker image,
+container name, build paths, container port, and whether the app should be
+reachable publicly or only through localhost.
+
+Run this from the repository root:
+
+```sh
+./scripts/deploy-app.sh apps/hello-http
+```
+
+The wrapper reads `apps/hello-http/deploy.json`, then calls
+`deploy-docker-ssh.sh` with the derived `--port` and `--env PORT=...` values.
+You can also use the npm shortcut:
+
+```sh
+npm run deploy:hello
+```
+
+The settings file supports these core fields:
+
+| Field | Description |
+| --- | --- |
+| `image` | Docker image name, without the tag. |
+| `tag` | Docker image tag. Defaults to `latest`. |
+| `container` | Remote Docker container name. |
+| `build.context` | Docker build context, relative to the settings file. |
+| `build.dockerfile` | Dockerfile path, relative to the settings file. |
+| `runtime.containerPort` | Port the app listens on inside the container. |
+| `runtime.visibility` | `internal`, `public`, or `domain`. Defaults to `internal`. |
+| `runtime.hostPort` | Host port to bind. Defaults to `runtime.containerPort`. |
+| `proxy.domain` | Root domain or subdomain required for `visibility: "domain"`. |
+| `proxy.type` | `caddy` or `nginx` for domain deployments. Defaults to `caddy`. |
+
+Visibility controls how the Docker port is published:
+
+| Visibility | Docker binding | Use case |
+| --- | --- | --- |
+| `internal` | `127.0.0.1:hostPort:containerPort` | App is reachable only on the deploy host or by another host-level service. |
+| `public` | `hostPort:containerPort` | App is reachable directly from the internet on the host port. |
+| `domain` | `127.0.0.1:hostPort:containerPort` plus reverse proxy | App is served from a root domain or subdomain through Caddy or nginx. |
+
+For one-off changes, prefer CLI overrides instead of editing the file:
+
+```sh
+./scripts/deploy-app.sh apps/hello-http --visibility internal
+./scripts/deploy-app.sh apps/hello-http --visibility domain --domain app.example.com
+```
+
+Use `--dry-run` to inspect the generated commands without building, uploading,
+or connecting over SSH:
+
+```sh
+./scripts/deploy-app.sh apps/hello-http --dry-run
+```
+
+Keep secrets such as SSH credentials in `.env.deploy.local`; `deploy.json`
+should contain app metadata and routing choices that are safe to commit.
+
 ### Deploy the hello HTTP test app directly
+
+`deploy-docker-ssh.sh` remains available as the low-level command when you need
+to pass every Docker option manually.
 
 Run this from the repository root:
 
@@ -89,11 +153,19 @@ chmod +x deploy-hello-http.sh
 
 SSH_HOST=deploy@example.com \
 SSH_PORT=22 \
-HOST_PORT=8080 \
 ./deploy-hello-http.sh
 ```
 
-The example supports these environment variables:
+The wrapper reads `apps/hello-http/deploy.json` and supports the same CLI
+overrides as `deploy-app.sh`, for example:
+
+```sh
+./deploy-hello-http.sh --visibility internal
+./deploy-hello-http.sh --tag canary --dry-run
+```
+
+The example still supports the SSH-related environment variables loaded by
+`.env.deploy.local`:
 
 | Variable | Default | Description |
 | --- | --- | --- |
@@ -104,24 +176,38 @@ The example supports these environment variables:
 | `DEPLOY_SSH_PORT` | unset | SSH port used when `SSH_PORT` is unset. |
 | `SSH_IDENTITY_FILE` | unset | Optional SSH private key path. |
 | `SSHPASS` | unset | Optional password used through `sshpass -e`. |
-| `IMAGE_NAME` | `chiwire/hello-http` | Docker image name to build and deploy. |
-| `IMAGE_TAG` | `latest` | Docker image tag. |
-| `CONTAINER_NAME` | `hello-http` | Remote Docker container name. |
-| `HOST_PORT` | `8080` | Remote host port to publish. |
-| `CONTAINER_PORT` | `3000` | Container port used by the app. |
 
 ### Serve the app from a root domain or subdomain
 
 Direct port publishing serves plain HTTP, for example `http://example.com:8080/`.
 To serve `.dev` domains or any production-style URL over HTTPS, publish the
-container on localhost and configure a host-level reverse proxy:
+container on localhost and configure a host-level reverse proxy. With app
+settings, change the app's `deploy.json` to use `domain` visibility:
 
-```sh
-HOST_PORT=127.0.0.1:3000 ./deploy-hello-http.sh
+```json
+{
+  "runtime": {
+    "containerPort": 3000,
+    "visibility": "domain",
+    "hostPort": 3000
+  },
+  "proxy": {
+    "type": "caddy",
+    "domain": "app.host.dev"
+  }
+}
 ```
 
 Then point DNS for the root domain (`host.dev`) or subdomain (`app.host.dev`) to
-the deploy host and run `configure-reverse-proxy-ssh.sh`.
+the deploy host and run:
+
+```sh
+./scripts/deploy-app.sh apps/hello-http
+```
+
+The wrapper deploys the container to `127.0.0.1:3000` and then runs
+`configure-reverse-proxy-ssh.sh` for the configured domain. You can still run the
+proxy script directly when you need to manage host-level routing separately.
 
 #### Caddy
 
