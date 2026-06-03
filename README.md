@@ -91,6 +91,10 @@ The `apps/mcps` workspace is a deployable home for self-hosted Model Context
 Protocol servers. It exposes Streamable HTTP at `/mcp`, plus `/` and `/health`
 endpoints for deployment checks.
 
+It includes Trello MCP tools for listing boards, lists, and cards; fetching a
+card; creating or updating cards; and adding card comments. Configure
+`TRELLO_API_KEY` and `TRELLO_TOKEN` in the server environment before using them.
+
 Run it locally:
 
 ```sh

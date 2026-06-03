@@ -20,16 +20,37 @@ curl http://localhost:3000/
 curl http://localhost:3000/health
 ```
 
+## Trello MCP tools
+
+This workspace includes Trello MCP tools for:
+
+- listing boards, lists, and cards
+- fetching a card
+- creating a card
+- updating or moving a card
+- adding a card comment
+
+Set these environment variables before using Trello tools:
+
+```sh
+TRELLO_API_KEY=your-trello-api-key
+TRELLO_TOKEN=your-trello-token
+```
+
+Generate both from [trello.com/app-key](https://trello.com/app-key) while signed
+in to Trello.
+
 ## Add your own MCPs
 
-Edit `src/index.ts` and register your own MCP capabilities:
+Edit `src/index.ts` or add modules beside it to register your own MCP
+capabilities:
 
 - `server.registerTool(...)` for actions the model can call.
 - `server.registerResource(...)` for data the model can read.
 - `server.registerPrompt(...)` for reusable prompt templates.
 
-The starter server includes a `server-info` tool and a `deployment-guide`
-resource so MCP clients can verify the endpoint.
+The server includes a `server-info` tool, a `deployment-guide` resource, and a
+`trello-setup` resource so MCP clients can verify the endpoint and Trello setup.
 
 ## Deploy to your own server
 

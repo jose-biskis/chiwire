@@ -8,6 +8,8 @@ import {
 } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
+import { registerTrelloMcp } from "./trello.js";
+
 const DEFAULT_PORT = 3000;
 const MCP_PATH = "/mcp";
 const JSON_CONTENT_TYPE = "application/json; charset=utf-8";
@@ -60,12 +62,15 @@ function createMcpServer(): McpServer {
           type: "text",
           text: [
             "Chiwire MCPs is a deployable workspace for self-hosted Model Context Protocol servers.",
-            "Add tools, resources, and prompts in apps/mcps/src/index.ts, then deploy this app to your own server.",
+            "This server includes Trello tools for listing boards, lists, and cards; creating cards; updating cards; and adding comments.",
+            "Set TRELLO_API_KEY and TRELLO_TOKEN in the server environment before using Trello tools.",
           ].join("\n"),
         },
       ],
     }),
   );
+
+  registerTrelloMcp(server);
 
   server.registerResource(
     "deployment-guide",
@@ -85,6 +90,7 @@ function createMcpServer(): McpServer {
             "",
             "This workspace exposes MCP servers over Streamable HTTP at `/mcp`.",
             "Use `PORT` to choose the listen port and `MCP_ALLOWED_ORIGIN` to restrict browser clients.",
+            "Trello tools require `TRELLO_API_KEY` and `TRELLO_TOKEN` in the server environment.",
             "Deploy with `npm run deploy:mcps` after configuring your SSH deployment environment.",
           ].join("\n"),
         },
