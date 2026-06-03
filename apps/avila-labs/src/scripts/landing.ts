@@ -297,7 +297,7 @@ function animateMacaws() {
     translateY: [28, 0],
     opacity: [0, 1],
     duration: 900,
-    delay: (_target, index) => index * 90,
+    delay: (_target: unknown, index = 0) => index * 90,
     ease: "outExpo",
   });
 }

@@ -11,7 +11,8 @@
     "typecheck": "astro check"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.9"
+    "@astrojs/check": "^0.9.9",
+    "@types/three": "^0.184.1"
   },
   "dependencies": {
     "animejs": "^4.4.1",
