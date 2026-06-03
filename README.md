@@ -9,6 +9,7 @@ single baseline for TypeScript configuration and developer scripts.
 ```text
 .
 ├── apps/              # Deployable apps and experiments
+│   ├── avila-labs/    # Astro landing page for AvilaLabs
 │   └── hello-http/    # Minimal HTTP service for Docker deployment testing
 ├── packages/          # Shared libraries, utilities, and project modules
 ├── scripts/           # Reusable local development and deployment scripts
@@ -29,6 +30,23 @@ Run the workspace type check:
 
 ```sh
 npm run typecheck
+```
+
+## AvilaLabs landing page
+
+The `apps/avila-labs` workspace is an Astro landing page with a stylized
+low-poly mountain scene, a Three.js 3D mascot, and Anime.js-powered macaws.
+
+Run it locally:
+
+```sh
+npm run dev:avila
+```
+
+Build the static site:
+
+```sh
+npm run build --workspace @chiwire/avila-labs
 ```
 
 ## Hello HTTP test app
@@ -74,6 +92,7 @@ deployment scripts. Apps can keep non-secret deploy defaults in their own
 beside the app:
 
 ```sh
+npm run deploy:avila
 npm run deploy:hello
 ```
 

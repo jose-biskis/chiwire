@@ -95,6 +95,14 @@ Visibility controls how the Docker port is published:
 | `public` | `hostPort:containerPort` | App is reachable directly from the internet on the host port. |
 | `domain` | `127.0.0.1:hostPort:containerPort` plus reverse proxy | App is served from a root domain or subdomain through Caddy or nginx. |
 
+AvilaLabs has the same kind of settings in `apps/avila-labs/deploy.json` and
+can be deployed with:
+
+```sh
+./scripts/deploy-app.sh apps/avila-labs
+npm run deploy:avila
+```
+
 For one-off changes, prefer CLI overrides instead of editing the file:
 
 ```sh
@@ -142,6 +150,23 @@ curl http://example.com:8080/
 # Hello, world!
 ```
 
+### Deploy the AvilaLabs Astro landing page directly
+
+The AvilaLabs app builds to static files and is served from an nginx container.
+Run this from the repository root:
+
+```sh
+./scripts/deploy-docker-ssh.sh \
+  --image chiwire/avila-labs \
+  --tag latest \
+  --container avila-labs \
+  --dockerfile apps/avila-labs/Dockerfile \
+  --context . \
+  --port 127.0.0.1:3000:80
+```
+
+Then configure the reverse proxy with `--upstream 127.0.0.1:3000`.
+
 ### Use the example wrapper script
 
 Copy the example script, then configure it with environment variables or the
@@ -156,12 +181,24 @@ SSH_PORT=22 \
 ./deploy-hello-http.sh
 ```
 
-The wrapper reads `apps/hello-http/deploy.json` and supports the same CLI
-overrides as `deploy-app.sh`, for example:
+For AvilaLabs:
+
+```sh
+cp scripts/examples/deploy-avila-labs.example.sh deploy-avila-labs.sh
+chmod +x deploy-avila-labs.sh
+
+SSH_HOST=deploy@example.com \
+SSH_PORT=22 \
+./deploy-avila-labs.sh
+```
+
+The wrappers read each app's `deploy.json` and support the same CLI overrides as
+`deploy-app.sh`, for example:
 
 ```sh
 ./deploy-hello-http.sh --visibility internal
 ./deploy-hello-http.sh --tag canary --dry-run
+./deploy-avila-labs.sh --visibility domain --domain avilalabs.example
 ```
 
 The example still supports the SSH-related environment variables loaded by

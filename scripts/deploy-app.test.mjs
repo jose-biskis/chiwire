@@ -6,10 +6,10 @@ import test from "node:test";
 
 import { buildDeployPlan, formatCommand, loadDeploySettings } from "./deploy-app.mjs";
 
-function withFixture(settings, callback) {
+function withFixture(settings, callback, appPath = "apps/hello-http") {
   const repoRoot = mkdtempSync(path.join(os.tmpdir(), "deploy-app-"));
   try {
-    const appDir = path.join(repoRoot, "apps/hello-http");
+    const appDir = path.join(repoRoot, appPath);
     mkdirSync(appDir, { recursive: true });
     mkdirSync(path.join(repoRoot, "scripts"), { recursive: true });
     writeFileSync(path.join(appDir, "Dockerfile"), "FROM scratch\n");
@@ -90,6 +90,40 @@ test("domain visibility binds locally and configures reverse proxy", () => {
     assert.match(proxyCommand, /--upstream 127\.0\.0\.1:3000/);
     assert.match(proxyCommand, /--skip-tls/);
   });
+});
+
+test("builds an internal nginx deploy command for AvilaLabs", () => {
+  withFixture({
+    image: "chiwire/avila-labs",
+    tag: "latest",
+    container: "avila-labs",
+    build: {
+      context: "../..",
+      dockerfile: "Dockerfile",
+    },
+    runtime: {
+      containerPort: 80,
+      visibility: "internal",
+      hostPort: 3000,
+      setPortEnv: false,
+    },
+  }, ({ repoRoot }) => {
+    const loaded = loadDeploySettings({
+      appPath: "apps/avila-labs",
+      cwd: repoRoot,
+    });
+    const plan = buildDeployPlan({
+      ...loaded,
+      repoRoot,
+    });
+
+    assert.equal(plan.portBinding, "127.0.0.1:3000:80");
+    assert.equal(plan.commands.length, 1);
+    const command = formatCommand(plan.commands[0]);
+    assert.match(command, /--port 127\.0\.0\.1:3000:80/);
+    assert.doesNotMatch(command, /--env PORT=80/);
+    assert.match(command, /--dockerfile apps\/avila-labs\/Dockerfile/);
+  }, "apps/avila-labs");
 });
 
 test("rejects unknown visibility values", () => {

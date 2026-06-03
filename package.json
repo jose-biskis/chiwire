@@ -12,10 +12,12 @@
     "build": "npm run build --workspaces",
     "dependency-map": "node scripts/dependency-map.mjs",
     "affected": "node scripts/dependency-map.mjs --affected",
+    "deploy:avila": "./scripts/deploy-app.sh apps/avila-labs",
+    "dev:avila": "npm run dev --workspace @chiwire/avila-labs",
     "deploy:hello": "./scripts/deploy-app.sh apps/hello-http",
     "start:hello": "npm run start --workspace @chiwire/hello-http",
     "test:deploy-settings": "node --test scripts/deploy-app.test.mjs",
-    "typecheck": "tsc --build",
+    "typecheck": "npm run typecheck --workspaces",
     "typecheck:watch": "tsc --build --watch"
   },
   "devDependencies": {
