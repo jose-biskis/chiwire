@@ -84,6 +84,7 @@ The settings file supports these core fields:
 | `runtime.containerPort` | Port the app listens on inside the container. |
 | `runtime.visibility` | `internal`, `public`, or `domain`. Defaults to `internal`. |
 | `runtime.hostPort` | Host port to bind. Defaults to `runtime.containerPort`. |
+| `runtime.env` | Non-secret environment defaults passed to the container. |
 | `proxy.domain` | Root domain or subdomain required for `visibility: "domain"`. |
 | `proxy.type` | `caddy` or `nginx` for domain deployments. Defaults to `caddy`. |
 
@@ -117,6 +118,7 @@ For one-off changes, prefer CLI overrides instead of editing the file:
 ./scripts/deploy-app.sh apps/hello-http --visibility internal
 ./scripts/deploy-app.sh apps/hello-http --visibility domain --domain app.example.com
 ./scripts/deploy-app.sh apps/mcps --visibility domain --domain mcps.example.com
+./scripts/deploy-app.sh apps/postgres --env POSTGRES_PASSWORD=change-me
 ```
 
 Use `--dry-run` to inspect the generated commands without building, uploading,
@@ -127,7 +129,23 @@ or connecting over SSH:
 ```
 
 Keep secrets such as SSH credentials in `.env.deploy.local`; `deploy.json`
-should contain app metadata and routing choices that are safe to commit.
+should contain app metadata, routing choices, and non-secret defaults that are
+safe to commit. Pass container secrets with repeatable `--env KEY=VALUE`
+overrides, for example `--env POSTGRES_PASSWORD=...`.
+
+### Deploy service sections
+
+The Postgres and Redis sections under `apps/` are regular Docker deploy targets:
+
+```sh
+npm run deploy:postgres -- --env POSTGRES_PASSWORD=change-me
+npm run deploy:redis
+```
+
+`apps/postgres` exposes PgBouncer from the container on port `6432` and maps it
+to `127.0.0.1:5432` on the Docker host by default. `apps/redis` runs Redis as a
+simple memory cache with persistence disabled, `maxmemory 256mb`, and
+`allkeys-lru` eviction.
 
 ### Deploy the hello HTTP test app directly
 

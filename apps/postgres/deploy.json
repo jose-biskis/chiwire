@@ -1,0 +1,25 @@
+{
+  "image": "chiwire/postgres-pgbouncer",
+  "tag": "latest",
+  "container": "postgres-pgbouncer",
+  "build": {
+    "context": ".",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 6432,
+    "visibility": "internal",
+    "hostPort": 5432,
+    "setPortEnv": false,
+    "volumes": [
+      "chiwire-postgres-data:/var/lib/postgresql/data"
+    ],
+    "env": {
+      "POSTGRES_DB": "chiwire",
+      "POSTGRES_USER": "chiwire",
+      "PGBOUNCER_POOL_MODE": "transaction",
+      "PGBOUNCER_MAX_CLIENT_CONN": 100,
+      "PGBOUNCER_DEFAULT_POOL_SIZE": 20
+    }
+  }
+}

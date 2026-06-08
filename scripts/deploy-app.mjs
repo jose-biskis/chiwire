@@ -26,6 +26,7 @@ Options:
   --visibility MODE        Override runtime.visibility: internal, public, domain
   --host-port PORT         Override runtime.hostPort
   --container-port PORT    Override runtime.containerPort
+  --env KEY=VALUE          Add or override a container environment variable; repeatable
   --domain DOMAIN          Domain/subdomain for visibility=domain
   --proxy caddy|nginx      Reverse proxy type for visibility=domain
   --email EMAIL            Let's Encrypt email for nginx/certbot
@@ -177,6 +178,20 @@ function hasKeyValueEntry(entries, key) {
   return entries.some((entry) => entry.startsWith(`${key}=`));
 }
 
+function keyValueEntryName(entry) {
+  return entry.slice(0, entry.indexOf("="));
+}
+
+function mergeKeyValueEntries(...entrySets) {
+  const merged = new Map();
+  for (const entries of entrySets) {
+    for (const entry of entries) {
+      merged.set(keyValueEntryName(entry), entry);
+    }
+  }
+  return Array.from(merged.values());
+}
+
 function resolvePath(baseDir, value, label) {
   const pathValue = requiredString(value, label);
   return path.isAbsolute(pathValue) ? pathValue : path.resolve(baseDir, pathValue);
@@ -197,6 +212,7 @@ function displayPath(repoRoot, value) {
 
 function parseArgs(argv) {
   const options = {
+    envEntries: [],
     sshOptions: [],
   };
   const positional = [];
@@ -232,6 +248,9 @@ function parseArgs(argv) {
         break;
       case "--container-port":
         options.containerPort = readValue(arg);
+        break;
+      case "--env":
+        options.envEntries.push(readValue(arg));
         break;
       case "--domain":
         options.domain = readValue(arg);
@@ -379,7 +398,10 @@ export function buildDeployPlan({
     ? `${hostPort}:${containerPort}`
     : `${bindAddress}:${hostPort}:${containerPort}`;
 
-  const envEntries = normalizeKeyValueEntries(runtime.env ?? deploySettings.env, "runtime.env");
+  const envEntries = mergeKeyValueEntries(
+    normalizeKeyValueEntries(runtime.env ?? deploySettings.env, "runtime.env"),
+    normalizeKeyValueEntries(cliOptions.envEntries, "--env"),
+  );
   if (runtime.setPortEnv !== false && !hasKeyValueEntry(envEntries, "PORT")) {
     envEntries.unshift(`PORT=${containerPort}`);
   }

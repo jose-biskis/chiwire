@@ -16,6 +16,8 @@
     "dev:avila": "npm run dev --workspace @chiwire/avila-labs",
     "deploy:hello": "./scripts/deploy-app.sh apps/hello-http",
     "deploy:mcps": "./scripts/deploy-app.sh apps/mcps",
+    "deploy:postgres": "./scripts/deploy-app.sh apps/postgres",
+    "deploy:redis": "./scripts/deploy-app.sh apps/redis",
     "start:hello": "npm run start --workspace @chiwire/hello-http",
     "start:mcps": "npm run start --workspace @chiwire/mcps",
     "test:deploy-settings": "node --test scripts/deploy-app.test.mjs",
