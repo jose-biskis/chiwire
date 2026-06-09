@@ -92,6 +92,42 @@ test("domain visibility binds locally and configures reverse proxy", () => {
   });
 });
 
+test("CLI env entries override matching deploy settings", () => {
+  withFixture({
+    image: "chiwire/hello-http",
+    container: "hello-http",
+    runtime: {
+      containerPort: 3000,
+      env: {
+        PORT: 3000,
+        API_TOKEN: "default",
+        LOG_LEVEL: "info",
+      },
+    },
+  }, ({ repoRoot }) => {
+    const loaded = loadDeploySettings({
+      appPath: "apps/hello-http",
+      cwd: repoRoot,
+    });
+    const plan = buildDeployPlan({
+      ...loaded,
+      repoRoot,
+      cliOptions: {
+        envEntries: [
+          "API_TOKEN=secret",
+          "EXTRA=true",
+        ],
+      },
+    });
+
+    const command = formatCommand(plan.commands[0]);
+    assert.match(command, /--env API_TOKEN=secret/);
+    assert.match(command, /--env EXTRA=true/);
+    assert.match(command, /--env LOG_LEVEL=info/);
+    assert.doesNotMatch(command, /API_TOKEN=default/);
+  });
+});
+
 test("builds an internal nginx deploy command for AvilaLabs", () => {
   withFixture({
     image: "chiwire/avila-labs",
@@ -124,6 +160,95 @@ test("builds an internal nginx deploy command for AvilaLabs", () => {
     assert.doesNotMatch(command, /--env PORT=80/);
     assert.match(command, /--dockerfile apps\/avila-labs\/Dockerfile/);
   }, "apps/avila-labs");
+});
+
+test("builds a Postgres deploy command that exposes PgBouncer", () => {
+  withFixture({
+    image: "chiwire/postgres-pgbouncer",
+    container: "postgres-pgbouncer",
+    build: {
+      context: ".",
+      dockerfile: "Dockerfile",
+    },
+    runtime: {
+      containerPort: 6432,
+      visibility: "internal",
+      hostPort: 5432,
+      setPortEnv: false,
+      volumes: [
+        "chiwire-postgres-data:/var/lib/postgresql/data",
+      ],
+      env: {
+        POSTGRES_DB: "chiwire",
+        POSTGRES_USER: "chiwire",
+      },
+    },
+  }, ({ repoRoot }) => {
+    const loaded = loadDeploySettings({
+      appPath: "apps/postgres",
+      cwd: repoRoot,
+    });
+    const plan = buildDeployPlan({
+      ...loaded,
+      repoRoot,
+      cliOptions: {
+        envEntries: [
+          "POSTGRES_PASSWORD=secret",
+        ],
+      },
+    });
+
+    assert.equal(plan.portBinding, "127.0.0.1:5432:6432");
+    const command = formatCommand(plan.commands[0]);
+    assert.match(command, /--dockerfile apps\/postgres\/Dockerfile/);
+    assert.match(command, /--port 127\.0\.0\.1:5432:6432/);
+    assert.match(command, /--volume chiwire-postgres-data:\/var\/lib\/postgresql\/data/);
+    assert.match(command, /--env POSTGRES_PASSWORD=secret/);
+    assert.doesNotMatch(command, /--env PORT=6432/);
+  }, "apps/postgres");
+});
+
+test("builds a Redis cache deploy command with memory settings", () => {
+  withFixture({
+    image: "chiwire/redis-cache",
+    container: "redis-cache",
+    build: {
+      context: ".",
+      dockerfile: "Dockerfile",
+    },
+    runtime: {
+      containerPort: 6379,
+      visibility: "internal",
+      hostPort: 6379,
+      setPortEnv: false,
+      env: {
+        REDIS_MAXMEMORY: "256mb",
+        REDIS_MAXMEMORY_POLICY: "allkeys-lru",
+      },
+    },
+  }, ({ repoRoot }) => {
+    const loaded = loadDeploySettings({
+      appPath: "apps/redis",
+      cwd: repoRoot,
+    });
+    const plan = buildDeployPlan({
+      ...loaded,
+      repoRoot,
+      cliOptions: {
+        envEntries: [
+          "REDIS_PASSWORD=secret",
+        ],
+      },
+    });
+
+    assert.equal(plan.portBinding, "127.0.0.1:6379:6379");
+    const command = formatCommand(plan.commands[0]);
+    assert.match(command, /--dockerfile apps\/redis\/Dockerfile/);
+    assert.match(command, /--env REDIS_MAXMEMORY=256mb/);
+    assert.match(command, /--env REDIS_MAXMEMORY_POLICY=allkeys-lru/);
+    assert.match(command, /--env REDIS_PASSWORD=secret/);
+    assert.doesNotMatch(command, /--env PORT=6379/);
+  }, "apps/redis");
 });
 
 test("rejects unknown visibility values", () => {
