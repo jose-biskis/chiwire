@@ -5,11 +5,30 @@
   "description": "Valenstonic Academy web UI — courses, backoffice, 3D practice labs.",
   "type": "module",
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc --build && vite build",
+    "build:server": "tsc --build",
+    "build:client": "vite build",
+    "dev:client": "vite",
     "start": "node dist/index.js",
-    "typecheck": "tsc --build --pretty false"
+    "typecheck": "tsc --build --pretty false && tsc -p client --pretty false --noEmit"
   },
   "dependencies": {
-    "@chiwire/valenstonic-academy-shared": "*"
+    "@chiwire/valenstonic-academy-shared": "*",
+    "@radix-ui/react-slot": "^1.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.525.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.7.0",
+    "tailwind-merge": "^3.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.7.0",
+    "tailwindcss": "^4.1.11",
+    "vite": "^7.0.5"
   }
 }

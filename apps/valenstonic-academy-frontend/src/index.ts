@@ -5,8 +5,6 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import {
   adminPage,
-  coursePage,
-  homePage,
   loginPage,
   notFoundPage,
   practicePage
@@ -18,6 +16,7 @@ const SESSION_COOKIE = "vt_admin_session";
 const MAX_BODY = 2_000_000;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_DIR = path.resolve(__dirname, "../static");
+const CLIENT_DIR = path.resolve(__dirname, "client");
 
 function readPort(): number {
   const configured = process.env.PORT ?? String(DEFAULT_PORT);
@@ -142,25 +141,44 @@ function csv(value: string | undefined): string[] {
 }
 
 function contentTypeFor(filePath: string): string {
-  if (filePath.endsWith(".js")) return "application/javascript; charset=utf-8";
+  if (filePath.endsWith(".html")) return "text/html; charset=utf-8";
+  if (filePath.endsWith(".js") || filePath.endsWith(".mjs")) return "application/javascript; charset=utf-8";
   if (filePath.endsWith(".css")) return "text/css; charset=utf-8";
   if (filePath.endsWith(".json")) return "application/json; charset=utf-8";
+  if (filePath.endsWith(".map")) return "application/json; charset=utf-8";
+  if (filePath.endsWith(".svg")) return "image/svg+xml";
+  if (filePath.endsWith(".png")) return "image/png";
+  if (filePath.endsWith(".jpg") || filePath.endsWith(".jpeg")) return "image/jpeg";
+  if (filePath.endsWith(".woff2")) return "font/woff2";
   if (filePath.endsWith(".glb")) return "model/gltf-binary";
   return "application/octet-stream";
 }
 
-function serveStatic(response: ServerResponse, urlPath: string): boolean {
-  const relative = urlPath.replace(/^\/static\//, "");
-  const resolved = path.resolve(STATIC_DIR, relative);
-  if (!resolved.startsWith(STATIC_DIR) || !existsSync(resolved) || !statSync(resolved).isFile()) {
+function serveFile(response: ServerResponse, rootDir: string, relativePath: string, cache: string): boolean {
+  const resolved = path.resolve(rootDir, relativePath);
+  if (!resolved.startsWith(rootDir) || !existsSync(resolved) || !statSync(resolved).isFile()) {
     return false;
   }
   response.writeHead(200, {
     "content-type": contentTypeFor(resolved),
-    "cache-control": "no-cache"
+    "cache-control": cache
   });
   createReadStream(resolved).pipe(response);
   return true;
+}
+
+function serveStatic(response: ServerResponse, urlPath: string): boolean {
+  const relative = urlPath.replace(/^\/static\//, "");
+  return serveFile(response, STATIC_DIR, relative, "no-cache");
+}
+
+function serveClientAsset(response: ServerResponse, urlPath: string): boolean {
+  const relative = urlPath.replace(/^\//, "");
+  return serveFile(response, CLIENT_DIR, relative, "public, max-age=31536000, immutable");
+}
+
+function serveSpa(response: ServerResponse): boolean {
+  return serveFile(response, CLIENT_DIR, "index.html", "no-store");
 }
 
 async function apiFetch(
@@ -226,6 +244,11 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       return;
     }
 
+    if (method === "GET" && pathname.startsWith("/assets/")) {
+      if (!serveClientAsset(response, pathname)) html(response, 404, notFoundPage());
+      return;
+    }
+
     if (pathname.startsWith("/api/")) {
       await proxyToApi(request, response, `${pathname}${url.search}`);
       return;
@@ -237,36 +260,8 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       return;
     }
 
-    if (method === "GET" && pathname === "/") {
-      const res = await apiFetch("/api/courses");
-      const courses = res.ok ? ((await res.json()) as Array<{
-        slug: string;
-        name: string;
-        description: string | null;
-        category: string;
-      }>) : [];
-      html(response, 200, homePage(courses));
-      return;
-    }
-
-    if (method === "GET" && pathname.startsWith("/courses/")) {
-      const slug = decodeURIComponent(pathname.slice("/courses/".length));
-      const res = await apiFetch(`/api/courses/${encodeURIComponent(slug)}`);
-      if (!res.ok) {
-        html(response, 404, notFoundPage());
-        return;
-      }
-      const data = (await res.json()) as {
-        course: { name: string; description: string | null; category: string };
-        lessons: Array<{
-          lesson_order: number;
-          title: string;
-          kind: string;
-          body: string | null;
-          scene_slug: string | null;
-        }>;
-      };
-      html(response, 200, coursePage(data));
+    if (method === "GET" && (pathname === "/" || pathname.startsWith("/courses/"))) {
+      if (!serveSpa(response)) html(response, 503, notFoundPage());
       return;
     }
 

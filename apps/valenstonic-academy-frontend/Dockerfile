@@ -31,6 +31,8 @@ COPY --from=build /repo/packages/valenstonic-academy-shared/dist packages/valens
 COPY --from=build /repo/apps/valenstonic-academy-frontend/dist apps/valenstonic-academy-frontend/dist
 COPY apps/valenstonic-academy-frontend/static apps/valenstonic-academy-frontend/static
 
+# Vite client assets live under dist/client (included via dist copy above).
+
 USER node
 
 EXPOSE 3000

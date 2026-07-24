@@ -2,6 +2,13 @@
 
 Learner UI, backoffice, and 3D practice labs. Talks to `@chiwire/valenstonic-academy-backend`.
 
+## Stack
+
+- **Marketing / courses**: Vite + React + Tailwind v4 + shadcn primitives (`client/`)
+- **Design system**: Valen's Tonic tokens in `client/src/styles/globals.css` (see `.cursor/skills/valenstonic-frontend`)
+- **Admin**: server-rendered HTML (for now)
+- **Practice labs**: static Three.js (`static/`)
+
 ## Local
 
 ```sh
@@ -11,6 +18,12 @@ export PORT=3000
 npm run build --workspace @chiwire/valenstonic-academy-shared
 npm run build --workspace @chiwire/valenstonic-academy-frontend
 npm run start:vtacademy
+```
+
+Vite-only client HMR (proxies API through the Node server on :3000):
+
+```sh
+npm run dev:client --workspace @chiwire/valenstonic-academy-frontend
 ```
 
 - Site: http://localhost:3000/
