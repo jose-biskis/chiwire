@@ -1,0 +1,15 @@
+{
+  "name": "@chiwire/contimiti",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Contimiti — share texts and files with a one-day TTL.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --build --pretty false"
+  },
+  "dependencies": {
+    "@chiwire/core": "*"
+  }
+}

@@ -365,6 +365,7 @@ export function buildDeployPlan({
   configDir = appDir,
   repoRoot = DEFAULT_REPO_ROOT,
   cliOptions = {},
+  processEnv = process.env,
 }) {
   const deploySettings = requireObject(settings, "deploy settings");
   const build = optionalObject(deploySettings.build, "build");
@@ -398,8 +399,20 @@ export function buildDeployPlan({
     ? `${hostPort}:${containerPort}`
     : `${bindAddress}:${hostPort}:${containerPort}`;
 
+  const envFromNames = normalizeStringArray(runtime.envFrom, "runtime.envFrom");
+  const envFromEntries = envFromNames.flatMap((name) => {
+    const value = processEnv?.[name];
+    if (value === undefined || value === null || value === "") {
+      return [];
+    }
+    if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+      fail(`environment variable ${name} must be a string, number, or boolean`);
+    }
+    return [`${name}=${value}`];
+  });
   const envEntries = mergeKeyValueEntries(
     normalizeKeyValueEntries(runtime.env ?? deploySettings.env, "runtime.env"),
+    envFromEntries,
     normalizeKeyValueEntries(cliOptions.envEntries, "--env"),
   );
   if (runtime.setPortEnv !== false && !hasKeyValueEntry(envEntries, "PORT")) {

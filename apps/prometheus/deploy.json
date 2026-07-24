@@ -1,0 +1,27 @@
+{
+  "image": "chiwire/prometheus",
+  "tag": "latest",
+  "container": "prometheus",
+  "build": {
+    "context": ".",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 9090,
+    "visibility": "internal",
+    "hostPort": 9090,
+    "setPortEnv": false,
+    "volumes": [
+      "/:/host:ro,rslave",
+      "chiwire-prometheus-data:/prometheus"
+    ],
+    "runArgs": [
+      "--pid",
+      "host"
+    ],
+    "env": {
+      "PROMETHEUS_RETENTION": "15d"
+    },
+    "network": "chiwire"
+  }
+}

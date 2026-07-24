@@ -39,6 +39,7 @@ settings into the variables used by the deploy scripts:
 | `DEPLOY_SSH_PORT` | `SSH_PORT` | SSH port. |
 | `DEPLOY_SSH_IDENTITY_FILE` | `SSH_IDENTITY_FILE` | SSH private key path. |
 | `DEPLOY_SSH_PASSWORD` | `SSHPASS` | Password used by `sshpass -e`. |
+| `GF_SECURITY_ADMIN_PASSWORD` | `GF_SECURITY_ADMIN_PASSWORD` | Grafana admin password for `deploy:grafana`. |
 
 Prefer SSH keys when possible. If you use `DEPLOY_SSH_PASSWORD`, install
 `sshpass` locally first; the deploy script will fail with a clear message if
@@ -85,6 +86,7 @@ The settings file supports these core fields:
 | `runtime.visibility` | `internal`, `public`, or `domain`. Defaults to `internal`. |
 | `runtime.hostPort` | Host port to bind. Defaults to `runtime.containerPort`. |
 | `runtime.env` | Non-secret environment defaults passed to the container. |
+| `runtime.envFrom` | Host environment variable names to forward into the container when set. |
 | `proxy.domain` | Root domain or subdomain required for `visibility: "domain"`. |
 | `proxy.type` | `caddy` or `nginx` for domain deployments. Defaults to `caddy`. |
 
@@ -128,10 +130,14 @@ or connecting over SSH:
 ./scripts/deploy-app.sh apps/hello-http --dry-run
 ```
 
-Keep secrets such as SSH credentials in `.env.deploy.local`; `deploy.json`
-should contain app metadata, routing choices, and non-secret defaults that are
-safe to commit. Pass container secrets with repeatable `--env KEY=VALUE`
-overrides, for example `--env POSTGRES_PASSWORD=...`.
+Keep secrets such as SSH credentials and app passwords in
+`.env.deploy.local`; `deploy.json` should only contain non-secret defaults.
+Apps can list secret names in `runtime.envFrom` so deploy picks them up from
+your shell/direnv automatically. You can still override with CLI
+`--env KEY=VALUE`, for example `--env POSTGRES_PASSWORD=...`.
+
+Grafana reads `GF_SECURITY_ADMIN_PASSWORD` from the environment when set in
+`.env.deploy.local`.
 
 ### Deploy service sections
 
@@ -139,6 +145,9 @@ The Postgres and Redis sections under `apps/` are regular Docker deploy targets:
 
 ```sh
 npm run deploy:postgres -- --env POSTGRES_PASSWORD=change-me
+npm run deploy:prometheus
+npm run deploy:cadvisor
+npm run deploy:grafana
 npm run deploy:redis
 ```
 
@@ -343,6 +352,26 @@ You can also run a remote command by placing it after `--`:
 
 The script accepts the same SSH target options as the deploy script:
 `--host`, `--ssh-port`, `--identity-file`, and repeatable `--ssh-option`.
+
+### Tunnel to an internal service over SSH
+
+Use `tunnel-deploy-ssh.sh` to forward a local port to an internal bind on the
+deploy host. This is the usual way to open Grafana when it is deployed with
+`visibility: "internal"`:
+
+```sh
+npm run tunnel:grafana
+./scripts/tunnel-deploy-ssh.sh --app apps/grafana
+```
+
+Then open http://localhost:3030. Leave the tunnel process running until you are
+done.
+
+You can also set ports explicitly:
+
+```sh
+./scripts/tunnel-deploy-ssh.sh --local-port 3030 --remote-port 3030
+```
 
 ### More options
 

@@ -251,6 +251,198 @@ test("builds a Redis cache deploy command with memory settings", () => {
   }, "apps/redis");
 });
 
+
+test("builds a Prometheus deploy command with host mounts", () => {
+  withFixture({
+    image: "chiwire/prometheus",
+    container: "prometheus",
+    build: {
+      context: ".",
+      dockerfile: "Dockerfile",
+    },
+    runtime: {
+      containerPort: 9090,
+      visibility: "internal",
+      hostPort: 9090,
+      setPortEnv: false,
+      volumes: [
+        "/:/host:ro,rslave",
+        "chiwire-prometheus-data:/prometheus",
+      ],
+      runArgs: [
+        "--pid",
+        "host",
+      ],
+      network: "chiwire",
+      env: {
+        PROMETHEUS_RETENTION: "15d",
+      },
+    },
+  }, ({ repoRoot }) => {
+    const loaded = loadDeploySettings({
+      appPath: "apps/prometheus",
+      cwd: repoRoot,
+    });
+    const plan = buildDeployPlan({
+      ...loaded,
+      repoRoot,
+    });
+
+    assert.equal(plan.portBinding, "127.0.0.1:9090:9090");
+    const command = formatCommand(plan.commands[0]);
+    assert.match(command, /--dockerfile apps\/prometheus\/Dockerfile/);
+    assert.match(command, /--port 127\.0\.0\.1:9090:9090/);
+    assert.match(command, /--volume \/:\/host:ro,rslave/);
+    assert.match(command, /--volume chiwire-prometheus-data:\/prometheus/);
+    assert.match(command, /--run-arg --pid/);
+    assert.match(command, /--run-arg host/);
+    assert.match(command, /--network chiwire/);
+    assert.match(command, /--env PROMETHEUS_RETENTION=15d/);
+    assert.doesNotMatch(command, /--env PORT=9090/);
+  }, "apps/prometheus");
+});
+
+
+test("builds a cAdvisor deploy command with privileged host mounts", () => {
+  withFixture({
+    image: "chiwire/cadvisor",
+    container: "cadvisor",
+    build: {
+      context: ".",
+      dockerfile: "Dockerfile",
+    },
+    runtime: {
+      containerPort: 8080,
+      visibility: "internal",
+      hostPort: 8080,
+      setPortEnv: false,
+      network: "chiwire",
+      volumes: [
+        "/:/rootfs:ro",
+        "/var/run:/var/run:ro",
+        "/sys:/sys:ro",
+        "/var/lib/docker/:/var/lib/docker:ro",
+        "/dev/disk/:/dev/disk:ro",
+      ],
+      runArgs: [
+        "--privileged",
+        "--device",
+        "/dev/kmsg",
+      ],
+    },
+  }, ({ repoRoot }) => {
+    const loaded = loadDeploySettings({
+      appPath: "apps/cadvisor",
+      cwd: repoRoot,
+    });
+    const plan = buildDeployPlan({
+      ...loaded,
+      repoRoot,
+    });
+
+    assert.equal(plan.portBinding, "127.0.0.1:8080:8080");
+    const command = formatCommand(plan.commands[0]);
+    assert.match(command, /--dockerfile apps\/cadvisor\/Dockerfile/);
+    assert.match(command, /--network chiwire/);
+    assert.match(command, /--volume \/:\/rootfs:ro/);
+    assert.match(command, /--volume \/var\/run:\/var\/run:ro/);
+    assert.match(command, /--run-arg --privileged/);
+    assert.match(command, /--run-arg --device/);
+    assert.match(command, /--run-arg \/dev\/kmsg/);
+    assert.doesNotMatch(command, /--env PORT=8080/);
+  }, "apps/cadvisor");
+});
+
+test("builds a Grafana deploy command on the chiwire network", () => {
+  withFixture({
+    image: "chiwire/grafana",
+    container: "grafana",
+    build: {
+      context: ".",
+      dockerfile: "Dockerfile",
+    },
+    runtime: {
+      containerPort: 3000,
+      visibility: "internal",
+      hostPort: 3030,
+      setPortEnv: false,
+      volumes: [
+        "chiwire-grafana-data:/var/lib/grafana",
+      ],
+      network: "chiwire",
+      env: {
+        GF_SECURITY_ADMIN_USER: "admin",
+      },
+      envFrom: [
+        "GF_SECURITY_ADMIN_PASSWORD",
+      ],
+    },
+  }, ({ repoRoot }) => {
+    const loaded = loadDeploySettings({
+      appPath: "apps/grafana",
+      cwd: repoRoot,
+    });
+    const plan = buildDeployPlan({
+      ...loaded,
+      repoRoot,
+      processEnv: {
+        GF_SECURITY_ADMIN_PASSWORD: "from-env",
+      },
+    });
+
+    assert.equal(plan.portBinding, "127.0.0.1:3030:3000");
+    const command = formatCommand(plan.commands[0]);
+    assert.match(command, /--dockerfile apps\/grafana\/Dockerfile/);
+    assert.match(command, /--port 127\.0\.0\.1:3030:3000/);
+    assert.match(command, /--volume chiwire-grafana-data:\/var\/lib\/grafana/);
+    assert.match(command, /--network chiwire/);
+    assert.match(command, /--env GF_SECURITY_ADMIN_USER=admin/);
+    assert.match(command, /--env GF_SECURITY_ADMIN_PASSWORD=from-env/);
+    assert.doesNotMatch(command, /--env PORT=3000/);
+  }, "apps/grafana");
+});
+
+test("CLI --env overrides runtime.envFrom values", () => {
+  withFixture({
+    image: "chiwire/grafana",
+    container: "grafana",
+    build: {
+      context: ".",
+      dockerfile: "Dockerfile",
+    },
+    runtime: {
+      containerPort: 3000,
+      visibility: "internal",
+      hostPort: 3030,
+      setPortEnv: false,
+      envFrom: [
+        "GF_SECURITY_ADMIN_PASSWORD",
+      ],
+    },
+  }, ({ repoRoot }) => {
+    const loaded = loadDeploySettings({
+      appPath: "apps/grafana",
+      cwd: repoRoot,
+    });
+    const plan = buildDeployPlan({
+      ...loaded,
+      repoRoot,
+      processEnv: {
+        GF_SECURITY_ADMIN_PASSWORD: "from-env",
+      },
+      cliOptions: {
+        envEntries: [
+          "GF_SECURITY_ADMIN_PASSWORD=from-cli",
+        ],
+      },
+    });
+
+    const command = formatCommand(plan.commands[0]);
+    assert.match(command, /--env GF_SECURITY_ADMIN_PASSWORD=from-cli/);
+    assert.doesNotMatch(command, /--env GF_SECURITY_ADMIN_PASSWORD=from-env/);
+  }, "apps/grafana");
+});
+
 test("rejects unknown visibility values", () => {
   assert.throws(
     () => buildDeployPlan({

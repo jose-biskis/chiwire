@@ -1,0 +1,21 @@
+{
+  "image": "chiwire/contimiti",
+  "tag": "latest",
+  "container": "contimiti",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 3000,
+    "visibility": "domain",
+    "hostPort": 8020,
+    "volumes": [
+      "chiwire-contimiti-data:/data"
+    ]
+  },
+  "proxy": {
+    "type": "caddy",
+    "domain": "contimiti.avilalabs.dev"
+  }
+}

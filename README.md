@@ -10,11 +10,16 @@ single baseline for TypeScript configuration and developer scripts.
 .
 ├── apps/              # Deployable apps and experiments
 │   ├── avila-labs/    # Astro landing page for AvilaLabs
+│   ├── contimiti/     # One-day text and file shares
 │   ├── hello-http/    # Minimal HTTP service for Docker deployment testing
 │   ├── mcps/          # Self-hosted Model Context Protocol servers
 │   ├── postgres/      # Postgres service fronted by PgBouncer
+│   ├── cadvisor/      # Per-container metrics for Prometheus
+│   ├── grafana/       # Grafana dashboards for Prometheus metrics
+│   ├── prometheus/    # Prometheus + node_exporter host metrics
 │   └── redis/         # Redis cache service
 ├── packages/          # Shared libraries, utilities, and project modules
+│   └── core/          # Shared ids, TTL helpers, Knex/pg factory
 ├── scripts/           # Reusable local development and deployment scripts
 ├── package.json       # Root workspace metadata and scripts
 ├── tsconfig.base.json # Shared TypeScript compiler options
@@ -117,10 +122,32 @@ Add custom MCP tools, resources, and prompts in
 [`apps/mcps/README.md`](apps/mcps/README.md) for extension and deployment
 details.
 
+## Contimiti
+
+The `apps/contimiti` workspace is a one-day share app for notes and files.
+Texts open in the browser (copy + update). Files support upload, download, and
+delete. Storage is local filesystem for v1; shared Knex/Postgres helpers live in
+`@chiwire/core` for later.
+
+```sh
+npm run build --workspace @chiwire/core
+npm run build --workspace @chiwire/contimiti
+npm run start:contimiti
+```
+
+Deploy to `contimiti.avilalabs.dev`:
+
+```sh
+npm run deploy:contimiti
+```
+
+See [`apps/contimiti/README.md`](apps/contimiti/README.md).
+
 ## Service sections
 
-The `apps/postgres` and `apps/redis` sections are Docker-deployable services
-that use the same SSH deployment wrapper as the apps.
+The `apps/postgres`, `apps/prometheus`, `apps/cadvisor`, `apps/grafana`, and
+`apps/redis` sections are Docker-deployable services that use the same SSH
+deployment wrapper as the apps.
 
 Postgres is fronted by PgBouncer. The default deployment binds
 `127.0.0.1:5432` on the Docker host to PgBouncer inside the container on port
@@ -138,6 +165,17 @@ npm run deploy:redis
 npm run deploy:redis -- --env REDIS_PASSWORD=change-me
 ```
 
+Prometheus + node_exporter collect host hardware metrics on
+`127.0.0.1:9090`. cAdvisor adds per-container CPU/memory. Grafana serves
+dashboards on `127.0.0.1:3030`:
+
+```sh
+npm run deploy:prometheus
+npm run deploy:cadvisor
+npm run deploy:grafana
+npm run tunnel:grafana
+```
+
 Keep committed service defaults in each section's `deploy.json`. Pass secrets at
 deploy time with repeatable `--env KEY=VALUE` options.
 
@@ -151,7 +189,11 @@ beside the app:
 ```sh
 npm run deploy:avila
 npm run deploy:hello
+npm run deploy:contimiti
 npm run deploy:postgres -- --env POSTGRES_PASSWORD=change-me
+npm run deploy:prometheus
+npm run deploy:cadvisor
+npm run deploy:grafana
 npm run deploy:redis
 ```
 

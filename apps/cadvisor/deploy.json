@@ -1,0 +1,28 @@
+{
+  "image": "chiwire/cadvisor",
+  "tag": "latest",
+  "container": "cadvisor",
+  "build": {
+    "context": ".",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 8080,
+    "visibility": "internal",
+    "hostPort": 8080,
+    "setPortEnv": false,
+    "network": "chiwire",
+    "volumes": [
+      "/:/rootfs:ro",
+      "/var/run:/var/run:ro",
+      "/sys:/sys:ro",
+      "/var/lib/docker/:/var/lib/docker:ro",
+      "/dev/disk/:/dev/disk:ro"
+    ],
+    "runArgs": [
+      "--privileged",
+      "--device",
+      "/dev/kmsg"
+    ]
+  }
+}

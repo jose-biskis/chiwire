@@ -3,10 +3,16 @@
   "files": [],
   "references": [
     {
+      "path": "./packages/core"
+    },
+    {
       "path": "./apps/hello-http"
     },
     {
       "path": "./apps/mcps"
+    },
+    {
+      "path": "./apps/contimiti"
     }
   ]
 }

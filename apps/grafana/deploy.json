@@ -1,0 +1,25 @@
+{
+  "image": "chiwire/grafana",
+  "tag": "latest",
+  "container": "grafana",
+  "build": {
+    "context": ".",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 3000,
+    "visibility": "internal",
+    "hostPort": 3030,
+    "setPortEnv": false,
+    "volumes": [
+      "chiwire-grafana-data:/var/lib/grafana"
+    ],
+    "env": {
+      "GF_SECURITY_ADMIN_USER": "admin"
+    },
+    "envFrom": [
+      "GF_SECURITY_ADMIN_PASSWORD"
+    ],
+    "network": "chiwire"
+  }
+}

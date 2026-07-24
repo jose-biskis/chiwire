@@ -302,6 +302,17 @@ RUN_COMMAND+=("$FULL_IMAGE")
 
 printf -v REMOTE_RUN_COMMAND '%q ' "${RUN_COMMAND[@]}"
 
+NETWORK_ENSURE_SCRIPT=""
+if [[ -n "$NETWORK" ]]; then
+  NETWORK_ENSURE_SCRIPT="$(cat <<NETWORK_ENSURE
+if ! docker network inspect $(quote "$NETWORK") >/dev/null 2>&1; then
+  echo "Creating Docker network $NETWORK"
+  docker network create $(quote "$NETWORK")
+fi
+NETWORK_ENSURE
+)"
+fi
+
 REMOTE_SCRIPT=$(cat <<REMOTE_SCRIPT
 set -Eeuo pipefail
 
@@ -309,6 +320,8 @@ $REMOTE_DOCKER_CHECK
 
 echo "Loading $FULL_IMAGE"
 docker load -i $(quote "$REMOTE_ARCHIVE")
+
+$NETWORK_ENSURE_SCRIPT
 
 if docker container inspect $(quote "$CONTAINER") >/dev/null 2>&1; then
   echo "Removing existing container $CONTAINER"
