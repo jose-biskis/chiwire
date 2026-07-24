@@ -11,7 +11,7 @@ function negroniAssets() {
       glb_url: "/static/models/negroni/gin-bottle.glb",
       collider: { type: "cylinder", radius: 0.12, height: 0.55 },
       spawn: { x: -3.2, y: 0.05, z: 1.2, rotY: 0.2 },
-      meta: { liquidColor: "#dbeafe", label: "GIN" }
+      meta: { liquidColor: "#7dd3fc", label: "GIN" }
     },
     {
       slug: "campari-bottle",
@@ -22,7 +22,7 @@ function negroniAssets() {
       glb_url: "/static/models/negroni/campari-bottle.glb",
       collider: { type: "cylinder", radius: 0.12, height: 0.55 },
       spawn: { x: -2.6, y: 0.05, z: 1.2, rotY: -0.1 },
-      meta: { liquidColor: "#ef4444", label: "CAMPARI" }
+      meta: { liquidColor: "#dc2626", label: "CAMPARI" }
     },
     {
       slug: "vermouth-bottle",
@@ -33,7 +33,7 @@ function negroniAssets() {
       glb_url: "/static/models/negroni/vermouth-bottle.glb",
       collider: { type: "cylinder", radius: 0.12, height: 0.55 },
       spawn: { x: -2.0, y: 0.05, z: 1.2, rotY: 0.15 },
-      meta: { liquidColor: "#7c2d12", label: "VERMOUTH" }
+      meta: { liquidColor: "#92400e", label: "VERMOUTH" }
     },
     {
       slug: "ice-bucket",
@@ -86,7 +86,7 @@ function negroniAssets() {
       model_type: "procedural",
       procedural_key: "barspoon",
       glb_url: "/static/models/negroni/barspoon.glb",
-      collider: { type: "box", width: 0.04, height: 0.02, depth: 0.55 },
+      collider: { type: "cylinder", radius: 0.04, height: 0.52 },
       spawn: { x: 2.2, y: 0.05, z: 1.0 },
       meta: {}
     },
@@ -132,21 +132,21 @@ const GENERIC_ACTIONS = [
     name: "Place",
     kind: "place",
     params_schema: { minCount: 1, stayOnTarget: false },
-    ui_hint: "Drag onto the Mixing glass (taller, left) or Rocks glass (shorter, right)."
+    ui_hint: "Drag onto the Mixing glass (taller, left) or Rocks glass (shorter, right). Use Hand."
   },
   {
     slug: "pour",
     name: "Pour",
     kind: "pour",
     params_schema: { amountMl: 30 },
-    ui_hint: "Drag the bottle onto the Mixing glass. Order matters."
+    ui_hint: "Select Jigger, then drag the bottle onto the Mixing glass."
   },
   {
     slug: "stir",
     name: "Stir",
     kind: "stir",
     params_schema: { durationMs: 4000, technique: "stir" },
-    ui_hint: "Select the barspoon, then Perform action on the Mixing glass."
+    ui_hint: "Drag the barspoon into the Mixing glass to stir."
   },
   {
     slug: "shake",
@@ -160,14 +160,14 @@ const GENERIC_ACTIONS = [
     name: "Strain",
     kind: "strain",
     params_schema: {},
-    ui_hint: "Select the strainer, then Perform — into the Rocks glass."
+    ui_hint: "Drag the strainer onto the Mixing glass to strain into the Rocks glass."
   },
   {
     slug: "measure",
     name: "Measure",
     kind: "measure",
     params_schema: { amountMl: 30 },
-    ui_hint: "Use the jigger to measure before pouring."
+    ui_hint: "Select the Jigger tool, then drag bottles to pour."
   }
 ] as const;
 
@@ -229,7 +229,7 @@ export async function seedIfEmpty(store: AcademyStore): Promise<void> {
       action_slug: "place",
       required_asset_slugs: ["ice-bucket"],
       target_vessel_slug: "mixing-glass",
-      params: { minCount: 3 },
+      params: { minCount: 3, idealCount: 3, maxCount: 5 },
       success_message: "Mixing glass is properly chilled.",
       failure_message: "Place ice in the mixing glass first."
     },
@@ -282,7 +282,7 @@ export async function seedIfEmpty(store: AcademyStore): Promise<void> {
       action_slug: "place",
       required_asset_slugs: ["ice-bucket"],
       target_vessel_slug: "rocks-glass",
-      params: { minCount: 2 },
+      params: { minCount: 2, idealCount: 2, maxCount: 4 },
       success_message: "Service glass ready.",
       failure_message: "Place fresh ice in the rocks glass before straining."
     },

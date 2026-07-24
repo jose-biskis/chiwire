@@ -17,15 +17,48 @@
   let practice = null;
   let currentStepIndex = 0;
   let score = 0;
-  let selectedToolSlug = null;
+  let selectedToolSlug = "hand";
+  let stationCompromised = false;
   let vesselState = {
-    "mixing-glass": { liquids: [], stirred: false, contentsReady: false },
-    "rocks-glass": { liquids: [], strainedIn: false }
+    "mixing-glass": { liquids: [], ice: 0, liquidMl: 0, stirred: false, overflow: false },
+    "rocks-glass": { liquids: [], ice: 0, liquidMl: 0, strainedIn: false, overflow: false }
   };
   /** Counts for generic `place` steps: `${vessel}:${asset}` → count */
   let placeCounts = {};
   /** Visual pieces left in vessels after a successful `place` (ice cubes, etc.) */
   let depositedPieces = [];
+  /** Liquid fill meshes keyed by vessel slug */
+  let liquidMeshes = {};
+  /** Spill puddles / fallen ice on the bar */
+  let spillMeshes = [];
+
+  const BOTTLE_LIQUID = {
+    "gin-bottle": 0x7dd3fc,
+    "campari-bottle": 0xdc2626,
+    "vermouth-bottle": 0x92400e
+  };
+  const SPIRIT_BOTTLES = new Set(["gin-bottle", "campari-bottle", "vermouth-bottle"]);
+  const VESSEL_CAPACITY = {
+    "mixing-glass": { ice: 5, liquidMl: 120 },
+    "rocks-glass": { ice: 4, liquidMl: 90 }
+  };
+  const JIGGER_SIDES = {
+    short: { ml: 30, label: "30 ml" },
+    long: { ml: 45, label: "45 ml" }
+  };
+  const TOOL_SLUGS = new Set(["barspoon", "jigger", "strainer", "shaker"]);
+  const TECHNIQUE_TOOLS = new Set(["barspoon", "strainer", "shaker"]);
+
+  let jiggerState = {
+    side: "short",
+    filledMl: 0,
+    bottleSlug: null
+  };
+
+  const failBannerEl = document.getElementById("fail-banner");
+  const failReasonEl = document.getElementById("fail-reason");
+  const resetBtnEl = document.getElementById("reset-btn");
+  const jiggerSideBarEl = document.getElementById("jigger-side-bar");
 
   const sceneObjects = [];
   let objectBySlug = {};
@@ -69,6 +102,21 @@
     scoreTextEl.textContent = String(score);
   }
 
+  function markCompromised(reason) {
+    stationCompromised = true;
+    failStep(reason);
+    if (failReasonEl) failReasonEl.textContent = reason;
+    if (failBannerEl) failBannerEl.classList.add("visible");
+    if (resetBtnEl) resetBtnEl.classList.add("pulse-reset");
+    controlHintEl.textContent = "Station compromised — Reset to retry, or keep going for a messy pour.";
+  }
+
+  function clearCompromised() {
+    stationCompromised = false;
+    if (failBannerEl) failBannerEl.classList.remove("visible");
+    if (resetBtnEl) resetBtnEl.classList.remove("pulse-reset");
+  }
+
   function succeedStep(message) {
     showToast(message || currentStep()?.success_message || "Good.", true);
     score += 100;
@@ -101,15 +149,15 @@
     let hint = action?.ui_hint || step.title;
     if (actionSlug === "place" && targetName) {
       const what = (step.required_asset_slugs || []).map(assetName).join(" / ");
-      const count = Number(step.params?.minCount || 1);
-      hint =
-        count > 1
-          ? `Drag ${what} onto the ${targetName} (${count}×).`
-          : `Place ${what} on the ${targetName}.`;
+      const ideal = Number(step.params?.idealCount || step.params?.minCount || 1);
+      const max = Number(step.params?.maxCount || ideal + 2);
+      hint = `Drag ${what} onto the ${targetName}. Aim for ~${ideal} (glass holds ${max} before overflow).`;
     } else if (actionSlug === "pour" && targetName) {
-      hint = `Pour into the ${targetName}. Select the jigger first.`;
-    } else if ((actionSlug === "stir" || actionSlug === "strain") && targetName) {
-      hint = `${action?.ui_hint || step.title} Target: ${targetName}.`;
+      hint = `Pick a jigger cup (30 or 45 ml), fill from the bottle, then pour the jigger into the ${targetName}.`;
+    } else if (actionSlug === "stir") {
+      hint = `Drag the barspoon into the ${targetName || "Mixing glass"} to stir.`;
+    } else if (actionSlug === "strain") {
+      hint = `Drag the strainer onto the Mixing glass to pour into the Rocks glass.`;
     }
     controlHintEl.textContent = hint;
     updateTargetHighlight();
@@ -136,7 +184,7 @@
       targetRing = new THREE.Mesh(
         new THREE.RingGeometry(0.22, 0.32, 48),
         new THREE.MeshBasicMaterial({
-          color: 0xfbbf24,
+          color: 0xd01059,
           transparent: true,
           opacity: 0.85,
           side: THREE.DoubleSide,
@@ -218,27 +266,85 @@
   }
 
   // --- Procedural builders ---
-  function bottle(color, labelColor) {
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.11, 0.13, 0.42, 20),
-      new THREE.MeshStandardMaterial({ color, roughness: 0.25, metalness: 0.05, transparent: true, opacity: 0.85 })
+  function toColor(value, fallback) {
+    try {
+      return new THREE.Color(value ?? fallback);
+    } catch {
+      return new THREE.Color(fallback);
+    }
+  }
+
+  function makeBottleBadge(text, bgHex, fgHex) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 128;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = bgHex;
+    ctx.fillRect(0, 0, 256, 128);
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(4, 4, 248, 120);
+    ctx.fillStyle = fgHex;
+    ctx.font = "bold 44px Figtree, Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(text || "").toUpperCase(), 128, 64);
+    const texture = new THREE.CanvasTexture(canvas);
+    const badge = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.2, 0.1),
+      new THREE.MeshBasicMaterial({ map: texture, transparent: true })
     );
-    body.position.y = 0.21;
-    body.castShadow = true;
-    g.add(body);
+    badge.position.set(0, 0.24, 0.132);
+    return badge;
+  }
+
+  function bottle(liquidHex, labelBg, labelText, fgHex) {
+    const g = new THREE.Group();
+    // Clear glass shell so the liquid color reads clearly.
+    const shell = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.115, 0.135, 0.44, 22, 1, true),
+      new THREE.MeshStandardMaterial({
+        color: 0xf8fafc,
+        transparent: true,
+        opacity: 0.22,
+        roughness: 0.08,
+        metalness: 0.05,
+        side: THREE.DoubleSide
+      })
+    );
+    shell.position.y = 0.22;
+    shell.castShadow = true;
+    g.add(shell);
+
+    const liquid = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.1, 0.118, 0.36, 22),
+      new THREE.MeshStandardMaterial({
+        color: toColor(liquidHex, "#7dd3fc"),
+        roughness: 0.28,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.95
+      })
+    );
+    liquid.position.y = 0.2;
+    liquid.castShadow = true;
+    g.add(liquid);
+
     const neck = new THREE.Mesh(
       new THREE.CylinderGeometry(0.035, 0.05, 0.12, 12),
-      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 })
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3, transparent: true, opacity: 0.45 })
     );
-    neck.position.y = 0.48;
+    neck.position.y = 0.5;
     g.add(neck);
-    const label = new THREE.Mesh(
-      new THREE.BoxGeometry(0.16, 0.14, 0.01),
-      new THREE.MeshStandardMaterial({ color: labelColor || 0xfef3c7 })
+
+    const cork = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.032, 0.032, 0.04, 12),
+      new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.85 })
     );
-    label.position.set(0, 0.22, 0.12);
-    g.add(label);
+    cork.position.y = 0.58;
+    g.add(cork);
+
+    g.add(makeBottleBadge(labelText, labelBg, fgHex || "#111827"));
     return g;
   }
 
@@ -264,17 +370,20 @@
     );
     base.position.y = 0.01;
     g.add(base);
+    g.userData.vesselRadius = radius;
+    g.userData.vesselHeight = height;
     return g;
   }
 
   function builders(key, meta) {
+    const m = meta || {};
     switch (key) {
       case "bottle_gin":
-        return bottle(meta.liquidColor || "#93c5fd", 0xdbeafe);
+        return bottle(m.liquidColor || "#7dd3fc", "#e0f2fe", m.label || "GIN", "#0c4a6e");
       case "bottle_campari":
-        return bottle(meta.liquidColor || "#ef4444", 0xfecaca);
+        return bottle(m.liquidColor || "#dc2626", "#fee2e2", m.label || "CAMPARI", "#7f1d1d");
       case "bottle_vermouth":
-        return bottle(meta.liquidColor || "#7c2d12", 0xfde68a);
+        return bottle(m.liquidColor || "#92400e", "#fef3c7", m.label || "VERMOUTH", "#451a03");
       case "ice_cubes": {
         const g = new THREE.Group();
         for (let i = 0; i < 5; i += 1) {
@@ -306,29 +415,74 @@
       case "rocks_glass":
         return glass(0.16, 0.2, 0xe8e0d4);
       case "barspoon": {
+        // Vertical spoon (Y-up) so stir orbits read as bartending, not a spinning rod.
         const g = new THREE.Group();
         const shaft = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.012, 0.012, 0.5, 8),
+          new THREE.CylinderGeometry(0.007, 0.009, 0.42, 10),
+          new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.92, roughness: 0.22 })
+        );
+        shaft.position.y = 0.27;
+        shaft.castShadow = true;
+        const tip = new THREE.Mesh(
+          new THREE.SphereGeometry(0.018, 12, 10),
           new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.9, roughness: 0.25 })
         );
-        shaft.rotation.z = Math.PI / 2;
-        shaft.position.y = 0.02;
-        g.add(shaft);
+        tip.position.y = 0.045;
+        tip.castShadow = true;
+        const handle = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.012, 0.01, 0.06, 10),
+          new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.3 })
+        );
+        handle.position.y = 0.5;
+        g.add(shaft, tip, handle);
         return g;
       }
       case "jigger": {
+        // Double-sided jigger: short cup up (30 ml), long cup down (45 ml).
         const g = new THREE.Group();
-        const top = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.05, 0.03, 0.08, 12),
-          new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.7, roughness: 0.3 })
+        const shortCup = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.045, 0.035, 0.09, 14, 1, true),
+          new THREE.MeshStandardMaterial({
+            color: 0xd01059,
+            metalness: 0.75,
+            roughness: 0.28,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.85
+          })
         );
-        top.position.y = 0.1;
-        const bottom = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.06, 0.04, 0.1, 12),
-          new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.7, roughness: 0.3 })
+        shortCup.position.y = 0.14;
+        const longCup = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.055, 0.04, 0.12, 14, 1, true),
+          new THREE.MeshStandardMaterial({
+            color: 0x9e2c58,
+            metalness: 0.75,
+            roughness: 0.28,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.85
+          })
         );
-        bottom.position.y = 0.04;
-        g.add(top, bottom);
+        longCup.position.y = 0.04;
+        const waist = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.02, 0.02, 0.03, 10),
+          new THREE.MeshStandardMaterial({ color: 0x6b3349, metalness: 0.85, roughness: 0.25 })
+        );
+        waist.position.y = 0.095;
+        const fill = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.032, 0.028, 1, 12),
+          new THREE.MeshStandardMaterial({
+            color: 0x7dd3fc,
+            transparent: true,
+            opacity: 0,
+            roughness: 0.25
+          })
+        );
+        fill.position.y = 0.14;
+        fill.scale.y = 0.01;
+        fill.userData.isJiggerFill = true;
+        g.add(longCup, waist, shortCup, fill);
+        g.userData.jiggerFill = fill;
         return g;
       }
       case "strainer": {
@@ -366,7 +520,7 @@
   // --- Three.js scene ---
   const container = document.getElementById("canvas-container");
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x1c1917);
+  scene.background = new THREE.Color(0x332d2f);
 
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.position.set(0, 4.8, 7.5);
@@ -383,20 +537,21 @@
   controls.minDistance = 3;
   controls.maxDistance = 14;
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.45));
-  const spot = new THREE.SpotLight(0xfff1d6, 2.2);
+  scene.add(new THREE.AmbientLight(0xf5e6eb, 0.42));
+  const spot = new THREE.SpotLight(0xffd6e4, 1.55);
   spot.position.set(0, 7, 1);
   spot.castShadow = true;
   spot.angle = Math.PI / 3;
-  spot.penumbra = 0.7;
+  spot.penumbra = 0.75;
   scene.add(spot);
-  const fill = new THREE.DirectionalLight(0xa5f3fc, 0.35);
+  const fill = new THREE.DirectionalLight(0x9e2c58, 0.28);
   fill.position.set(-4, 3, -2);
   scene.add(fill);
 
+  // Bar body + tabletop follow brand palette (--palette-3/4/5 equivalents).
   const bar = new THREE.Mesh(
     new THREE.BoxGeometry(10, 0.7, 5.5),
-    new THREE.MeshStandardMaterial({ color: 0x44403c, roughness: 0.35, metalness: 0.4 })
+    new THREE.MeshStandardMaterial({ color: 0x38262d, roughness: 0.55, metalness: 0.15 })
   );
   bar.position.y = -0.35;
   bar.receiveShadow = true;
@@ -404,7 +559,7 @@
 
   const wood = new THREE.Mesh(
     new THREE.BoxGeometry(9.5, 0.06, 5),
-    new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.8 })
+    new THREE.MeshStandardMaterial({ color: 0x6b3349, roughness: 0.72, metalness: 0.08 })
   );
   wood.position.y = 0.02;
   wood.receiveShadow = true;
@@ -412,10 +567,111 @@
 
   const wall = new THREE.Mesh(
     new THREE.PlaneGeometry(14, 8),
-    new THREE.MeshStandardMaterial({ color: 0x292524, roughness: 0.9 })
+    new THREE.MeshStandardMaterial({ color: 0x332d2f, roughness: 0.92 })
   );
   wall.position.set(0, 3.5, -2.7);
   scene.add(wall);
+
+  /** Neon script text only — no circular logo plate. */
+  function addNeonLogoSign() {
+    const draw = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1400;
+      canvas.height = 420;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Soft pink glow behind letterforms (tube bloom), not a filled disc.
+      ctx.save();
+      ctx.font = '220px "Great Vibes", "Segoe Script", cursive';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = "#D01059";
+      ctx.shadowBlur = 48;
+      ctx.fillText("Valen's Tonic", canvas.width / 2, canvas.height / 2 + 10);
+      ctx.shadowBlur = 18;
+      ctx.fillText("Valen's Tonic", canvas.width / 2, canvas.height / 2 + 10);
+      ctx.shadowBlur = 0;
+      ctx.fillText("Valen's Tonic", canvas.width / 2, canvas.height / 2 + 10);
+
+      // Tiny leaf accents above the T (logo detail, still text-only sign).
+      const leafX = canvas.width / 2 + 118;
+      const leafY = canvas.height / 2 - 78;
+      ctx.translate(leafX, leafY);
+      ctx.rotate(-0.35);
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 10, 22, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(14, -4, 8, 18, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      const texture = new THREE.CanvasTexture(canvas);
+      if ("encoding" in texture && THREE.sRGBEncoding !== undefined) {
+        texture.encoding = THREE.sRGBEncoding;
+      }
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      texture.needsUpdate = true;
+
+      const signW = 3.4;
+      const signH = signW * (canvas.height / canvas.width);
+      const signY = 2.55;
+      const signZ = -2.655;
+
+      const material = new THREE.MeshStandardMaterial({
+        map: texture,
+        transparent: true,
+        alphaTest: 0.05,
+        roughness: 0.35,
+        metalness: 0.05,
+        emissive: new THREE.Color(0xd01059),
+        emissiveMap: texture,
+        emissiveIntensity: 1.05,
+        side: THREE.FrontSide,
+        depthWrite: false
+      });
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(signW, signH), material);
+      sign.position.set(0, signY, signZ);
+      scene.add(sign);
+
+      // Diffuse neon cast — no circular backing plate.
+      const neonLight = new THREE.PointLight(0xd01059, 1.35, 8, 2);
+      neonLight.position.set(0, signY, -2.2);
+      scene.add(neonLight);
+
+      if (typeof gsap !== "undefined") {
+        gsap.to(material, {
+          emissiveIntensity: 1.35,
+          duration: 2.4,
+          yoyo: true,
+          repeat: -1,
+          ease: "sine.inOut"
+        });
+        gsap.to(neonLight, {
+          intensity: 1.85,
+          duration: 2.4,
+          yoyo: true,
+          repeat: -1,
+          ease: "sine.inOut"
+        });
+      }
+    };
+
+    if (document.fonts?.load) {
+      document.fonts
+        .load('220px "Great Vibes"')
+        .then(() => draw())
+        .catch(() => draw());
+    } else {
+      setTimeout(draw, 120);
+    }
+  }
+  addNeonLogoSign();
 
   const guidePlane = new THREE.Mesh(
     new THREE.PlaneGeometry(100, 100),
@@ -458,6 +714,9 @@
   }
 
   function attachAssetUserData(mesh, asset) {
+    const vesselRadius = mesh.userData.vesselRadius || Number(asset.collider?.radius) || null;
+    const vesselHeight = mesh.userData.vesselHeight || Number(asset.collider?.height) || null;
+    const jiggerFill = mesh.userData.jiggerFill || null;
     mesh.position.set(asset.spawn.x || 0, asset.spawn.y || 0.05, asset.spawn.z || 0);
     if (asset.spawn.rotY) mesh.rotation.y = asset.spawn.rotY;
     mesh.userData = {
@@ -468,7 +727,10 @@
       spawnZ: asset.spawn.z || 0,
       collider: asset.collider || {},
       draggable: asset.kind !== "vessel",
-      renderMode
+      renderMode,
+      vesselRadius,
+      vesselHeight,
+      jiggerFill
     };
     mesh.traverse((child) => {
       if (child.isMesh) {
@@ -645,6 +907,722 @@
     }
   }
 
+  function clearLiquidMeshes() {
+    for (const slug of Object.keys(liquidMeshes)) {
+      const mesh = liquidMeshes[slug];
+      gsap.killTweensOf(mesh.rotation);
+      gsap.killTweensOf(mesh.scale);
+      gsap.killTweensOf(mesh.position);
+      if (mesh.parent) mesh.parent.remove(mesh);
+      if (mesh.geometry) mesh.geometry.dispose();
+      if (mesh.material) mesh.material.dispose();
+    }
+    liquidMeshes = {};
+  }
+
+  function clearSpills() {
+    while (spillMeshes.length) {
+      const mesh = spillMeshes.pop();
+      gsap.killTweensOf(mesh.position);
+      gsap.killTweensOf(mesh.scale);
+      if (mesh.parent) mesh.parent.remove(mesh);
+      if (mesh.geometry) mesh.geometry.dispose();
+      if (mesh.material) mesh.material.dispose();
+    }
+  }
+
+  function blendLiquidColor(slugs) {
+    if (!slugs.length) return new THREE.Color(0xb91c1c);
+    const out = new THREE.Color(0, 0, 0);
+    for (const slug of slugs) {
+      out.add(new THREE.Color(BOTTLE_LIQUID[slug] ?? 0x888888));
+    }
+    out.multiplyScalar(1 / slugs.length);
+    return out;
+  }
+
+  function vesselFillHeight(vesselSlug) {
+    const vessel = objectBySlug[vesselSlug];
+    const state = vesselState[vesselSlug];
+    const cap = VESSEL_CAPACITY[vesselSlug] || { liquidMl: 100 };
+    const glassH = vessel?.userData.vesselHeight || Number(vessel?.userData.collider?.height) || 0.3;
+    const ratio = (state?.liquidMl || 0) / cap.liquidMl;
+    // Allow visual over-rim when overflowing.
+    return Math.min(Math.max(ratio, 0) * glassH * 0.82, glassH * 1.05);
+  }
+
+  function spawnLiquidPuddle(vesselSlug, color) {
+    const vessel = objectBySlug[vesselSlug];
+    if (!vessel) return;
+    const puddle = new THREE.Mesh(
+      new THREE.CircleGeometry(0.12 + Math.random() * 0.08, 20),
+      new THREE.MeshStandardMaterial({
+        color: color || 0xb91c1c,
+        transparent: true,
+        opacity: 0.75,
+        roughness: 0.35,
+        metalness: 0.05
+      })
+    );
+    puddle.rotation.x = -Math.PI / 2;
+    puddle.position.set(
+      vessel.position.x + (Math.random() - 0.5) * 0.35,
+      0.035,
+      vessel.position.z + 0.22 + Math.random() * 0.15
+    );
+    puddle.scale.set(0.2, 0.2, 0.2);
+    scene.add(puddle);
+    spillMeshes.push(puddle);
+    gsap.to(puddle.scale, { x: 1, y: 1, z: 1, duration: 0.45, ease: "power2.out" });
+  }
+
+  /** Cascading overflow: rim surge, side drips, then puddle. */
+  function animateLiquidOverflow(vesselSlug, colorHex) {
+    const vessel = objectBySlug[vesselSlug];
+    const liquid = liquidMeshes[vesselSlug];
+    if (!vessel) return;
+    const color = new THREE.Color(colorHex || 0xb91c1c);
+
+    if (liquid) {
+      const baseY = liquid.position.y;
+      gsap
+        .timeline()
+        .to(liquid.scale, { y: `+=0.08`, duration: 0.2, ease: "power1.out" })
+        .to(liquid.position, { y: baseY + 0.04, duration: 0.2, ease: "power1.out" }, "<")
+        .to(liquid.scale, { y: `-=0.03`, duration: 0.35, ease: "bounce.out" })
+        .to(liquid.position, { y: baseY + 0.02, duration: 0.35, ease: "bounce.out" }, "<");
+    }
+
+    const glassH = vessel.userData.vesselHeight || 0.3;
+    for (let i = 0; i < 7; i += 1) {
+      const drop = new THREE.Mesh(
+        new THREE.SphereGeometry(0.018 + Math.random() * 0.012, 8, 8),
+        new THREE.MeshStandardMaterial({
+          color,
+          transparent: true,
+          opacity: 0.9,
+          roughness: 0.2
+        })
+      );
+      const side = i % 2 === 0 ? 1 : -1;
+      drop.position.set(
+        vessel.position.x + side * (0.12 + Math.random() * 0.08),
+        vessel.position.y + glassH * 0.9,
+        vessel.position.z + (Math.random() - 0.5) * 0.1
+      );
+      scene.add(drop);
+      spillMeshes.push(drop);
+      gsap.to(drop.position, {
+        y: 0.05,
+        x: drop.position.x + side * (0.08 + Math.random() * 0.2),
+        z: drop.position.z + 0.15 + Math.random() * 0.2,
+        duration: 0.45 + Math.random() * 0.35,
+        delay: i * 0.05,
+        ease: "power2.in",
+        onComplete() {
+          gsap.to(drop.scale, { x: 1.8, y: 0.15, z: 1.8, duration: 0.2 });
+          gsap.to(drop.material, { opacity: 0.55, duration: 0.2 });
+        }
+      });
+    }
+
+    const sheet = new THREE.Mesh(
+      new THREE.BoxGeometry(0.04, 0.28, 0.02),
+      new THREE.MeshStandardMaterial({ color, transparent: true, opacity: 0.7, roughness: 0.15 })
+    );
+    sheet.position.set(vessel.position.x + 0.16, vessel.position.y + glassH * 0.55, vessel.position.z);
+    scene.add(sheet);
+    spillMeshes.push(sheet);
+    gsap.fromTo(
+      sheet.scale,
+      { y: 0.2 },
+      {
+        y: 1,
+        duration: 0.35,
+        ease: "power1.out",
+        onComplete() {
+          gsap.to(sheet.material, {
+            opacity: 0,
+            duration: 0.5,
+            delay: 0.15,
+            onComplete() {
+              if (sheet.parent) sheet.parent.remove(sheet);
+            }
+          });
+        }
+      }
+    );
+
+    spawnLiquidPuddle(vesselSlug, colorHex);
+    gsap.delayedCall(0.25, () => spawnLiquidPuddle(vesselSlug, colorHex));
+  }
+
+  function spillIceOnBar(vesselSlug) {
+    const vessel = objectBySlug[vesselSlug];
+    if (!vessel) return;
+    const cube = makeIceCubeMesh();
+    cube.position.set(
+      vessel.position.x + (Math.random() - 0.5) * 0.35,
+      0.55,
+      vessel.position.z + 0.28 + Math.random() * 0.12
+    );
+    cube.rotation.set(Math.random(), Math.random(), Math.random());
+    scene.add(cube);
+    spillMeshes.push(cube);
+    depositedPieces.push(cube);
+    gsap.to(cube.position, {
+      y: 0.06,
+      duration: 0.5,
+      ease: "bounce.out"
+    });
+  }
+
+  function syncVesselLiquid(vesselSlug, animateIn) {
+    const vessel = objectBySlug[vesselSlug];
+    const state = vesselState[vesselSlug];
+    if (!vessel || !state) return;
+
+    const liquids = state.liquids || [];
+    const show = state.liquidMl > 0 || liquids.length > 0 || state.strainedIn;
+    let mesh = liquidMeshes[vesselSlug];
+
+    if (!show) {
+      if (mesh) {
+        if (mesh.parent) mesh.parent.remove(mesh);
+        delete liquidMeshes[vesselSlug];
+      }
+      return;
+    }
+
+    const radius = Math.max((vessel.userData.vesselRadius || Number(vessel.userData.collider?.radius) || 0.18) * 0.78, 0.1);
+    const fillHeight = Math.max(vesselFillHeight(vesselSlug), 0.04);
+    const color = blendLiquidColor(liquids.length ? liquids : ["campari-bottle", "gin-bottle", "vermouth-bottle"]);
+
+    if (!mesh) {
+      mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius * 0.96, 1, 28),
+        new THREE.MeshStandardMaterial({
+          color,
+          transparent: true,
+          opacity: 0.88,
+          roughness: 0.22,
+          metalness: 0.05
+        })
+      );
+      mesh.userData.isLiquidFill = true;
+      vessel.add(mesh);
+      liquidMeshes[vesselSlug] = mesh;
+      if (animateIn) {
+        mesh.scale.set(1, 0.05, 1);
+        mesh.position.y = 0.03;
+        gsap.to(mesh.scale, { y: fillHeight, duration: 0.45, ease: "power2.out" });
+        gsap.to(mesh.position, { y: fillHeight / 2 + 0.025, duration: 0.45, ease: "power2.out" });
+      } else {
+        mesh.scale.set(1, fillHeight, 1);
+        mesh.position.y = fillHeight / 2 + 0.025;
+      }
+    } else {
+      mesh.material.color.copy(color);
+      gsap.to(mesh.scale, { y: fillHeight, duration: 0.35, ease: "power2.out" });
+      gsap.to(mesh.position, { y: fillHeight / 2 + 0.025, duration: 0.35, ease: "power2.out" });
+    }
+  }
+
+  function addLiquidToVessel(vesselSlug, bottleSlug, amountMl) {
+    const state = vesselState[vesselSlug];
+    const cap = VESSEL_CAPACITY[vesselSlug];
+    if (!state || !cap) return;
+    state.liquids.push(bottleSlug);
+    state.liquidMl += amountMl;
+    syncVesselLiquid(vesselSlug, true);
+    if (state.liquidMl > cap.liquidMl) {
+      state.overflow = true;
+      animateLiquidOverflow(vesselSlug, BOTTLE_LIQUID[bottleSlug]);
+      markCompromised(`Overflow! Too much liquid in the ${assetName(vesselSlug)}.`);
+    }
+  }
+
+  function placeIceInVessel(vesselSlug) {
+    const state = vesselState[vesselSlug];
+    const cap = VESSEL_CAPACITY[vesselSlug];
+    if (!state || !cap) return state?.ice || 0;
+    state.ice += 1;
+    if (state.ice > cap.ice) {
+      state.overflow = true;
+      spillIceOnBar(vesselSlug);
+      markCompromised(`Overflow! Too much ice in the ${assetName(vesselSlug)}.`);
+    } else {
+      depositInVessel("ice-bucket", vesselSlug, state.ice - 1);
+    }
+    return state.ice;
+  }
+
+  function selectTool(slug) {
+    selectedToolSlug = slug || "hand";
+    document.querySelectorAll("[data-tool]").forEach((b) => {
+      b.style.outline = b.getAttribute("data-tool") === selectedToolSlug ? "2px solid #D01059" : "none";
+    });
+    if (jiggerSideBarEl) {
+      jiggerSideBarEl.classList.toggle("visible", selectedToolSlug === "jigger");
+    }
+    syncJiggerSideButtons();
+    if (selectedToolSlug === "hand") {
+      controlHintEl.textContent = "Hand ready — drag ice, bottles, peel, or bar tools.";
+    } else if (selectedToolSlug === "jigger") {
+      controlHintEl.textContent = `Jigger · ${JIGGER_SIDES[jiggerState.side].label} cup — drag a bottle onto the jigger, then the jigger onto a glass.`;
+    } else {
+      controlHintEl.textContent = `${selectedToolSlug} ready — drag it onto a glass (animations always play).`;
+    }
+  }
+
+  function syncJiggerSideButtons() {
+    document.querySelectorAll("[data-jigger-side]").forEach((btn) => {
+      btn.classList.toggle("active", btn.getAttribute("data-jigger-side") === jiggerState.side);
+    });
+  }
+
+  function setJiggerSide(side) {
+    if (!JIGGER_SIDES[side]) return;
+    jiggerState.side = side;
+    syncJiggerSideButtons();
+    // Flip jigger so the active cup faces up.
+    const jigger = objectBySlug.jigger;
+    if (jigger) {
+      gsap.to(jigger.rotation, {
+        z: side === "long" ? Math.PI : 0,
+        duration: 0.45,
+        ease: "power2.inOut"
+      });
+    }
+    controlHintEl.textContent = `Using the ${JIGGER_SIDES[side].label} side — no rush.`;
+    showToast(`${JIGGER_SIDES[side].label} cup selected`, true);
+  }
+
+  function syncJiggerFillVisual() {
+    const jigger = objectBySlug.jigger;
+    const fill = jigger?.userData?.jiggerFill;
+    if (!fill) return;
+    const side = jiggerState.side;
+    const capacity = JIGGER_SIDES[side].ml;
+    const ratio = Math.min(jiggerState.filledMl / capacity, 1.15);
+    const cupH = side === "short" ? 0.07 : 0.1;
+    const fillH = Math.max(ratio * cupH, 0.01);
+    const cupY = side === "short" ? 0.14 : 0.04;
+    fill.material.color.set(BOTTLE_LIQUID[jiggerState.bottleSlug] || 0x7dd3fc);
+    fill.material.opacity = jiggerState.filledMl > 0 ? 0.9 : 0;
+    // Keep fill in the upright cup relative to jigger flip.
+    fill.position.y = side === "long" ? -0.02 : cupY;
+    gsap.to(fill.scale, { y: fillH, duration: 0.35, ease: "power2.out" });
+  }
+
+  function clearJigger() {
+    jiggerState.filledMl = 0;
+    jiggerState.bottleSlug = null;
+    syncJiggerFillVisual();
+  }
+
+  function nearObject(obj, other, radius = 0.85) {
+    if (!obj || !other) return false;
+    const dx = obj.position.x - other.position.x;
+    const dz = obj.position.z - other.position.z;
+    return Math.sqrt(dx * dx + dz * dz) < radius;
+  }
+
+  function animatePourToTarget(source, target, opts, onStream, onDone) {
+    if (!source || !target) {
+      onDone?.();
+      return;
+    }
+    const lift = opts?.lift ?? 0.42;
+    const tilt = opts?.tilt ?? 1.05;
+    const streamColor = new THREE.Color(opts?.color ?? 0xb91c1c);
+
+    gsap.killTweensOf(source.position);
+    gsap.killTweensOf(source.rotation);
+
+    const home = {
+      x: source.userData.spawnX ?? source.position.x,
+      y: source.userData.spawnY ?? source.position.y,
+      z: source.userData.spawnZ ?? source.position.z,
+      rotZ: source.userData.slug === "jigger" ? (jiggerState.side === "long" ? Math.PI : 0) : 0,
+      rotY: source.rotation.y
+    };
+    // After pour, jigger returns to its station pose; bottles use spawn.
+    if (source.userData.slug !== "jigger") {
+      home.rotZ = 0;
+    }
+
+    const toward = source.position.x >= target.position.x ? 1 : -1;
+    const stream = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.02, 1, 8),
+      new THREE.MeshStandardMaterial({
+        color: streamColor,
+        transparent: true,
+        opacity: 0.9,
+        roughness: 0.2
+      })
+    );
+    stream.visible = false;
+    scene.add(stream);
+
+    const placeStream = () => {
+      const from = new THREE.Vector3(
+        target.position.x + toward * 0.16,
+        lift + 0.06,
+        target.position.z
+      );
+      const to = new THREE.Vector3(target.position.x, target.position.y + 0.2, target.position.z);
+      const mid = from.clone().add(to).multiplyScalar(0.5);
+      const dir = to.clone().sub(from);
+      const len = Math.max(dir.length(), 0.12);
+      stream.position.copy(mid);
+      stream.scale.set(1, len, 1);
+      stream.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+      stream.visible = true;
+    };
+
+    const tl = gsap.timeline({
+      onComplete() {
+        scene.remove(stream);
+        stream.geometry.dispose();
+        stream.material.dispose();
+        onDone?.();
+      }
+    });
+
+    tl.to(source.position, {
+      x: target.position.x + toward * 0.26,
+      y: lift,
+      z: target.position.z,
+      duration: 0.35,
+      ease: "power2.out"
+    });
+    tl.to(source.rotation, { z: home.rotZ + toward * -tilt, duration: 0.3, ease: "power2.inOut" }, "<0.05");
+    tl.add(() => {
+      playClack();
+      placeStream();
+      onStream?.();
+    });
+    tl.to(stream.material, { opacity: 0.3, duration: 0.55, ease: "power1.in" });
+    tl.add(() => {
+      stream.visible = false;
+    });
+    tl.to(source.rotation, { z: home.rotZ, duration: 0.3, ease: "power2.out" });
+    tl.to(
+      source.position,
+      {
+        x: home.x,
+        y: home.y,
+        z: home.z,
+        duration: 0.4,
+        ease: "power2.inOut"
+      },
+      "<"
+    );
+  }
+
+  function animateStir() {
+    const spoon = objectBySlug.barspoon;
+    const vessel = objectBySlug["mixing-glass"];
+    const liquid = liquidMeshes["mixing-glass"];
+    playStir();
+    if (!spoon || !vessel) return;
+
+    gsap.killTweensOf(spoon.position);
+    gsap.killTweensOf(spoon.rotation);
+    if (liquid) {
+      gsap.killTweensOf(liquid.rotation);
+      gsap.killTweensOf(liquid.material);
+    }
+
+    const home = {
+      x: spoon.userData.spawnX,
+      y: spoon.userData.spawnY,
+      z: spoon.userData.spawnZ,
+      rotX: spoon.rotation.x,
+      rotY: spoon.rotation.y,
+      rotZ: spoon.rotation.z
+    };
+    const cx = vessel.position.x;
+    const cz = vessel.position.z;
+    const stirY = 0.14;
+    const orbitR = 0.07;
+    const progress = { angle: 0 };
+
+    const tl = gsap.timeline();
+    tl.to(spoon.position, {
+      x: cx + orbitR,
+      y: stirY,
+      z: cz,
+      duration: 0.4,
+      ease: "power2.out"
+    });
+    tl.to(
+      spoon.rotation,
+      {
+        x: 0.35,
+        y: 0,
+        z: 0.2,
+        duration: 0.35,
+        ease: "power2.out"
+      },
+      "<"
+    );
+    tl.to(progress, {
+      angle: Math.PI * 5,
+      duration: 1.7,
+      ease: "sine.inOut",
+      onUpdate() {
+        const a = progress.angle;
+        spoon.position.x = cx + Math.cos(a) * orbitR;
+        spoon.position.z = cz + Math.sin(a) * orbitR;
+        spoon.position.y = stirY + Math.sin(a * 2) * 0.012;
+        spoon.rotation.y = a;
+      }
+    });
+    tl.to(spoon.position, {
+      x: home.x,
+      y: home.y,
+      z: home.z,
+      duration: 0.4,
+      ease: "power2.inOut"
+    });
+    tl.to(
+      spoon.rotation,
+      {
+        x: home.rotX,
+        y: home.rotY,
+        z: home.rotZ,
+        duration: 0.35,
+        ease: "power2.inOut"
+      },
+      "<"
+    );
+
+    if (liquid) {
+      gsap.to(liquid.rotation, {
+        y: liquid.rotation.y + Math.PI * 3.5,
+        duration: 1.7,
+        delay: 0.35,
+        ease: "sine.inOut"
+      });
+    }
+  }
+
+  function animateStrain(onDone) {
+    const strainer = objectBySlug.strainer;
+    const mixing = objectBySlug["mixing-glass"];
+    const rocks = objectBySlug["rocks-glass"];
+    if (!strainer || !mixing || !rocks) {
+      onDone?.();
+      return;
+    }
+
+    gsap.killTweensOf(strainer.position);
+    gsap.killTweensOf(strainer.rotation);
+    gsap.killTweensOf(mixing.rotation);
+    gsap.killTweensOf(mixing.position);
+
+    const strainerHome = {
+      x: strainer.userData.spawnX,
+      y: strainer.userData.spawnY,
+      z: strainer.userData.spawnZ
+    };
+    const mixingHome = {
+      x: mixing.position.x,
+      y: mixing.position.y,
+      z: mixing.position.z,
+      rotZ: mixing.rotation.z
+    };
+
+    const pourColor = blendLiquidColor(
+      vesselState["mixing-glass"].liquids.length
+        ? vesselState["mixing-glass"].liquids
+        : ["campari-bottle", "gin-bottle", "vermouth-bottle"]
+    );
+    const stream = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.018, 0.028, 1, 10),
+      new THREE.MeshStandardMaterial({
+        color: pourColor,
+        transparent: true,
+        opacity: 0.85,
+        roughness: 0.25
+      })
+    );
+    stream.visible = false;
+    scene.add(stream);
+
+    const mx = mixing.position.x;
+    const mz = mixing.position.z;
+    const rx = rocks.position.x;
+    const rz = rocks.position.z;
+    const towardRocks = rx >= mx ? 1 : -1;
+
+    const placeStream = () => {
+      const from = new THREE.Vector3(mx + towardRocks * 0.12, 0.34, mz);
+      const to = new THREE.Vector3(rx, 0.22, rz);
+      const mid = from.clone().add(to).multiplyScalar(0.5);
+      const dir = to.clone().sub(from);
+      const len = Math.max(dir.length(), 0.2);
+      stream.position.copy(mid);
+      stream.scale.set(1, len, 1);
+      stream.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+      stream.visible = true;
+    };
+
+    const tl = gsap.timeline({
+      onComplete() {
+        scene.remove(stream);
+        stream.geometry.dispose();
+        stream.material.dispose();
+        onDone?.();
+      }
+    });
+
+    // Seat strainer on the mixing-glass rim.
+    tl.to(strainer.position, {
+      x: mx,
+      y: 0.4,
+      z: mz,
+      duration: 0.35,
+      ease: "power2.out"
+    });
+    tl.to(strainer.rotation, { x: 0.15, y: 0, z: 0, duration: 0.25 }, "<0.05");
+
+    // Tip mixing glass toward rocks; strainer rides with the tilt.
+    tl.to(mixing.rotation, { z: towardRocks * -0.65, duration: 0.5, ease: "power2.inOut" });
+    tl.to(strainer.position, { x: mx + towardRocks * 0.08, y: 0.36, duration: 0.5, ease: "power2.inOut" }, "<");
+    tl.to(strainer.rotation, { z: towardRocks * -0.35, duration: 0.5 }, "<");
+
+    tl.add(() => {
+      playClack();
+      placeStream();
+      const mixed = [...vesselState["mixing-glass"].liquids];
+      vesselState["rocks-glass"].liquids = mixed;
+      vesselState["rocks-glass"].liquidMl += vesselState["mixing-glass"].liquidMl;
+      vesselState["mixing-glass"].liquids = [];
+      vesselState["mixing-glass"].liquidMl = 0;
+      vesselState["rocks-glass"].strainedIn = true;
+      syncVesselLiquid("mixing-glass", false);
+      syncVesselLiquid("rocks-glass", true);
+    });
+
+    tl.to(stream.material, { opacity: 0.35, duration: 0.55, ease: "power1.in" });
+    tl.add(() => {
+      stream.visible = false;
+    });
+
+    // Set glasses upright and put strainer away.
+    tl.to(mixing.rotation, { z: mixingHome.rotZ, duration: 0.4, ease: "power2.out" });
+    tl.to(
+      strainer.position,
+      {
+        x: strainerHome.x,
+        y: strainerHome.y,
+        z: strainerHome.z,
+        duration: 0.4,
+        ease: "power2.inOut"
+      },
+      "<"
+    );
+    tl.to(strainer.rotation, { x: 0, y: 0, z: 0, duration: 0.3 }, "<");
+  }
+
+  function animatePour(bottle, vesselSlug, onStream, onDone) {
+    const vessel = objectBySlug[vesselSlug];
+    if (!bottle || !vessel) {
+      onDone?.();
+      return;
+    }
+
+    gsap.killTweensOf(bottle.position);
+    gsap.killTweensOf(bottle.rotation);
+
+    const home = {
+      x: bottle.userData.spawnX,
+      y: bottle.userData.spawnY,
+      z: bottle.userData.spawnZ,
+      rotZ: bottle.rotation.z,
+      rotY: bottle.rotation.y
+    };
+    const toward = bottle.position.x >= vessel.position.x ? 1 : -1;
+    const pourColor = new THREE.Color(BOTTLE_LIQUID[bottle.userData.slug] || 0xb91c1c);
+    const stream = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.02, 1, 8),
+      new THREE.MeshStandardMaterial({
+        color: pourColor,
+        transparent: true,
+        opacity: 0.9,
+        roughness: 0.2
+      })
+    );
+    stream.visible = false;
+    scene.add(stream);
+
+    const placeStream = () => {
+      const neck = new THREE.Vector3(
+        vessel.position.x + toward * 0.18,
+        0.48,
+        vessel.position.z
+      );
+      const mouth = new THREE.Vector3(vessel.position.x, 0.28, vessel.position.z);
+      const mid = neck.clone().add(mouth).multiplyScalar(0.5);
+      const dir = mouth.clone().sub(neck);
+      const len = Math.max(dir.length(), 0.15);
+      stream.position.copy(mid);
+      stream.scale.set(1, len, 1);
+      stream.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+      stream.visible = true;
+    };
+
+    const tl = gsap.timeline({
+      onComplete() {
+        scene.remove(stream);
+        stream.geometry.dispose();
+        stream.material.dispose();
+        onDone?.();
+      }
+    });
+
+    tl.to(bottle.position, {
+      x: vessel.position.x + toward * 0.28,
+      y: 0.42,
+      z: vessel.position.z,
+      duration: 0.35,
+      ease: "power2.out"
+    });
+    tl.to(bottle.rotation, { z: toward * -1.05, duration: 0.3, ease: "power2.inOut" }, "<0.05");
+    tl.add(() => {
+      playClack();
+      placeStream();
+      onStream?.();
+    });
+    tl.to(stream.material, { opacity: 0.35, duration: 0.55, ease: "power1.in" });
+    tl.add(() => {
+      stream.visible = false;
+    });
+    tl.to(bottle.rotation, { z: home.rotZ, duration: 0.3, ease: "power2.out" });
+    tl.to(
+      bottle.position,
+      {
+        x: home.x,
+        y: home.y,
+        z: home.z,
+        duration: 0.4,
+        ease: "power2.inOut"
+      },
+      "<"
+    );
+    tl.to(bottle.rotation, { y: home.rotY, duration: 0.2 }, "<");
+  }
+
+  function idealIceForVessel(vesselSlug) {
+    const step = (practice?.steps || []).find(
+      (s) => normalizeActionSlug(s.action_slug) === "place" && s.target_vessel_slug === vesselSlug
+    );
+    return Number(step?.params?.idealCount || step?.params?.minCount || 0);
+  }
+
   function makeIceCubeMesh() {
     const cube = new THREE.Mesh(
       new THREE.BoxGeometry(0.09, 0.09, 0.09),
@@ -705,15 +1683,10 @@
   function handleDrop(obj) {
     playClack();
     const step = currentStep();
-    if (!step) {
-      returnToSpawn(obj);
-      return;
-    }
-
     const slugDropped = obj.userData.slug;
-    const actionSlug = normalizeActionSlug(step.action_slug);
+    const actionSlug = step ? normalizeActionSlug(step.action_slug) : null;
 
-    if (actionSlug === "place" && (step.required_asset_slugs || []).includes(slugDropped)) {
+    if (step && actionSlug === "place" && (step.required_asset_slugs || []).includes(slugDropped)) {
       const target = step.target_vessel_slug;
       const dist = distanceToVessel(obj, target);
       const threshold = vesselDropRadius(target);
@@ -734,11 +1707,12 @@
       }
 
       const key = `${target}:${slugDropped}`;
-      placeCounts[key] = (placeCounts[key] || 0) + 1;
-      const minCount = Number(step.params.minCount || 1);
+      const ideal = Number(step.params.idealCount || step.params.minCount || 1);
+      const maxCount = Number(step.params.maxCount || VESSEL_CAPACITY[target]?.ice || ideal + 2);
       const stayOnTarget = Boolean(step.params.stayOnTarget);
 
       if (stayOnTarget) {
+        placeCounts[key] = (placeCounts[key] || 0) + 1;
         gsap.to(obj.position, {
           x: objectBySlug[target].position.x,
           y: 0.28,
@@ -746,58 +1720,229 @@
           duration: 0.35
         });
         obj.userData.draggable = false;
-      } else {
-        // Source stays reusable (ice pile); drop a cube into the glass so placement is visible.
-        depositInVessel(slugDropped, target, placeCounts[key] - 1);
-        returnToSpawn(obj);
+        if (placeCounts[key] >= ideal) {
+          ensureStep("place", () => true);
+        }
+        return;
       }
 
-      if (placeCounts[key] >= minCount) {
-        ensureStep("place", () => true);
-      } else {
-        controlHintEl.textContent = `Placed ${slugDropped} on ${target}: ${placeCounts[key]}/${minCount}`;
+      // Ice (and similar): allow under/over; overflow when past capacity.
+      const iceCount = placeIceInVessel(target);
+      placeCounts[key] = iceCount;
+      returnToSpawn(obj);
+
+      if (iceCount < ideal) {
+        controlHintEl.textContent = `${assetName(target)}: ${iceCount}/${ideal} ice (you can add more — or move on and risk under-icing).`;
+      } else if (iceCount === ideal) {
+        controlHintEl.textContent = `Nice — ${ideal} ice in the ${assetName(target)}.`;
+        if (normalizeActionSlug(step.action_slug) === "place") {
+          ensureStep("place", () => true);
+        }
+      } else if (iceCount <= maxCount) {
+        controlHintEl.textContent = `Heavy ice (${iceCount}/${maxCount}). Still in the glass — careful.`;
+        if (currentStep() && normalizeActionSlug(currentStep().action_slug) === "place") {
+          ensureStep("place", () => true);
+        }
       }
       return;
     }
 
-    if (actionSlug === "pour" && (step.required_asset_slugs || []).includes(slugDropped)) {
-      const target = step.target_vessel_slug;
-      const dist = distanceToVessel(obj, target);
-      const threshold = vesselDropRadius(target);
-      lastDebugDrop = {
-        slug: slugDropped,
-        target,
-        dist: dist.toFixed(2),
-        threshold: threshold.toFixed(2),
-        ok: dist < threshold
-      };
-      updateDebugPanel();
-      if (dist >= threshold) {
+    // Extra ice anytime — under/over is allowed; overflow is punished.
+    if (slugDropped === "ice-bucket") {
+      const candidates = ["mixing-glass", "rocks-glass"];
+      const target = candidates.find((v) => nearVessel(obj, v));
+      if (target) {
+        const iceCount = placeIceInVessel(target);
         returnToSpawn(obj);
-        failStep("Pour into the correct vessel.");
+        controlHintEl.textContent = `${assetName(target)} now has ${iceCount} ice.`;
+        const placeStep =
+          currentStep() &&
+          normalizeActionSlug(currentStep().action_slug) === "place" &&
+          currentStep().target_vessel_slug === target;
+        if (placeStep) {
+          const ideal = Number(currentStep().params.idealCount || currentStep().params.minCount || 1);
+          if (iceCount >= ideal) ensureStep("place", () => true);
+        }
         return;
       }
-      if (selectedToolSlug && selectedToolSlug !== step.required_tool_slug) {
-        returnToSpawn(obj);
-        failStep(`Use the ${step.required_tool_slug} for measured pours.`);
+    }
+
+    if (SPIRIT_BOTTLES.has(slugDropped)) {
+      const jigger = objectBySlug.jigger;
+      const glassTarget = ["mixing-glass", "rocks-glass"].find((v) => nearVessel(obj, v));
+
+      // Preferred: bottle → jigger.
+      if (jigger && nearObject(obj, jigger, 0.9)) {
+        selectTool("jigger");
+        const side = jiggerState.side;
+        const amountMl = JIGGER_SIDES[side].ml;
+        animatePourToTarget(
+          obj,
+          jigger,
+          { lift: 0.38, tilt: 0.95, color: BOTTLE_LIQUID[slugDropped] },
+          () => {
+            jiggerState.filledMl = amountMl;
+            jiggerState.bottleSlug = slugDropped;
+            syncJiggerFillVisual();
+            if (side === "long") {
+              markCompromised("Heavy pour — filled the 45 ml side (Negroni wants 30 ml).");
+            }
+          }
+        );
+        controlHintEl.textContent = `Jigger filled (${amountMl} ml). Drag the jigger onto a glass to empty it.`;
         return;
       }
-      if (step.required_tool_slug && selectedToolSlug !== step.required_tool_slug) {
-        returnToSpawn(obj);
-        failStep(`Select the ${step.required_tool_slug} before pouring.`);
+
+      // Direct bottle → glass still works (animation testing / shortcuts).
+      if (glassTarget) {
+        const amountMl = JIGGER_SIDES[jiggerState.side]?.ml || 30;
+        const expected = actionSlug === "pour" ? step?.required_asset_slugs?.[0] : null;
+        animatePourToTarget(
+          obj,
+          objectBySlug[glassTarget],
+          { lift: 0.42, tilt: 1.05, color: BOTTLE_LIQUID[slugDropped] },
+          () => addLiquidToVessel(glassTarget, slugDropped, amountMl)
+        );
+        showToast("Tip: pour into the jigger first for the proper build.", false);
+        if (actionSlug === "pour" && expected === slugDropped && glassTarget === step?.target_vessel_slug) {
+          ensureStep("pour", () => true);
+        } else if (step) {
+          markCompromised("Poured straight into the glass (or wrong spirit) — animations still run.");
+        }
         return;
       }
-      vesselState[target].liquids.push(slugDropped);
+
       returnToSpawn(obj);
-      ensureStep("pour", (s) => s.required_asset_slugs[0] === slugDropped);
+      failStep("Drop the bottle on the jigger (or a glass).");
+      return;
+    }
+
+    // Empty filled jigger into a glass.
+    if (slugDropped === "jigger") {
+      const glassTarget = ["mixing-glass", "rocks-glass"].find((v) => nearVessel(obj, v));
+      if (!glassTarget) {
+        returnToSpawn(obj);
+        return;
+      }
+      if (jiggerState.filledMl <= 0) {
+        returnToSpawn(obj);
+        showToast("Jigger is empty — fill it from a bottle first.", false);
+        return;
+      }
+
+      const amountMl = jiggerState.filledMl;
+      const bottleSlug = jiggerState.bottleSlug || "gin-bottle";
+      const expected = actionSlug === "pour" ? step?.required_asset_slugs?.[0] : null;
+
+      animatePourToTarget(
+        obj,
+        objectBySlug[glassTarget],
+        { lift: 0.36, tilt: 0.85, color: BOTTLE_LIQUID[bottleSlug] },
+        () => {
+          addLiquidToVessel(glassTarget, bottleSlug, amountMl);
+          clearJigger();
+        }
+      );
+
+      const needIce = idealIceForVessel(glassTarget);
+      if (needIce && vesselState[glassTarget].ice < needIce && !vesselState[glassTarget].overflow) {
+        markCompromised(
+          `Under-iced: ${assetName(glassTarget)} has ${vesselState[glassTarget].ice}/${needIce} cubes.`
+        );
+      }
+
+      if (actionSlug === "pour" && expected === bottleSlug && glassTarget === step?.target_vessel_slug) {
+        const wantMl = Number(step.params?.amountMl || 30);
+        if (amountMl !== wantMl) {
+          markCompromised(`Used ${amountMl} ml; recipe asks for ${wantMl} ml.`);
+        }
+        ensureStep("pour", () => true);
+      } else if (step && actionSlug === "pour") {
+        markCompromised(`Wrong spirit or glass — expected ${assetName(expected || "next bottle")}.`);
+      }
+      return;
+    }
+
+    // Technique tools — always animate when near a glass (even if incorrect).
+    if (TECHNIQUE_TOOLS.has(slugDropped)) {
+      if (slugDropped === "barspoon") {
+        const nearMix = nearVessel(obj, "mixing-glass");
+        if (!nearMix) {
+          returnToSpawn(obj);
+          failStep("Drop the barspoon near the Mixing glass to stir.");
+          return;
+        }
+        if (!vesselState["mixing-glass"].liquidMl) {
+          markCompromised("Stirring an empty glass — animation still plays.");
+        }
+        const needIce = idealIceForVessel("mixing-glass");
+        if (needIce && vesselState["mixing-glass"].ice < needIce) {
+          markCompromised(
+            `Stirring under-iced (${vesselState["mixing-glass"].ice}/${needIce}).`
+          );
+        }
+        selectTool("barspoon");
+        animateStir();
+        vesselState["mixing-glass"].stirred = true;
+        syncVesselLiquid("mixing-glass", false);
+        if (actionSlug === "stir") ensureStep("stir", () => true);
+        else if (step) markCompromised("Stirred out of order — animation still played.");
+        return;
+      }
+
+      if (slugDropped === "strainer") {
+        if (!nearVessel(obj, "mixing-glass") && !nearVessel(obj, "rocks-glass")) {
+          returnToSpawn(obj);
+          failStep("Drop the strainer on the Mixing glass to strain.");
+          return;
+        }
+        if (!vesselState["mixing-glass"].stirred) {
+          markCompromised("Straining before stir — animation still plays.");
+        }
+        selectTool("strainer");
+        animateStrain(() => {
+          if (actionSlug === "strain") ensureStep("strain", () => true);
+          else if (step) markCompromised("Strained out of order — animation still played.");
+          if (vesselState["rocks-glass"].liquidMl > VESSEL_CAPACITY["rocks-glass"].liquidMl) {
+            vesselState["rocks-glass"].overflow = true;
+            animateLiquidOverflow("rocks-glass", BOTTLE_LIQUID[vesselState["rocks-glass"].liquids[0]]);
+            markCompromised("Rocks glass overflowed on the strain.");
+          }
+        });
+        return;
+      }
+
+      if (slugDropped === "shaker") {
+        const nearMix = nearVessel(obj, "mixing-glass");
+        if (nearMix) {
+          // Shake animation: bounce the shaker, always allowed for testing.
+          gsap
+            .timeline()
+            .to(obj.position, { y: 0.45, duration: 0.15 })
+            .to(obj.rotation, { z: 0.4, duration: 0.12, yoyo: true, repeat: 5 })
+            .to(obj.position, {
+              x: obj.userData.spawnX,
+              y: obj.userData.spawnY,
+              z: obj.userData.spawnZ,
+              duration: 0.35
+            })
+            .to(obj.rotation, { z: 0, duration: 0.2 }, "<");
+          markCompromised("Shaking a Negroni fails the practice — but the animation ran.");
+          return;
+        }
+        returnToSpawn(obj);
+        return;
+      }
+
+      returnToSpawn(obj);
       return;
     }
 
     lastDebugDrop = {
       slug: slugDropped,
-      target: step.target_vessel_slug || "",
-      dist: step.target_vessel_slug ? distanceToVessel(obj, step.target_vessel_slug).toFixed(2) : "—",
-      threshold: step.target_vessel_slug ? vesselDropRadius(step.target_vessel_slug).toFixed(2) : "—",
+      target: step?.target_vessel_slug || "",
+      dist: step?.target_vessel_slug ? distanceToVessel(obj, step.target_vessel_slug).toFixed(2) : "—",
+      threshold: step?.target_vessel_slug ? vesselDropRadius(step.target_vessel_slug).toFixed(2) : "—",
       ok: false
     };
     updateDebugPanel();
@@ -837,6 +1982,11 @@
 
     const root = findDraggableRoot(hits[0].object);
     if (!root || !root.userData.draggable) return;
+
+    // Picking up a bar tool also equips it in the toolbar.
+    if (TOOL_SLUGS.has(root.userData.slug)) {
+      selectTool(root.userData.slug);
+    }
 
     event.preventDefault();
     event.stopPropagation();
@@ -887,60 +2037,15 @@
 
   document.querySelectorAll("[data-tool]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      selectedToolSlug = btn.getAttribute("data-tool");
-      document.querySelectorAll("[data-tool]").forEach((b) => {
-        b.style.outline = b === btn ? "2px solid #d97706" : "none";
-      });
-      controlHintEl.textContent = `Selected tool: ${selectedToolSlug}`;
+      selectTool(btn.getAttribute("data-tool"));
     });
   });
 
-  document.getElementById("perform-btn").addEventListener("click", () => {
-    const step = currentStep();
-    if (!step) return;
-
-    if (step.action_slug === "stir") {
-      if (selectedToolSlug !== "barspoon") {
-        failStep("Select the barspoon to stir.");
-        return;
-      }
-      if (selectedToolSlug === "shaker") {
-        failStep("Never shake a classic Negroni.");
-        return;
-      }
-      playStir();
-      const spoon = objectBySlug.barspoon;
-      if (spoon) {
-        gsap.to(spoon.rotation, { y: spoon.rotation.y + Math.PI * 4, duration: 1.2, ease: "power1.inOut" });
-      }
-      vesselState["mixing-glass"].stirred = true;
-      ensureStep("stir", (s) => s.required_tool_slug === "barspoon");
-      return;
-    }
-
-    if (step.action_slug === "shake") {
-      failStep("Shaking is incorrect for this recipe.");
-      return;
-    }
-
-    if (step.action_slug === "strain") {
-      if (selectedToolSlug !== "strainer") {
-        failStep("Select the strainer first.");
-        return;
-      }
-      if (!vesselState["mixing-glass"].stirred) {
-        failStep("Stir before straining.");
-        return;
-      }
-      playClack();
-      vesselState["rocks-glass"].strainedIn = true;
-      ensureStep("strain", () => true);
-      return;
-    }
-
-    if (selectedToolSlug === "shaker" && step.action_slug === "stir") {
-      failStep("Shaking a Negroni fails the practice.");
-    }
+  document.querySelectorAll("[data-jigger-side]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setJiggerSide(btn.getAttribute("data-jigger-side"));
+      selectTool("jigger");
+    });
   });
 
   document.getElementById("reset-btn").addEventListener("click", () => {
@@ -948,22 +2053,36 @@
     score = 0;
     scoreTextEl.textContent = "0";
     vesselState = {
-      "mixing-glass": { liquids: [], stirred: false, contentsReady: false },
-      "rocks-glass": { liquids: [], strainedIn: false }
+      "mixing-glass": { liquids: [], ice: 0, liquidMl: 0, stirred: false, overflow: false },
+      "rocks-glass": { liquids: [], ice: 0, liquidMl: 0, strainedIn: false, overflow: false }
     };
     placeCounts = {};
     clearDeposits();
-    selectedToolSlug = null;
-    document.querySelectorAll("[data-tool]").forEach((b) => {
-      b.style.outline = "none";
-    });
+    clearLiquidMeshes();
+    clearSpills();
+    clearJigger();
+    clearCompromised();
+    jiggerState.side = "short";
+    const jigger = objectBySlug.jigger;
+    if (jigger) jigger.rotation.z = 0;
+    syncJiggerSideButtons();
     for (const obj of sceneObjects) {
+      gsap.killTweensOf(obj.position);
+      gsap.killTweensOf(obj.rotation);
       obj.userData.draggable = obj.userData.kind !== "vessel";
       obj.position.set(obj.userData.spawnX, obj.userData.spawnY, obj.userData.spawnZ);
+      obj.rotation.y = 0;
+      obj.rotation.x = 0;
+      obj.rotation.z = 0;
     }
+    selectTool("hand");
     renderSteps();
     refreshControlHint();
     showToast("Station reset.", true);
+  });
+
+  document.getElementById("fail-reset-btn")?.addEventListener("click", () => {
+    document.getElementById("reset-btn")?.click();
   });
 
   function onResize() {
@@ -997,6 +2116,7 @@
     recipeNameEl.textContent = practice.recipe.name;
     renderSteps();
     await spawnAssets();
+    selectTool("hand");
   }
 
   document.getElementById("enter-btn").addEventListener("click", () => {
