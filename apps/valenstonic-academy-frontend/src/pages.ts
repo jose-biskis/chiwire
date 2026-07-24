@@ -243,7 +243,7 @@ export function adminPage(options: {
           <label>Kind</label>
           <select name="kind">
             <option>pour</option><option>stir</option><option>shake</option><option>strain</option>
-            <option>add_ice</option><option>garnish</option><option>measure</option><option>place</option><option>custom</option>
+            <option>place</option><option>measure</option><option>custom</option>
           </select>
           <label>Params schema JSON</label><textarea name="params_schema">{"durationMs":4000}</textarea>
           <label>UI hint</label><input name="ui_hint" />
@@ -293,7 +293,7 @@ export function adminPage(options: {
           <label>Description</label><textarea name="description"></textarea>
           <label>Steps JSON array</label>
           <textarea name="steps">[
-  {"step_order":1,"title":"Add ice","action_slug":"add-ice","required_asset_slugs":["ice-bucket"],"target_vessel_slug":"mixing-glass","params":{}}
+  {"step_order":1,"title":"Add ice","action_slug":"place","required_asset_slugs":["ice-bucket"],"target_vessel_slug":"mixing-glass","params":{"minCount":3}}
 ]</textarea>
           <p style="margin-top:1rem"><button class="btn" type="submit">Save recipe</button></p>
         </form>
@@ -427,6 +427,9 @@ export function practicePage(
       margin-top:1.2rem; border:0; border-radius:999px; padding:0.85rem 1.4rem; font-weight:800;
       background:var(--accent); color:#1c1208; cursor:pointer;
     }
+    #loading.hidden { display: none !important; }
+    #canvas-container canvas { display:block; width:100%; height:100%; touch-action:none; cursor:grab; }
+    #canvas-container canvas:active { cursor:grabbing; }
     #hud-left { position:absolute; top:1rem; left:1rem; z-index:10; width:min(22rem, calc(100vw - 2rem)); padding:1rem; }
     #hud-right { position:absolute; top:1rem; right:1rem; z-index:10; display:flex; flex-direction:column; gap:0.55rem; }
     #hud-bottom {

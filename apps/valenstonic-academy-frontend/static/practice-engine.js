@@ -15,9 +15,11 @@
   let score = 0;
   let selectedToolSlug = null;
   let vesselState = {
-    "mixing-glass": { ice: 0, liquids: [], stirred: false, contentsReady: false },
-    "rocks-glass": { ice: 0, liquids: [], garnished: false, strainedIn: false }
+    "mixing-glass": { liquids: [], stirred: false, contentsReady: false },
+    "rocks-glass": { liquids: [], strainedIn: false }
   };
+  /** Counts for generic `place` steps: `${vessel}:${asset}` → count */
+  let placeCounts = {};
 
   const sceneObjects = [];
   let objectBySlug = {};
@@ -349,11 +351,57 @@
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
+        // Help raycasts find the root even on nested GLB meshes.
+        child.userData.dragRootSlug = asset.slug;
       }
     });
+
+    // Invisible larger hit volume so small items (ice, peel, spoon) are easy to grab.
+    if (mesh.userData.draggable) {
+      const collider = asset.collider || {};
+      let hitGeo;
+      if (collider.type === "cylinder") {
+        const r = Math.max(Number(collider.radius) || 0.12, 0.18);
+        const h = Math.max(Number(collider.height) || 0.2, 0.25);
+        hitGeo = new THREE.CylinderGeometry(r, r, h, 16);
+      } else if (collider.type === "sphere") {
+        hitGeo = new THREE.SphereGeometry(Math.max(Number(collider.radius) || 0.2, 0.22), 12, 12);
+      } else {
+        const w = Math.max(Number(collider.width) || 0.25, 0.35);
+        const h = Math.max(Number(collider.height) || 0.2, 0.25);
+        const d = Math.max(Number(collider.depth) || 0.25, 0.35);
+        hitGeo = new THREE.BoxGeometry(w, h, d);
+      }
+      const hit = new THREE.Mesh(
+        hitGeo,
+        new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0, depthTest: true })
+      );
+      hit.position.y = (Number(collider.height) || 0.2) / 2;
+      hit.userData.dragRootSlug = asset.slug;
+      hit.userData.isHitProxy = true;
+      mesh.add(hit);
+    }
+
     scene.add(mesh);
     sceneObjects.push(mesh);
     objectBySlug[asset.slug] = mesh;
+  }
+
+  function findDraggableRoot(object) {
+    let node = object;
+    while (node) {
+      if (node.userData?.slug && node.userData.draggable) {
+        return node;
+      }
+      if (node.userData?.dragRootSlug) {
+        return objectBySlug[node.userData.dragRootSlug] || null;
+      }
+      if (!node.parent || node.parent === scene) {
+        break;
+      }
+      node = node.parent;
+    }
+    return null;
   }
 
   function loadGlb(url) {
@@ -399,7 +447,7 @@
     if (!vessel) return false;
     const dx = obj.position.x - vessel.position.x;
     const dz = obj.position.z - vessel.position.z;
-    return Math.sqrt(dx * dx + dz * dz) < 0.55;
+    return Math.sqrt(dx * dx + dz * dz) < 0.75;
   }
 
   function handleDrop(obj) {
@@ -412,18 +460,37 @@
 
     const slugDropped = obj.userData.slug;
 
-    if (step.action_slug === "add-ice" && slugDropped === "ice-bucket") {
+    if (step.action_slug === "place" && step.required_asset_slugs.includes(slugDropped)) {
       const target = step.target_vessel_slug;
-      if (nearVessel(obj, target)) {
-        vesselState[target].ice += 1;
+      if (!nearVessel(obj, target)) {
         returnToSpawn(obj);
-        if (vesselState[target].ice >= Number(step.params.minCubes || 1)) {
-          ensureStep("add-ice", () => true);
-        } else {
-          controlHintEl.textContent = `Ice in ${target}: ${vesselState[target].ice}/${step.params.minCubes || 1}`;
-        }
+        failStep(step.failure_message || "Place that on the correct vessel.");
         return;
       }
+
+      const key = `${target}:${slugDropped}`;
+      placeCounts[key] = (placeCounts[key] || 0) + 1;
+      const minCount = Number(step.params.minCount || 1);
+      const stayOnTarget = Boolean(step.params.stayOnTarget);
+
+      if (stayOnTarget) {
+        gsap.to(obj.position, {
+          x: objectBySlug[target].position.x,
+          y: 0.28,
+          z: objectBySlug[target].position.z,
+          duration: 0.35
+        });
+        obj.userData.draggable = false;
+      } else {
+        returnToSpawn(obj);
+      }
+
+      if (placeCounts[key] >= minCount) {
+        ensureStep("place", () => true);
+      } else {
+        controlHintEl.textContent = `Placed ${slugDropped} on ${target}: ${placeCounts[key]}/${minCount}`;
+      }
+      return;
     }
 
     if (step.action_slug === "pour" && step.required_asset_slugs.includes(slugDropped)) {
@@ -438,7 +505,6 @@
         failStep(`Use the ${step.required_tool_slug} for measured pours.`);
         return;
       }
-      // Prefer jigger selected, but allow pour if jigger is the required tool and selected OR if no wrong tool selected
       if (step.required_tool_slug && selectedToolSlug !== step.required_tool_slug) {
         returnToSpawn(obj);
         failStep(`Select the ${step.required_tool_slug} before pouring.`);
@@ -448,22 +514,6 @@
       returnToSpawn(obj);
       ensureStep("pour", (s) => s.required_asset_slugs[0] === slugDropped);
       return;
-    }
-
-    if (step.action_slug === "garnish" && step.required_asset_slugs.includes(slugDropped)) {
-      const target = step.target_vessel_slug;
-      if (nearVessel(obj, target)) {
-        gsap.to(obj.position, {
-          x: objectBySlug[target].position.x,
-          y: 0.28,
-          z: objectBySlug[target].position.z,
-          duration: 0.35
-        });
-        obj.userData.draggable = false;
-        vesselState[target].garnished = true;
-        ensureStep("garnish", () => true);
-        return;
-      }
     }
 
     returnToSpawn(obj);
@@ -479,26 +529,46 @@
     });
   }
 
+  function pointerToNdc(event, element) {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      y: -((event.clientY - rect.top) / rect.height) * 2 + 1
+    };
+  }
+
   function onPointerDown(event) {
-    if (event.target.closest("button") || event.target.closest(".glass") || event.target.closest(".top-link")) return;
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    if (event.target.closest?.("button") || event.target.closest?.(".glass") || event.target.closest?.(".top-link")) {
+      return;
+    }
+    if (!practice) return;
+
+    const ndc = pointerToNdc(event, renderer.domElement);
+    mouse.x = ndc.x;
+    mouse.y = ndc.y;
     raycaster.setFromCamera(mouse, camera);
     const hits = raycaster.intersectObjects(sceneObjects, true);
     if (!hits.length) return;
-    let root = hits[0].object;
-    while (root.parent && root.parent !== scene) root = root.parent;
-    if (!root.userData?.draggable) return;
+
+    const root = findDraggableRoot(hits[0].object);
+    if (!root || !root.userData.draggable) return;
+
+    event.preventDefault();
+    event.stopPropagation();
     controls.enabled = false;
+    renderer.domElement.setPointerCapture?.(event.pointerId);
     selectedObject = root;
     originalY = root.position.y;
     gsap.to(root.position, { y: 0.55, duration: 0.18 });
+    document.body.style.cursor = "grabbing";
   }
 
   function onPointerMove(event) {
     if (!selectedObject) return;
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    event.preventDefault();
+    const ndc = pointerToNdc(event, renderer.domElement);
+    mouse.x = ndc.x;
+    mouse.y = ndc.y;
     raycaster.setFromCamera(mouse, camera);
     const hit = raycaster.intersectObject(guidePlane);
     if (hit.length) {
@@ -507,26 +577,28 @@
     }
   }
 
-  function onPointerUp() {
+  function onPointerUp(event) {
     if (!selectedObject) return;
+    event.preventDefault();
+    try {
+      renderer.domElement.releasePointerCapture?.(event.pointerId);
+    } catch {
+      /* ignore */
+    }
     handleDrop(selectedObject);
     selectedObject = null;
     controls.enabled = true;
+    document.body.style.cursor = "default";
   }
 
-  window.addEventListener("mousedown", onPointerDown);
-  window.addEventListener("mousemove", onPointerMove);
-  window.addEventListener("mouseup", onPointerUp);
-  window.addEventListener("touchstart", (e) => onPointerDown(e.touches[0]), { passive: false });
-  window.addEventListener(
-    "touchmove",
-    (e) => {
-      e.preventDefault();
-      onPointerMove(e.touches[0]);
-    },
-    { passive: false }
-  );
-  window.addEventListener("touchend", onPointerUp);
+  const canvasEl = renderer.domElement;
+  canvasEl.addEventListener("pointerdown", onPointerDown);
+  canvasEl.addEventListener("pointermove", onPointerMove);
+  canvasEl.addEventListener("pointerup", onPointerUp);
+  canvasEl.addEventListener("pointercancel", onPointerUp);
+  // Avoid browser touch gestures stealing the drag.
+  canvasEl.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
+  canvasEl.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
 
   document.querySelectorAll("[data-tool]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -581,7 +653,6 @@
       return;
     }
 
-    // Wrong tool trap: if user selected shaker during stir step
     if (selectedToolSlug === "shaker" && step.action_slug === "stir") {
       failStep("Shaking a Negroni fails the practice.");
     }
@@ -592,9 +663,10 @@
     score = 0;
     scoreTextEl.textContent = "0";
     vesselState = {
-      "mixing-glass": { ice: 0, liquids: [], stirred: false, contentsReady: false },
-      "rocks-glass": { ice: 0, liquids: [], garnished: false, strainedIn: false }
+      "mixing-glass": { liquids: [], stirred: false, contentsReady: false },
+      "rocks-glass": { liquids: [], strainedIn: false }
     };
+    placeCounts = {};
     selectedToolSlug = null;
     document.querySelectorAll("[data-tool]").forEach((b) => {
       b.style.outline = "none";
@@ -641,8 +713,11 @@
   document.getElementById("enter-btn").addEventListener("click", () => {
     audioCtx.resume();
     loadingEl.style.opacity = "0";
-    setTimeout(() => loadingEl.classList.add("hidden"), 450);
     loadingEl.style.pointerEvents = "none";
+    setTimeout(() => {
+      loadingEl.classList.add("hidden");
+      loadingEl.style.display = "none";
+    }, 450);
   });
 
   boot().catch((err) => {

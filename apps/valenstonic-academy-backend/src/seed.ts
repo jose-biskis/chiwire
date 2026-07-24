@@ -126,71 +126,65 @@ function negroniAssets() {
   ] as const;
 }
 
-/** Seeds Negroni recipe, procedural + GLB assets, tools/actions, scene, and a thin course. */
+const GENERIC_ACTIONS = [
+  {
+    slug: "place",
+    name: "Place",
+    kind: "place",
+    params_schema: { minCount: 1, stayOnTarget: false },
+    ui_hint: "Drag an ingredient onto the target vessel. Count and order come from the recipe step."
+  },
+  {
+    slug: "pour",
+    name: "Pour",
+    kind: "pour",
+    params_schema: { amountMl: 30 },
+    ui_hint: "Drag the bottle onto the target vessel. Order matters."
+  },
+  {
+    slug: "stir",
+    name: "Stir",
+    kind: "stir",
+    params_schema: { durationMs: 4000, technique: "stir" },
+    ui_hint: "Select the barspoon, then Perform action."
+  },
+  {
+    slug: "shake",
+    name: "Shake",
+    kind: "shake",
+    params_schema: { durationMs: 4000, technique: "shake" },
+    ui_hint: "Shake is wrong for a classic Negroni."
+  },
+  {
+    slug: "strain",
+    name: "Strain",
+    kind: "strain",
+    params_schema: {},
+    ui_hint: "Select the strainer, then Perform action."
+  },
+  {
+    slug: "measure",
+    name: "Measure",
+    kind: "measure",
+    params_schema: { amountMl: 30 },
+    ui_hint: "Use the jigger to measure before pouring."
+  }
+] as const;
+
+/** Seeds / refreshes Negroni catalog: assets, generic actions, tools, recipe, scene, course. */
 export async function seedIfEmpty(store: AcademyStore): Promise<void> {
   const assets = negroniAssets();
 
-  // Always keep dual render paths (procedural key + glb_url) on Negroni assets.
   for (const asset of assets) {
     await store.upsertAsset({ ...asset });
   }
 
-  const recipes = await store.listRecipes();
-  if (recipes.length > 0) {
-    return;
+  for (const action of GENERIC_ACTIONS) {
+    await store.upsertAction(action);
   }
 
   const allAssets = await store.listAssets();
   const bySlug = Object.fromEntries(allAssets.map((asset) => [asset.slug, asset]));
-
-  const actions = [
-    {
-      slug: "add-ice",
-      name: "Add ice",
-      kind: "add_ice",
-      params_schema: { minCubes: 3 },
-      ui_hint: "Drag ice into the target vessel."
-    },
-    {
-      slug: "pour",
-      name: "Pour",
-      kind: "pour",
-      params_schema: { amountMl: 30 },
-      ui_hint: "Drag the bottle onto the target vessel. Order matters."
-    },
-    {
-      slug: "stir",
-      name: "Stir",
-      kind: "stir",
-      params_schema: { durationMs: 4000, technique: "stir" },
-      ui_hint: "Select the barspoon, then hold Stir on the mixing glass."
-    },
-    {
-      slug: "shake",
-      name: "Shake",
-      kind: "shake",
-      params_schema: { durationMs: 4000, technique: "shake" },
-      ui_hint: "Shake is wrong for a classic Negroni."
-    },
-    {
-      slug: "strain",
-      name: "Strain",
-      kind: "strain",
-      params_schema: {},
-      ui_hint: "Use the strainer from mixing glass into the rocks glass."
-    },
-    {
-      slug: "garnish",
-      name: "Garnish",
-      kind: "garnish",
-      params_schema: {},
-      ui_hint: "Place the orange peel on the finished drink."
-    }
-  ] as const;
-
-  for (const action of actions) {
-    await store.upsertAction(action);
-  }
 
   await store.upsertTool({
     slug: "barspoon",
@@ -225,16 +219,17 @@ export async function seedIfEmpty(store: AcademyStore): Promise<void> {
     category: "cocktail"
   });
 
+  // Always refresh Negroni steps so generic actions stay in sync.
   await store.replaceRecipeSteps(recipeId, [
     {
       step_order: 1,
       title: "Add ice to the mixing glass",
-      action_slug: "add-ice",
+      action_slug: "place",
       required_asset_slugs: ["ice-bucket"],
       target_vessel_slug: "mixing-glass",
-      params: { minCubes: 3 },
+      params: { minCount: 3 },
       success_message: "Mixing glass is properly chilled.",
-      failure_message: "Ice belongs in the mixing glass first."
+      failure_message: "Place ice in the mixing glass first."
     },
     {
       step_order: 2,
@@ -282,12 +277,12 @@ export async function seedIfEmpty(store: AcademyStore): Promise<void> {
     {
       step_order: 6,
       title: "Add fresh ice to the rocks glass",
-      action_slug: "add-ice",
+      action_slug: "place",
       required_asset_slugs: ["ice-bucket"],
       target_vessel_slug: "rocks-glass",
-      params: { minCubes: 2 },
+      params: { minCount: 2 },
       success_message: "Service glass ready.",
-      failure_message: "Fresh ice goes in the rocks glass before straining."
+      failure_message: "Place fresh ice in the rocks glass before straining."
     },
     {
       step_order: 7,
@@ -303,12 +298,12 @@ export async function seedIfEmpty(store: AcademyStore): Promise<void> {
     {
       step_order: 8,
       title: "Garnish with orange peel",
-      action_slug: "garnish",
+      action_slug: "place",
       required_asset_slugs: ["orange-peel"],
       target_vessel_slug: "rocks-glass",
-      params: {},
+      params: { minCount: 1, stayOnTarget: true },
       success_message: "Negroni complete. Salute.",
-      failure_message: "Finish with the orange peel on the rocks glass."
+      failure_message: "Place the orange peel on the rocks glass."
     }
   ]);
 
@@ -320,6 +315,11 @@ export async function seedIfEmpty(store: AcademyStore): Promise<void> {
     available_asset_slugs: assets.map((asset) => asset.slug),
     available_tool_slugs: ["barspoon", "jigger", "strainer", "shaker"]
   });
+
+  const courses = await store.listCourses();
+  if (courses.length > 0) {
+    return;
+  }
 
   const courseId = await store.upsertCourse({
     slug: "classic-cocktails-lab",

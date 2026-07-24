@@ -13,10 +13,8 @@ export type ActionKind =
   | "shake"
   | "stir"
   | "strain"
-  | "add_ice"
-  | "garnish"
-  | "measure"
   | "place"
+  | "measure"
   | "custom";
 
 export type ColliderDef = {
