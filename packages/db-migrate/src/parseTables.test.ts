@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   parseColumnDefinition,
   parseCreateTableStatement,
+  sortTablesByForeignKeys,
   splitTopLevelCommas
 } from "./parseTables.js";
 
@@ -15,9 +16,7 @@ test("splitTopLevelCommas respects typmod and defaults", () => {
 });
 
 test("parseColumnDefinition handles common clauses", () => {
-  const column = parseColumnDefinition(
-    `body text NOT NULL DEFAULT ''`
-  );
+  const column = parseColumnDefinition(`body text NOT NULL DEFAULT ''`);
   assert.ok(column);
   assert.equal(column!.name, "body");
   assert.equal(column!.typeSql, "text");
@@ -64,4 +63,31 @@ test("parseCreateTableStatement skips table constraints", () => {
   assert.equal(table.columns[0]!.notNull, true);
   assert.equal(table.columns[1]!.notNull, true);
   assert.match(table.columns[0]!.extraSql ?? "", /REFERENCES/i);
+});
+
+test("sortTablesByForeignKeys parents before children regardless of input order", () => {
+  const child = parseCreateTableStatement(
+    `
+    CREATE TABLE vt_academy.vt_tools (
+      id text PRIMARY KEY,
+      asset_id text REFERENCES vt_academy.vt_assets (id) ON DELETE SET NULL
+    )
+    `,
+    "vt_academy"
+  );
+  const parent = parseCreateTableStatement(
+    `
+    CREATE TABLE vt_academy.vt_assets (
+      id text PRIMARY KEY,
+      slug text NOT NULL
+    )
+    `,
+    "vt_academy"
+  );
+
+  const ordered = sortTablesByForeignKeys([child, parent], "vt_academy");
+  assert.deepEqual(
+    ordered.map((table) => table.name),
+    ["vt_assets", "vt_tools"]
+  );
 });

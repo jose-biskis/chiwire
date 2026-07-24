@@ -346,6 +346,89 @@ export function isCreateTableStatement(statement: string): boolean {
   return /^CREATE\s+TABLE\b/i.test(cleaned);
 }
 
+function tableKey(table: DesiredTable): string {
+  return `${table.schema}.${table.name}`;
+}
+
+/** Collect schema.table keys referenced via REFERENCES in a CREATE TABLE. */
+export function referencedTableKeys(
+  table: DesiredTable,
+  defaultSchema: string
+): string[] {
+  const refs: string[] = [];
+  const re =
+    /REFERENCES\s+((?:"[^"]+"|[A-Za-z_][\w$]*)(?:\s*\.\s*(?:"[^"]+"|[A-Za-z_][\w$]*))?)/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(table.createStatement)) !== null) {
+    const qualified = splitQualifiedName(match[1]!);
+    const schema = qualified.schema ?? defaultSchema;
+    const key = `${schema}.${qualified.name}`;
+    if (key !== tableKey(table)) {
+      refs.push(key);
+    }
+  }
+  return refs;
+}
+
+/**
+ * Order tables so referenced parents are created before dependents.
+ * File name order no longer matters for CREATE TABLE.
+ */
+export function sortTablesByForeignKeys(
+  tables: DesiredTable[],
+  defaultSchema: string
+): DesiredTable[] {
+  const byKey = new Map(tables.map((table) => [tableKey(table), table]));
+  const indegree = new Map<string, number>();
+  const dependents = new Map<string, string[]>();
+
+  for (const key of byKey.keys()) {
+    indegree.set(key, 0);
+    dependents.set(key, []);
+  }
+
+  for (const table of tables) {
+    const key = tableKey(table);
+    for (const ref of referencedTableKeys(table, defaultSchema)) {
+      if (!byKey.has(ref)) {
+        continue;
+      }
+      dependents.get(ref)!.push(key);
+      indegree.set(key, (indegree.get(key) ?? 0) + 1);
+    }
+  }
+
+  const ready = [...indegree.entries()]
+    .filter(([, degree]) => degree === 0)
+    .map(([key]) => key)
+    .sort((a, b) => a.localeCompare(b));
+
+  const ordered: DesiredTable[] = [];
+  while (ready.length > 0) {
+    const key = ready.shift()!;
+    ordered.push(byKey.get(key)!);
+    for (const dependent of dependents.get(key) ?? []) {
+      const next = (indegree.get(dependent) ?? 0) - 1;
+      indegree.set(dependent, next);
+      if (next === 0) {
+        ready.push(dependent);
+        ready.sort((a, b) => a.localeCompare(b));
+      }
+    }
+  }
+
+  if (ordered.length !== tables.length) {
+    const remaining = [...byKey.keys()].filter(
+      (key) => !ordered.some((table) => tableKey(table) === key)
+    );
+    throw new Error(
+      `Circular foreign keys among tables: ${remaining.join(", ")}`
+    );
+  }
+
+  return ordered;
+}
+
 export function classifyStatements(
   statements: string[],
   defaultSchema: string
@@ -361,5 +444,8 @@ export function classifyStatements(
     }
   }
 
-  return { tables, otherStatements };
+  return {
+    tables: sortTablesByForeignKeys(tables, defaultSchema),
+    otherStatements
+  };
 }

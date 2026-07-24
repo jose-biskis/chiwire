@@ -35,6 +35,8 @@ export {
   isCreateTableStatement,
   parseColumnDefinition,
   parseCreateTableStatement,
+  referencedTableKeys,
+  sortTablesByForeignKeys,
   splitTopLevelCommas,
   type DesiredColumn,
   type DesiredTable
