@@ -132,21 +132,21 @@ const GENERIC_ACTIONS = [
     name: "Place",
     kind: "place",
     params_schema: { minCount: 1, stayOnTarget: false },
-    ui_hint: "Drag an ingredient onto the target vessel. Count and order come from the recipe step."
+    ui_hint: "Drag onto the Mixing glass (taller, left) or Rocks glass (shorter, right)."
   },
   {
     slug: "pour",
     name: "Pour",
     kind: "pour",
     params_schema: { amountMl: 30 },
-    ui_hint: "Drag the bottle onto the target vessel. Order matters."
+    ui_hint: "Drag the bottle onto the Mixing glass. Order matters."
   },
   {
     slug: "stir",
     name: "Stir",
     kind: "stir",
     params_schema: { durationMs: 4000, technique: "stir" },
-    ui_hint: "Select the barspoon, then Perform action."
+    ui_hint: "Select the barspoon, then Perform action on the Mixing glass."
   },
   {
     slug: "shake",
@@ -160,7 +160,7 @@ const GENERIC_ACTIONS = [
     name: "Strain",
     kind: "strain",
     params_schema: {},
-    ui_hint: "Select the strainer, then Perform action."
+    ui_hint: "Select the strainer, then Perform — into the Rocks glass."
   },
   {
     slug: "measure",
@@ -182,6 +182,8 @@ export async function seedIfEmpty(store: AcademyStore): Promise<void> {
   for (const action of GENERIC_ACTIONS) {
     await store.upsertAction(action);
   }
+  // Drop leftovers from older seeds (e.g. add-ice, garnish) so admin only shows verbs.
+  await store.deleteActionsNotIn(GENERIC_ACTIONS.map((action) => action.slug));
 
   const allAssets = await store.listAssets();
   const bySlug = Object.fromEntries(allAssets.map((asset) => [asset.slug, asset]));
@@ -223,7 +225,7 @@ export async function seedIfEmpty(store: AcademyStore): Promise<void> {
   await store.replaceRecipeSteps(recipeId, [
     {
       step_order: 1,
-      title: "Add ice to the mixing glass",
+      title: "Place ice in the mixing glass",
       action_slug: "place",
       required_asset_slugs: ["ice-bucket"],
       target_vessel_slug: "mixing-glass",
@@ -276,7 +278,7 @@ export async function seedIfEmpty(store: AcademyStore): Promise<void> {
     },
     {
       step_order: 6,
-      title: "Add fresh ice to the rocks glass",
+      title: "Place fresh ice in the rocks glass",
       action_slug: "place",
       required_asset_slugs: ["ice-bucket"],
       target_vessel_slug: "rocks-glass",
@@ -297,7 +299,7 @@ export async function seedIfEmpty(store: AcademyStore): Promise<void> {
     },
     {
       step_order: 8,
-      title: "Garnish with orange peel",
+      title: "Place orange peel on the rocks glass",
       action_slug: "place",
       required_asset_slugs: ["orange-peel"],
       target_vessel_slug: "rocks-glass",

@@ -35,6 +35,7 @@
     "start:vtacademy": "npm run start --workspace @chiwire/valenstonic-academy-frontend",
     "test:deploy-settings": "node --test scripts/deploy-app.test.mjs",
     "db:migrate": "npm run build --workspace @chiwire/core && npm run build --workspace @chiwire/db-migrate && npm run db-migrate --workspace @chiwire/db-migrate --",
+    "db:migrate:vtacademy": "npm run build --workspace @chiwire/core && npm run build --workspace @chiwire/db-migrate && npm run db:apply --workspace @chiwire/valenstonic-academy-backend",
     "typecheck": "npm run typecheck --workspaces",
     "typecheck:watch": "tsc --build --watch"
   },

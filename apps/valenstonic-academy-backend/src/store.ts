@@ -218,6 +218,14 @@ export class AcademyStore {
     });
   }
 
+  /** Removes catalog actions that are no longer part of the generic verb set. */
+  async deleteActionsNotIn(keepSlugs: string[]): Promise<number> {
+    if (keepSlugs.length === 0) {
+      return 0;
+    }
+    return Number(await this.t("vt_actions").whereNotIn("slug", keepSlugs).del());
+  }
+
   async upsertTool(input: {
     slug: string;
     name: string;

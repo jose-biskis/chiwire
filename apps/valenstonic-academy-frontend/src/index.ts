@@ -273,7 +273,8 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     if (method === "GET" && pathname.startsWith("/practice/")) {
       const slug = decodeURIComponent(pathname.slice("/practice/".length));
       const mode = url.searchParams.get("mode") === "glb" ? "glb" : "procedural";
-      html(response, 200, practicePage(slug, mode, browserApiBase()));
+      const debug = url.searchParams.get("debug") === "1";
+      html(response, 200, practicePage(slug, mode, browserApiBase(), debug));
       return;
     }
 

@@ -7,6 +7,7 @@
   },
   "references": [
     { "path": "../../packages/core" },
+    { "path": "../../packages/db-migrate" },
     { "path": "../../packages/valenstonic-academy-shared" }
   ],
   "include": ["src/**/*.ts"]

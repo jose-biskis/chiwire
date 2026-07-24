@@ -2,12 +2,16 @@
 (() => {
   const slug = window.__PRACTICE_SLUG__;
   const renderMode = window.__PRACTICE_MODE__ === "glb" ? "glb" : "procedural";
+  const debugMode =
+    window.__PRACTICE_DEBUG__ === true ||
+    new URLSearchParams(window.location.search).get("debug") === "1";
   const toastEl = document.getElementById("toast");
   const stepListEl = document.getElementById("step-list");
   const recipeNameEl = document.getElementById("recipe-name");
   const scoreTextEl = document.getElementById("score-text");
   const controlHintEl = document.getElementById("control-hint");
   const loadingEl = document.getElementById("loading");
+  const debugPanelEl = document.getElementById("debug-panel");
   const gltfLoader = typeof THREE.GLTFLoader === "function" ? new THREE.GLTFLoader() : null;
 
   let practice = null;
@@ -20,11 +24,17 @@
   };
   /** Counts for generic `place` steps: `${vessel}:${asset}` → count */
   let placeCounts = {};
+  /** Visual pieces left in vessels after a successful `place` (ice cubes, etc.) */
+  let depositedPieces = [];
 
   const sceneObjects = [];
   let objectBySlug = {};
   let selectedObject = null;
   let originalY = 0;
+  let targetRing = null;
+  let targetRingPulse = 0;
+  const debugHelpers = [];
+  let lastDebugDrop = null;
 
   function showToast(message, ok) {
     toastEl.textContent = message;
@@ -68,11 +78,95 @@
     if (currentStepIndex >= practice.steps.length) {
       controlHintEl.textContent = "Practice complete. Reset to try again.";
       showToast("Negroni nailed. Process complete.", true);
+      updateTargetHighlight();
     } else {
-      const next = currentStep();
-      const action = practice.actions.find((a) => a.slug === next.action_slug);
-      controlHintEl.textContent = action?.ui_hint || next.title;
+      refreshControlHint();
     }
+  }
+
+  function assetName(slug) {
+    return practice?.assets?.find((a) => a.slug === slug)?.name || slug;
+  }
+
+  function refreshControlHint() {
+    const step = currentStep();
+    if (!step) {
+      updateTargetHighlight();
+      updateDebugPanel();
+      return;
+    }
+    const action = practice.actions.find((a) => a.slug === step.action_slug);
+    const targetName = step.target_vessel_slug ? assetName(step.target_vessel_slug) : null;
+    const actionSlug = normalizeActionSlug(step.action_slug);
+    let hint = action?.ui_hint || step.title;
+    if (actionSlug === "place" && targetName) {
+      const what = (step.required_asset_slugs || []).map(assetName).join(" / ");
+      const count = Number(step.params?.minCount || 1);
+      hint =
+        count > 1
+          ? `Drag ${what} onto the ${targetName} (${count}×).`
+          : `Place ${what} on the ${targetName}.`;
+    } else if (actionSlug === "pour" && targetName) {
+      hint = `Pour into the ${targetName}. Select the jigger first.`;
+    } else if ((actionSlug === "stir" || actionSlug === "strain") && targetName) {
+      hint = `${action?.ui_hint || step.title} Target: ${targetName}.`;
+    }
+    controlHintEl.textContent = hint;
+    updateTargetHighlight();
+    updateDebugPanel();
+  }
+
+  function updateDebugPanel() {
+    if (!debugMode || !debugPanelEl) return;
+    const step = currentStep();
+    const lines = [
+      `debug=1 · colliders + drop zones`,
+      `step: ${step ? `${step.step_order || currentStepIndex + 1} ${step.action_slug}` : "(done)"}`,
+      step?.target_vessel_slug ? `target: ${step.target_vessel_slug}` : null,
+      step?.required_asset_slugs?.length ? `need: ${step.required_asset_slugs.join(",")}` : null,
+      lastDebugDrop
+        ? `last drop: ${lastDebugDrop.slug} → ${lastDebugDrop.target || "?"} dist=${lastDebugDrop.dist} need<${lastDebugDrop.threshold} ${lastDebugDrop.ok ? "OK" : "MISS"}`
+        : "last drop: —"
+    ].filter(Boolean);
+    debugPanelEl.textContent = lines.join("\n");
+  }
+
+  function updateTargetHighlight() {
+    if (!targetRing) {
+      targetRing = new THREE.Mesh(
+        new THREE.RingGeometry(0.22, 0.32, 48),
+        new THREE.MeshBasicMaterial({
+          color: 0xfbbf24,
+          transparent: true,
+          opacity: 0.85,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        })
+      );
+      targetRing.rotation.x = -Math.PI / 2;
+      targetRing.position.y = 0.04;
+      targetRing.visible = false;
+      scene.add(targetRing);
+    }
+
+    const step = currentStep();
+    const vesselSlug = step?.target_vessel_slug;
+    const vessel = vesselSlug ? objectBySlug[vesselSlug] : null;
+    if (!vessel) {
+      targetRing.visible = false;
+      return;
+    }
+    targetRing.visible = true;
+    targetRing.position.x = vessel.position.x;
+    targetRing.position.z = vessel.position.z;
+    const radius = Math.max(Number(vessel.userData?.collider?.radius) || 0.2, 0.18);
+    targetRing.geometry.dispose();
+    targetRing.geometry = new THREE.RingGeometry(radius + 0.04, radius + 0.14, 48);
+  }
+
+  function normalizeActionSlug(actionSlug) {
+    if (actionSlug === "add-ice" || actionSlug === "garnish") return "place";
+    return actionSlug;
   }
 
   function ensureStep(actionSlug, extraCheck) {
@@ -81,7 +175,7 @@
       showToast("Already finished. Reset to practice again.", false);
       return false;
     }
-    if (step.action_slug !== actionSlug) {
+    if (normalizeActionSlug(step.action_slug) !== normalizeActionSlug(actionSlug)) {
       failStep(step.failure_message || `Current step needs "${step.action_slug}", not "${actionSlug}".`);
       return false;
     }
@@ -208,9 +302,9 @@
         return g;
       }
       case "mixing_glass":
-        return glass(0.2, 0.32, 0xf8fafc);
+        return glass(0.2, 0.38, 0xb8d4e8);
       case "rocks_glass":
-        return glass(0.16, 0.2, 0xe2e8f0);
+        return glass(0.16, 0.2, 0xe8e0d4);
       case "barspoon": {
         const g = new THREE.Group();
         const shaft = new THREE.Mesh(
@@ -334,6 +428,35 @@
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
 
+  function colliderGeometry(collider) {
+    if (collider.type === "cylinder") {
+      const r = Math.max(Number(collider.radius) || 0.12, 0.05);
+      const h = Math.max(Number(collider.height) || 0.2, 0.05);
+      return new THREE.CylinderGeometry(r, r, h, 16);
+    }
+    if (collider.type === "sphere") {
+      return new THREE.SphereGeometry(Math.max(Number(collider.radius) || 0.2, 0.05), 12, 12);
+    }
+    const w = Math.max(Number(collider.width) || 0.25, 0.05);
+    const h = Math.max(Number(collider.height) || 0.2, 0.05);
+    const d = Math.max(Number(collider.depth) || 0.25, 0.05);
+    return new THREE.BoxGeometry(w, h, d);
+  }
+
+  function clearDebugHelpers() {
+    while (debugHelpers.length) {
+      const helper = debugHelpers.pop();
+      if (helper.parent) helper.parent.remove(helper);
+      if (helper.geometry) helper.geometry.dispose();
+      if (helper.material) helper.material.dispose();
+    }
+  }
+
+  function addDebugHelper(mesh) {
+    debugHelpers.push(mesh);
+    return mesh;
+  }
+
   function attachAssetUserData(mesh, asset) {
     mesh.position.set(asset.spawn.x || 0, asset.spawn.y || 0.05, asset.spawn.z || 0);
     if (asset.spawn.rotY) mesh.rotation.y = asset.spawn.rotY;
@@ -356,9 +479,10 @@
       }
     });
 
+    const collider = asset.collider || {};
+
     // Invisible larger hit volume so small items (ice, peel, spoon) are easy to grab.
     if (mesh.userData.draggable) {
-      const collider = asset.collider || {};
       let hitGeo;
       if (collider.type === "cylinder") {
         const r = Math.max(Number(collider.radius) || 0.12, 0.18);
@@ -374,12 +498,57 @@
       }
       const hit = new THREE.Mesh(
         hitGeo,
-        new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0, depthTest: true })
+        new THREE.MeshBasicMaterial({
+          color: 0x22d3ee,
+          wireframe: true,
+          transparent: true,
+          opacity: debugMode ? 0.7 : 0,
+          visible: debugMode,
+          depthTest: true
+        })
       );
       hit.position.y = (Number(collider.height) || 0.2) / 2;
       hit.userData.dragRootSlug = asset.slug;
       hit.userData.isHitProxy = true;
       mesh.add(hit);
+      if (debugMode) addDebugHelper(hit);
+    }
+
+    // Authored collider (seed) — magenta wireframe in debug.
+    if (debugMode && collider.type) {
+      const authored = new THREE.Mesh(
+        colliderGeometry(collider),
+        new THREE.MeshBasicMaterial({
+          color: asset.kind === "vessel" ? 0xf472b6 : 0xa78bfa,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.85
+        })
+      );
+      authored.position.y = (Number(collider.height) || 0.2) / 2;
+      authored.userData.isDebugCollider = true;
+      mesh.add(authored);
+      addDebugHelper(authored);
+    }
+
+    // Drop acceptance disc for vessels (XZ radius used by nearVessel).
+    if (debugMode && asset.kind === "vessel") {
+      const dropR = vesselDropRadiusForCollider(collider);
+      const disc = new THREE.Mesh(
+        new THREE.RingGeometry(dropR - 0.03, dropR, 48),
+        new THREE.MeshBasicMaterial({
+          color: 0x4ade80,
+          transparent: true,
+          opacity: 0.55,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        })
+      );
+      disc.rotation.x = -Math.PI / 2;
+      disc.position.y = 0.03;
+      disc.userData.isDebugDropZone = true;
+      mesh.add(disc);
+      addDebugHelper(disc);
     }
 
     scene.add(mesh);
@@ -421,6 +590,7 @@
 
   async function spawnAssets() {
     objectBySlug = {};
+    clearDebugHelpers();
     while (sceneObjects.length) {
       const existing = sceneObjects.pop();
       scene.remove(existing);
@@ -440,14 +610,96 @@
       }
       attachAssetUserData(mesh, asset);
     }
+    refreshControlHint();
+  }
+
+  function vesselDropRadiusForCollider(collider) {
+    const base = Number(collider?.radius) || 0.22;
+    // Forgiving XZ drop radius so ice does not need pixel-perfect centering.
+    return Math.max(base + 0.65, 1.05);
+  }
+
+  function vesselDropRadius(vesselSlug) {
+    const vessel = objectBySlug[vesselSlug];
+    return vesselDropRadiusForCollider(vessel?.userData?.collider || {});
+  }
+
+  function distanceToVessel(obj, vesselSlug) {
+    const vessel = objectBySlug[vesselSlug];
+    if (!vessel) return Infinity;
+    const dx = obj.position.x - vessel.position.x;
+    const dz = obj.position.z - vessel.position.z;
+    return Math.sqrt(dx * dx + dz * dz);
   }
 
   function nearVessel(obj, vesselSlug) {
+    return distanceToVessel(obj, vesselSlug) < vesselDropRadius(vesselSlug);
+  }
+
+  function clearDeposits() {
+    while (depositedPieces.length) {
+      const piece = depositedPieces.pop();
+      gsap.killTweensOf(piece.position);
+      gsap.killTweensOf(piece.rotation);
+      if (piece.parent) piece.parent.remove(piece);
+    }
+  }
+
+  function makeIceCubeMesh() {
+    const cube = new THREE.Mesh(
+      new THREE.BoxGeometry(0.09, 0.09, 0.09),
+      new THREE.MeshStandardMaterial({
+        color: 0xe0f2fe,
+        transparent: true,
+        opacity: 0.82,
+        roughness: 0.12,
+        metalness: 0.05
+      })
+    );
+    cube.castShadow = true;
+    cube.receiveShadow = true;
+    return cube;
+  }
+
+  /** Leave a visible piece inside the vessel when a reusable source (ice pile) is placed. */
+  function depositInVessel(assetSlug, vesselSlug, index) {
     const vessel = objectBySlug[vesselSlug];
-    if (!vessel) return false;
-    const dx = obj.position.x - vessel.position.x;
-    const dz = obj.position.z - vessel.position.z;
-    return Math.sqrt(dx * dx + dz * dz) < 0.75;
+    if (!vessel) return;
+
+    let piece;
+    if (assetSlug === "ice-bucket" || assetSlug.includes("ice")) {
+      piece = makeIceCubeMesh();
+    } else {
+      const asset = practice?.assets?.find((a) => a.slug === assetSlug);
+      piece = builders(asset?.procedural_key || "fallback", asset?.meta || {});
+      piece.scale.setScalar(0.85);
+    }
+
+    piece.userData.deposited = true;
+    vessel.add(piece);
+
+    const angle = index * 2.1;
+    const radius = 0.05 + (index % 3) * 0.025;
+    const restY = 0.07 + Math.floor(index / 3) * 0.085;
+    const localX = Math.cos(angle) * radius;
+    const localZ = Math.sin(angle) * radius;
+
+    piece.position.set(localX, restY + 0.55, localZ);
+    piece.rotation.set(0.4, index * 0.6, 0.2);
+    depositedPieces.push(piece);
+
+    gsap.to(piece.position, {
+      y: restY,
+      duration: 0.45,
+      ease: "bounce.out"
+    });
+    gsap.to(piece.rotation, {
+      x: (index % 3) * 0.35 - 0.2,
+      y: index * 0.55,
+      z: (index % 2) * 0.25,
+      duration: 0.45,
+      ease: "power2.out"
+    });
   }
 
   function handleDrop(obj) {
@@ -459,10 +711,23 @@
     }
 
     const slugDropped = obj.userData.slug;
+    const actionSlug = normalizeActionSlug(step.action_slug);
 
-    if (step.action_slug === "place" && step.required_asset_slugs.includes(slugDropped)) {
+    if (actionSlug === "place" && (step.required_asset_slugs || []).includes(slugDropped)) {
       const target = step.target_vessel_slug;
-      if (!nearVessel(obj, target)) {
+      const dist = distanceToVessel(obj, target);
+      const threshold = vesselDropRadius(target);
+      const ok = dist < threshold;
+      lastDebugDrop = {
+        slug: slugDropped,
+        target,
+        dist: dist.toFixed(2),
+        threshold: threshold.toFixed(2),
+        ok
+      };
+      updateDebugPanel();
+
+      if (!ok) {
         returnToSpawn(obj);
         failStep(step.failure_message || "Place that on the correct vessel.");
         return;
@@ -482,6 +747,8 @@
         });
         obj.userData.draggable = false;
       } else {
+        // Source stays reusable (ice pile); drop a cube into the glass so placement is visible.
+        depositInVessel(slugDropped, target, placeCounts[key] - 1);
         returnToSpawn(obj);
       }
 
@@ -493,9 +760,19 @@
       return;
     }
 
-    if (step.action_slug === "pour" && step.required_asset_slugs.includes(slugDropped)) {
+    if (actionSlug === "pour" && (step.required_asset_slugs || []).includes(slugDropped)) {
       const target = step.target_vessel_slug;
-      if (!nearVessel(obj, target)) {
+      const dist = distanceToVessel(obj, target);
+      const threshold = vesselDropRadius(target);
+      lastDebugDrop = {
+        slug: slugDropped,
+        target,
+        dist: dist.toFixed(2),
+        threshold: threshold.toFixed(2),
+        ok: dist < threshold
+      };
+      updateDebugPanel();
+      if (dist >= threshold) {
         returnToSpawn(obj);
         failStep("Pour into the correct vessel.");
         return;
@@ -516,6 +793,14 @@
       return;
     }
 
+    lastDebugDrop = {
+      slug: slugDropped,
+      target: step.target_vessel_slug || "",
+      dist: step.target_vessel_slug ? distanceToVessel(obj, step.target_vessel_slug).toFixed(2) : "—",
+      threshold: step.target_vessel_slug ? vesselDropRadius(step.target_vessel_slug).toFixed(2) : "—",
+      ok: false
+    };
+    updateDebugPanel();
     returnToSpawn(obj);
   }
 
@@ -667,6 +952,7 @@
       "rocks-glass": { liquids: [], strainedIn: false }
     };
     placeCounts = {};
+    clearDeposits();
     selectedToolSlug = null;
     document.querySelectorAll("[data-tool]").forEach((b) => {
       b.style.outline = "none";
@@ -676,7 +962,7 @@
       obj.position.set(obj.userData.spawnX, obj.userData.spawnY, obj.userData.spawnZ);
     }
     renderSteps();
-    controlHintEl.textContent = practice.actions.find((a) => a.slug === practice.steps[0].action_slug)?.ui_hint || "";
+    refreshControlHint();
     showToast("Station reset.", true);
   });
 
@@ -690,6 +976,12 @@
   function animate() {
     requestAnimationFrame(animate);
     controls.update();
+    if (targetRing?.visible) {
+      targetRingPulse += 0.06;
+      const s = 1 + Math.sin(targetRingPulse) * 0.1;
+      targetRing.scale.set(s, s, 1);
+      targetRing.material.opacity = 0.5 + Math.sin(targetRingPulse) * 0.3;
+    }
     renderer.render(scene, camera);
   }
   animate();
@@ -704,9 +996,6 @@
     practice = await res.json();
     recipeNameEl.textContent = practice.recipe.name;
     renderSteps();
-    controlHintEl.textContent =
-      practice.actions.find((a) => a.slug === practice.steps[0]?.action_slug)?.ui_hint ||
-      "Follow the process steps.";
     await spawnAssets();
   }
 

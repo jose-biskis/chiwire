@@ -293,7 +293,7 @@ export function adminPage(options: {
           <label>Description</label><textarea name="description"></textarea>
           <label>Steps JSON array</label>
           <textarea name="steps">[
-  {"step_order":1,"title":"Add ice","action_slug":"place","required_asset_slugs":["ice-bucket"],"target_vessel_slug":"mixing-glass","params":{"minCount":3}}
+  {"step_order":1,"title":"Place ice in mixing glass","action_slug":"place","required_asset_slugs":["ice-bucket"],"target_vessel_slug":"mixing-glass","params":{"minCount":3}}
 ]</textarea>
           <p style="margin-top:1rem"><button class="btn" type="submit">Save recipe</button></p>
         </form>
@@ -384,10 +384,14 @@ export function adminPage(options: {
 export function practicePage(
   slug: string,
   mode: "procedural" | "glb",
-  apiBase: string
+  apiBase: string,
+  debug = false
 ): string {
-  const proceduralHref = `/practice/${encodeURIComponent(slug)}?mode=procedural`;
-  const glbHref = `/practice/${encodeURIComponent(slug)}?mode=glb`;
+  const debugQuery = debug ? "&debug=1" : "";
+  const proceduralHref = `/practice/${encodeURIComponent(slug)}?mode=procedural${debugQuery}`;
+  const glbHref = `/practice/${encodeURIComponent(slug)}?mode=glb${debugQuery}`;
+  const debugOnHref = `/practice/${encodeURIComponent(slug)}?mode=${mode}&debug=1`;
+  const debugOffHref = `/practice/${encodeURIComponent(slug)}?mode=${mode}`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -457,12 +461,15 @@ export function practicePage(
     #toast.bad { display:block; background:var(--bad); color:white; }
     .top-link { position:absolute; top:1rem; left:50%; transform:translateX(-50%); z-index:10; display:flex; gap:0.75rem; align-items:center; }
     .top-link a { color:var(--muted); font-size:0.85rem; text-decoration:none; }
-    .mode-switch { display:inline-flex; gap:0.25rem; padding:0.2rem; border-radius:999px; border:1px solid var(--line); background:rgba(0,0,0,0.25); }
-    .mode-switch a {
-      padding:0.35rem 0.7rem; border-radius:999px; font-size:0.75rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase;
-      color:var(--muted); text-decoration:none;
-    }
+    .mode-switch { display:flex; gap:0.35rem; background:rgba(0,0,0,0.25); padding:0.25rem; border-radius:999px; border:1px solid var(--line); }
+    .mode-switch a { padding:0.35rem 0.7rem; border-radius:999px; font-size:0.75rem; font-weight:700; }
     .mode-switch a.active { background:var(--accent); color:#1c1208; }
+    #debug-panel {
+      display:${debug ? "block" : "none"};
+      position:absolute; bottom:6.5rem; left:1rem; z-index:12; width:min(22rem, calc(100vw - 2rem));
+      padding:0.75rem 0.9rem; font:12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space:pre-wrap; color:#bbf7d0; background:rgba(6,78,59,0.88); border:1px solid rgba(74,222,128,0.35); border-radius:12px;
+    }
   </style>
 </head>
 <body>
@@ -471,7 +478,7 @@ export function practicePage(
       <div style="font-size:3rem">🍸</div>
       <h1>Valenstonic Bar Lab</h1>
       <p>Loading recipe, tools, and station…</p>
-      <p style="font-size:0.85rem">Render mode: <strong style="color:var(--accent)">${mode}</strong></p>
+      <p style="font-size:0.85rem">Render mode: <strong style="color:var(--accent)">${mode}</strong>${debug ? " · <strong style=\"color:#4ade80\">debug</strong>" : ""}</p>
       <button type="button" id="enter-btn">Enter the bar</button>
     </div>
   </div>
@@ -481,11 +488,12 @@ export function practicePage(
     <div class="mode-switch" title="Switch 3D render source">
       <a class="${mode === "procedural" ? "active" : ""}" href="${proceduralHref}">Procedural</a>
       <a class="${mode === "glb" ? "active" : ""}" href="${glbHref}">GLB</a>
+      <a class="${debug ? "active" : ""}" href="${debug ? debugOffHref : debugOnHref}">Debug</a>
     </div>
   </div>
 
   <aside id="hud-left" class="glass">
-    <div class="eyebrow">Active process · ${mode}</div>
+    <div class="eyebrow">Active process · ${mode}${debug ? " · debug" : ""}</div>
     <h2 id="recipe-name">…</h2>
     <ol id="step-list"></ol>
     <div style="margin-top:0.9rem;padding-top:0.8rem;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:0.85rem;color:var(--muted)">
@@ -511,12 +519,14 @@ export function practicePage(
     </div>
   </div>
 
+  <pre id="debug-panel"></pre>
   <div id="toast"></div>
   <div id="canvas-container"></div>
 
   <script>
     window.__PRACTICE_SLUG__ = ${JSON.stringify(slug)};
     window.__PRACTICE_MODE__ = ${JSON.stringify(mode)};
+    window.__PRACTICE_DEBUG__ = ${debug ? "true" : "false"};
     window.__API_BASE__ = ${JSON.stringify(apiBase)};
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>

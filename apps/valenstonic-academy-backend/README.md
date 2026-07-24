@@ -2,6 +2,9 @@
 
 JSON API for courses, practices, and admin CRUD. Uses Postgres schema `vt_academy` via Knex.
 
+Schema desired state lives in `schemas/vt_academy/` and is applied with `@chiwire/db-migrate`
+(on API startup, or via the scripts below).
+
 ## Local
 
 ```sh
@@ -10,8 +13,15 @@ export CORS_ORIGINS=http://localhost:3000
 export PORT=3001
 
 npm run build --workspace @chiwire/core
+npm run build --workspace @chiwire/db-migrate
 npm run build --workspace @chiwire/valenstonic-academy-shared
 npm run build --workspace @chiwire/valenstonic-academy-backend
+
+# Optional: inspect / apply schema without starting the API
+npm run db:plan --workspace @chiwire/valenstonic-academy-backend
+npm run db:apply --workspace @chiwire/valenstonic-academy-backend
+npm run db:status --workspace @chiwire/valenstonic-academy-backend
+
 npm run start:vtacademy-api
 ```
 
