@@ -30,7 +30,7 @@ Never ship default shadcn/zinc/Inter aesthetics.
 | Styling | Tailwind CSS v4 (`@tailwindcss/vite`) |
 | Primitives | shadcn/ui (copied into `client/src/components/ui`) |
 | Tokens | CSS variables in `client/src/styles/globals.css` (`--palette-*` + semantic) |
-| Server | Existing Node server: API proxy, practice HTML, admin SSR for now; serves Vite build for marketing routes |
+| Server | Existing Node server: API proxy, practice HTML, admin HTML; **SSR + hydrate** for `/` and `/courses/*` (`dist/ssr`) |
 
 Practice labs (`static/practice-engine.js`) stay vanilla Three.js — do not force React into the 3D engine.
 

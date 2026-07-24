@@ -4,10 +4,12 @@ Learner UI, backoffice, and 3D practice labs. Talks to `@chiwire/valenstonic-aca
 
 ## Stack
 
-- **Marketing / courses**: Vite + React + Tailwind v4 + shadcn primitives (`client/`)
+- **Marketing / courses**: Vite + React + Tailwind v4 + shadcn (`client/`), **SSR + hydrate** for `/` and `/courses/*`
 - **Design system**: Valen's Tonic tokens in `client/src/styles/globals.css` (see `.cursor/skills/valenstonic-frontend`)
 - **Admin**: server-rendered HTML (for now)
 - **Practice labs**: static Three.js (`static/`)
+
+Build produces `dist/client` (browser) and `dist/ssr` (Node `render()`). The server fetches course data, renders HTML, and the client hydrates.
 
 ## Local
 

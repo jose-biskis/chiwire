@@ -3,7 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
   root: "client",
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -12,9 +12,15 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: path.resolve(__dirname, "dist/client"),
+    outDir: isSsrBuild
+      ? path.resolve(__dirname, "dist/ssr")
+      : path.resolve(__dirname, "dist/client"),
     emptyOutDir: true,
     sourcemap: true
+  },
+  ssr: {
+    // Bundle deps into the SSR entry so Node can import one file at runtime.
+    noExternal: true
   },
   server: {
     port: 5173,
@@ -25,4 +31,4 @@ export default defineConfig({
       "/admin": "http://localhost:3000"
     }
   }
-});
+}));

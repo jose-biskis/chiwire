@@ -5,14 +5,18 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchCourse, type CourseDetail } from "@/lib/api";
+import { useInitialData } from "@/lib/InitialDataContext";
 
 export function CoursePage() {
   const { slug = "" } = useParams();
-  const [data, setData] = useState<CourseDetail | null>(null);
-  const [missing, setMissing] = useState(false);
+  const initial = useInitialData();
+  const ssrMatches = Boolean(initial.courseSlug && initial.courseSlug === slug);
+  const [data, setData] = useState<CourseDetail | null>(ssrMatches ? (initial.course ?? null) : null);
+  const [missing, setMissing] = useState(ssrMatches ? Boolean(initial.courseMissing) : false);
 
   useEffect(() => {
     if (!slug) return;
+    if (ssrMatches) return;
     void fetchCourse(slug).then((result) => {
       if (!result) {
         setMissing(true);
@@ -20,7 +24,7 @@ export function CoursePage() {
       }
       setData(result);
     });
-  }, [slug]);
+  }, [slug, ssrMatches]);
 
   return (
     <>

@@ -5,9 +5,9 @@
   "description": "Valenstonic Academy web UI — courses, backoffice, 3D practice labs.",
   "type": "module",
   "scripts": {
-    "build": "tsc --build && vite build",
+    "build": "tsc --build && node scripts/build-ui.mjs",
     "build:server": "tsc --build",
-    "build:client": "vite build",
+    "build:client": "node scripts/build-ui.mjs",
     "dev:client": "vite",
     "start": "node dist/index.js",
     "typecheck": "tsc --build --pretty false && tsc -p client --pretty false --noEmit"

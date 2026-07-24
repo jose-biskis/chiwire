@@ -1,8 +1,8 @@
-import { createReadStream, existsSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   adminPage,
   loginPage,
@@ -17,6 +17,23 @@ const MAX_BODY = 2_000_000;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_DIR = path.resolve(__dirname, "../static");
 const CLIENT_DIR = path.resolve(__dirname, "client");
+const SSR_ENTRY = path.resolve(__dirname, "ssr/entry-server.js");
+
+type SsrData = {
+  courses?: unknown[];
+  course?: unknown;
+  courseSlug?: string;
+  courseMissing?: boolean;
+};
+
+type SsrRender = (url: string, data?: SsrData) => {
+  html: string;
+  title: string;
+  description: string;
+};
+
+let clientTemplate: string | null = null;
+let ssrRender: SsrRender | null = null;
 
 function readPort(): number {
   const configured = process.env.PORT ?? String(DEFAULT_PORT);
@@ -181,6 +198,77 @@ function serveSpa(response: ServerResponse): boolean {
   return serveFile(response, CLIENT_DIR, "index.html", "no-store");
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function serializeSsrData(data: SsrData): string {
+  return JSON.stringify(data).replaceAll("<", "\\u003c");
+}
+
+function loadClientTemplate(): string | null {
+  if (clientTemplate) return clientTemplate;
+  const templatePath = path.join(CLIENT_DIR, "index.html");
+  if (!existsSync(templatePath)) return null;
+  clientTemplate = readFileSync(templatePath, "utf8");
+  return clientTemplate;
+}
+
+async function loadSsrRender(): Promise<SsrRender | null> {
+  if (ssrRender) return ssrRender;
+  if (!existsSync(SSR_ENTRY)) return null;
+  const mod = (await import(pathToFileURL(SSR_ENTRY).href)) as { render?: SsrRender };
+  if (typeof mod.render !== "function") return null;
+  ssrRender = mod.render;
+  return ssrRender;
+}
+
+async function renderMarketingPage(
+  pathname: string
+): Promise<{ status: number; body: string } | null> {
+  const template = loadClientTemplate();
+  const render = await loadSsrRender();
+  if (!template || !render) return null;
+
+  const data: SsrData = {};
+  let status = 200;
+
+  if (pathname === "/") {
+    const res = await apiFetch("/api/courses");
+    data.courses = res.ok
+      ? ((await res.json()) as unknown[])
+      : [];
+  } else if (pathname.startsWith("/courses/")) {
+    const slug = decodeURIComponent(pathname.slice("/courses/".length)).replace(/\/$/, "");
+    if (!slug) return null;
+    data.courseSlug = slug;
+    const res = await apiFetch(`/api/courses/${encodeURIComponent(slug)}`);
+    if (!res.ok) {
+      data.course = null;
+      data.courseMissing = true;
+      status = 404;
+    } else {
+      data.course = await res.json();
+      data.courseMissing = false;
+    }
+  } else {
+    return null;
+  }
+
+  const { html, title, description } = render(pathname, data);
+  const body = template
+    .replaceAll("<!--app-title-->", escapeHtml(title))
+    .replaceAll("<!--app-description-->", escapeHtml(description))
+    .replace("<!--app-html-->", html)
+    .replace("<!--app-data-->", serializeSsrData(data));
+
+  return { status, body };
+}
+
 async function apiFetch(
   pathname: string,
   init: RequestInit & { token?: string } = {}
@@ -261,6 +349,12 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     }
 
     if (method === "GET" && (pathname === "/" || pathname.startsWith("/courses/"))) {
+      const rendered = await renderMarketingPage(pathname);
+      if (rendered) {
+        html(response, rendered.status, rendered.body);
+        return;
+      }
+      // Fallback: client-only shell if SSR bundle/template is missing.
       if (!serveSpa(response)) html(response, 503, notFoundPage());
       return;
     }

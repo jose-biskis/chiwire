@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchCourses, type CourseSummary } from "@/lib/api";
+import { useInitialData } from "@/lib/InitialDataContext";
 
 const features = [
   {
@@ -28,11 +29,14 @@ const features = [
 const categories = ["Stirred classics", "Measured pours", "Garnish & serve", "Bar tools"];
 
 export function HomePage() {
-  const [courses, setCourses] = useState<CourseSummary[]>([]);
+  const initial = useInitialData();
+  const hasSsrCourses = Array.isArray(initial.courses);
+  const [courses, setCourses] = useState<CourseSummary[]>(initial.courses ?? []);
 
   useEffect(() => {
+    if (hasSsrCourses) return;
     void fetchCourses().then(setCourses);
-  }, []);
+  }, [hasSsrCourses]);
 
   return (
     <>
