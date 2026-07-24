@@ -1,0 +1,22 @@
+{
+  "image": "chiwire/valenstonic-academy-frontend",
+  "tag": "latest",
+  "container": "valenstonic-academy-frontend",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 3000,
+    "visibility": "domain",
+    "hostPort": 8030,
+    "env": {
+      "API_BASE_URL": "http://valenstonic-academy-backend:3000"
+    },
+    "network": "chiwire"
+  },
+  "proxy": {
+    "type": "caddy",
+    "domain": "vtacademy.avilalabs.dev"
+  }
+}

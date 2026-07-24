@@ -1,0 +1,17 @@
+{
+  "name": "@chiwire/valenstonic-academy-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Valenstonic Academy API — recipes, assets, courses, interactive practices.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --build --pretty false"
+  },
+  "dependencies": {
+    "@chiwire/core": "*",
+    "@chiwire/valenstonic-academy-shared": "*",
+    "knex": "^3.1.0"
+  }
+}

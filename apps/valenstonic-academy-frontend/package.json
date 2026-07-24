@@ -1,0 +1,15 @@
+{
+  "name": "@chiwire/valenstonic-academy-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Valenstonic Academy web UI — courses, backoffice, 3D practice labs.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --build --pretty false"
+  },
+  "dependencies": {
+    "@chiwire/valenstonic-academy-shared": "*"
+  }
+}

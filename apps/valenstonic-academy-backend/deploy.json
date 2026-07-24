@@ -1,0 +1,32 @@
+{
+  "image": "chiwire/valenstonic-academy-backend",
+  "tag": "latest",
+  "container": "valenstonic-academy-backend",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 3000,
+    "visibility": "domain",
+    "hostPort": 8031,
+    "env": {
+      "PGHOST": "postgres-pgbouncer",
+      "PGPORT": "6432",
+      "PGUSER": "chiwire",
+      "PGDATABASE": "chiwire",
+      "REDIS_HOST": "redis-cache",
+      "REDIS_PORT": "6379",
+      "CORS_ORIGINS": "https://vtacademy.avilalabs.dev,http://localhost:3000"
+    },
+    "envFrom": [
+      "PGPASSWORD",
+      "REDIS_PASSWORD"
+    ],
+    "network": "chiwire"
+  },
+  "proxy": {
+    "type": "caddy",
+    "domain": "api.vtacademy.avilalabs.dev"
+  }
+}

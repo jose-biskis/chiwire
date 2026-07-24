@@ -11,7 +11,17 @@ From the repository root:
 npm run deploy:redis
 ```
 
-To require a Redis password without committing it:
+To require a Redis password without committing it, set `REDIS_PASSWORD` in
+`.env.deploy.local` (forwarded via `runtime.envFrom`):
+
+```sh
+# in .env.deploy.local
+REDIS_PASSWORD=change-me
+
+npm run deploy:redis
+```
+
+Or pass it once on the command line:
 
 ```sh
 npm run deploy:redis -- --env REDIS_PASSWORD=change-me

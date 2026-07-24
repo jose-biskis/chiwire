@@ -2,17 +2,13 @@
   "extends": "./tsconfig.base.json",
   "files": [],
   "references": [
-    {
-      "path": "./packages/core"
-    },
-    {
-      "path": "./apps/hello-http"
-    },
-    {
-      "path": "./apps/mcps"
-    },
-    {
-      "path": "./apps/contimiti"
-    }
+    { "path": "./packages/core" },
+    { "path": "./packages/db-migrate" },
+    { "path": "./packages/valenstonic-academy-shared" },
+    { "path": "./apps/hello-http" },
+    { "path": "./apps/mcps" },
+    { "path": "./apps/contimiti" },
+    { "path": "./apps/valenstonic-academy-backend" },
+    { "path": "./apps/valenstonic-academy-frontend" }
   ]
 }

@@ -12,6 +12,8 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 |-----|-----------|-------------|--------------|
 | AvilaLabs landing page | `@chiwire/avila-labs` | `npm run dev:avila` | 4321 |
 | Contimiti share app | `@chiwire/contimiti` | build then `npm run start:contimiti` | 3000 |
+| Valenstonic Academy frontend | `@chiwire/valenstonic-academy-frontend` | build then `npm run start:vtacademy` | 3000 |
+| Valenstonic Academy API | `@chiwire/valenstonic-academy-backend` | build then `npm run start:vtacademy-api` | 3001 |
 | hello-http smoke-test API | `@chiwire/hello-http` | build then `npm run start:hello` | 3000 |
 | self-hosted MCP servers | `@chiwire/mcps` | build then `npm run start:mcps` | 3000 |
 | Prometheus + node_exporter | `apps/prometheus` | `npm run deploy:prometheus` | 9090 |
@@ -32,6 +34,8 @@ See `README.md` for full details. Common commands:
 - Deploy script tests: `npm run test:deploy-settings`
 - AvilaLabs dev server: `npm run dev:avila`
 - Contimiti: `npm run build --workspace @chiwire/core` then `npm run build --workspace @chiwire/contimiti` then `npm run start:contimiti`
+- Valenstonic Academy API: set `PG*` env vars, then `npm run build --workspace @chiwire/core` && `npm run build --workspace @chiwire/valenstonic-academy-shared` && `npm run build --workspace @chiwire/valenstonic-academy-backend` && `npm run start:vtacademy-api`
+- Valenstonic Academy frontend: set `API_BASE_URL=http://localhost:3001`, then build shared + frontend and `npm run start:vtacademy`
 - hello-http: `npm run build --workspace @chiwire/hello-http` then `npm run start:hello`
 - MCP servers: `npm run build --workspace @chiwire/mcps` then `npm run start:mcps`
 - Verify Contimiti: `curl http://localhost:3000/health` and open `http://localhost:3000/`

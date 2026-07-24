@@ -15,6 +15,10 @@
     "env": {
       "REDIS_MAXMEMORY": "256mb",
       "REDIS_MAXMEMORY_POLICY": "allkeys-lru"
-    }
+    },
+    "envFrom": [
+      "REDIS_PASSWORD"
+    ],
+    "network": "chiwire"
   }
 }
