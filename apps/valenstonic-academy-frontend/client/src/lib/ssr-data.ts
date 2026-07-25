@@ -1,6 +1,9 @@
 import type { CourseDetail, CourseSummary } from "@/lib/api";
+import type { LangId, StyleId } from "@/lib/site-prefs";
 
 export type SsrData = {
+  style?: StyleId;
+  lang?: LangId;
   courses?: CourseSummary[];
   course?: CourseDetail | null;
   courseSlug?: string;

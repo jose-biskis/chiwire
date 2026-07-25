@@ -20,6 +20,8 @@ const CLIENT_DIR = path.resolve(__dirname, "client");
 const SSR_ENTRY = path.resolve(__dirname, "ssr/entry-server.js");
 
 type SsrData = {
+  style?: string;
+  lang?: string;
   courses?: unknown[];
   course?: unknown;
   courseSlug?: string;
@@ -30,6 +32,8 @@ type SsrRender = (url: string, data?: SsrData) => {
   html: string;
   title: string;
   description: string;
+  style: string;
+  lang: string;
 };
 
 let clientTemplate: string | null = null;
@@ -227,21 +231,32 @@ async function loadSsrRender(): Promise<SsrRender | null> {
   return ssrRender;
 }
 
+function parseStyleParam(value: string | null): string {
+  const allowed = new Set(["original", "noir", "atelier", "brutalist", "deco", "botanical"]);
+  return value && allowed.has(value) ? value : "noir";
+}
+
+function parseLangParam(value: string | null): string {
+  return value === "es" ? "es" : "en";
+}
+
 async function renderMarketingPage(
-  pathname: string
+  pathname: string,
+  search: string
 ): Promise<{ status: number; body: string } | null> {
   const template = loadClientTemplate();
   const render = await loadSsrRender();
   if (!template || !render) return null;
 
-  const data: SsrData = {};
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  const style = parseStyleParam(params.get("style"));
+  const lang = parseLangParam(params.get("lang"));
+  const data: SsrData = { style, lang };
   let status = 200;
 
   if (pathname === "/") {
     const res = await apiFetch("/api/courses");
-    data.courses = res.ok
-      ? ((await res.json()) as unknown[])
-      : [];
+    data.courses = res.ok ? ((await res.json()) as unknown[]) : [];
   } else if (pathname.startsWith("/courses/")) {
     const slug = decodeURIComponent(pathname.slice("/courses/".length)).replace(/\/$/, "");
     if (!slug) return null;
@@ -259,10 +274,13 @@ async function renderMarketingPage(
     return null;
   }
 
-  const { html, title, description } = render(pathname, data);
+  const requestUrl = `${pathname}${search.startsWith("?") || search === "" ? search : `?${search}`}`;
+  const { html, title, description } = render(requestUrl, data);
   const body = template
     .replaceAll("<!--app-title-->", escapeHtml(title))
     .replaceAll("<!--app-description-->", escapeHtml(description))
+    .replaceAll("<!--app-theme-->", escapeHtml(style))
+    .replaceAll("<!--app-lang-->", escapeHtml(lang))
     .replace("<!--app-html-->", html)
     .replace("<!--app-data-->", serializeSsrData(data));
 
@@ -337,6 +355,11 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       return;
     }
 
+    if (method === "GET" && pathname.startsWith("/themes/")) {
+      if (!serveClientAsset(response, pathname)) html(response, 404, notFoundPage());
+      return;
+    }
+
     if (pathname.startsWith("/api/")) {
       await proxyToApi(request, response, `${pathname}${url.search}`);
       return;
@@ -349,7 +372,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     }
 
     if (method === "GET" && (pathname === "/" || pathname.startsWith("/courses/"))) {
-      const rendered = await renderMarketingPage(pathname);
+      const rendered = await renderMarketingPage(pathname, url.search);
       if (rendered) {
         html(response, rendered.status, rendered.body);
         return;

@@ -29,6 +29,8 @@ npm run dev:client --workspace @chiwire/valenstonic-academy-frontend
 ```
 
 - Site: http://localhost:3000/
+- Styles: `?style=original|noir|atelier|brutalist|deco|botanical`
+- Language: `?lang=en|es` (combine, e.g. `/?style=deco&lang=es`)
 - Practice: http://localhost:3000/practice/negroni?mode=procedural
 - Admin: http://localhost:3000/admin (`admin` / `1234`)
 

@@ -1,0 +1,247 @@
+/* Valen's Tonic site themes via data-theme on <html> / <body> */
+
+:root,
+[data-theme="original"] {
+  color-scheme: dark;
+  --font-script: "Great Vibes", cursive;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --color-palette-1: #d01059;
+  --color-palette-2: #9e2c58;
+  --color-palette-3: #6b3349;
+  --color-palette-4: #38262d;
+  --color-palette-5: #332d2f;
+  --color-background: #332d2f;
+  --color-foreground: #e6d9de;
+  --color-card: rgba(51, 45, 47, 0.92);
+  --color-card-foreground: #e6d9de;
+  --color-primary: #d01059;
+  --color-primary-foreground: #faf6f7;
+  --color-secondary: #38262d;
+  --color-secondary-foreground: #e6d9de;
+  --color-muted: rgba(56, 38, 45, 0.72);
+  --color-muted-foreground: #9a858c;
+  --color-accent: #6b3349;
+  --color-accent-foreground: #e6d9de;
+  --color-border: rgba(230, 217, 222, 0.1);
+  --color-ring: #d01059;
+  --hero-media-radius: 9999px;
+  --hero-media-border: 8px solid #d01059;
+  --radius-md: 8px;
+}
+
+[data-theme="noir"] {
+  color-scheme: dark;
+  --font-script: "Great Vibes", cursive;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Cormorant Garamond", "Fraunces", Georgia, serif;
+  --color-palette-1: #8b1e3f;
+  --color-palette-2: #6b1830;
+  --color-palette-3: #4a2c24;
+  --color-palette-4: #1c1410;
+  --color-palette-5: #100e0c;
+  --color-background: #100e0c;
+  --color-foreground: #e8dcc8;
+  --color-card: rgba(28, 20, 16, 0.92);
+  --color-card-foreground: #e8dcc8;
+  --color-primary: #8b1e3f;
+  --color-primary-foreground: #f7efe4;
+  --color-secondary: #1c1410;
+  --color-secondary-foreground: #e8dcc8;
+  --color-muted: rgba(28, 20, 16, 0.8);
+  --color-muted-foreground: #a89880;
+  --color-accent: #c4a35a;
+  --color-accent-foreground: #100e0c;
+  --color-border: rgba(196, 163, 90, 0.28);
+  --color-ring: #c4a35a;
+  --hero-media-radius: 9999px;
+  --hero-media-border: 10px solid #c4a35a;
+  --radius-md: 4px;
+}
+
+[data-theme="atelier"] {
+  color-scheme: light;
+  --font-script: "Great Vibes", cursive;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --color-palette-1: #6d1d2a;
+  --color-palette-2: #9e2c58;
+  --color-palette-3: #c4b8ae;
+  --color-palette-4: #efeae4;
+  --color-palette-5: #f7f4f0;
+  --color-background: #f7f4f0;
+  --color-foreground: #1f1a18;
+  --color-card: #ffffff;
+  --color-card-foreground: #1f1a18;
+  --color-primary: #6d1d2a;
+  --color-primary-foreground: #faf6f7;
+  --color-secondary: #efeae4;
+  --color-secondary-foreground: #1f1a18;
+  --color-muted: #efeae4;
+  --color-muted-foreground: #6b5f58;
+  --color-accent: #6d1d2a;
+  --color-accent-foreground: #faf6f7;
+  --color-border: rgba(31, 26, 24, 0.12);
+  --color-ring: #6d1d2a;
+  --hero-media-radius: 9999px;
+  --hero-media-border: 3px solid #6d1d2a;
+  --radius-md: 2px;
+}
+
+[data-theme="brutalist"] {
+  color-scheme: light;
+  --font-script: "Great Vibes", cursive;
+  --font-sans: "Space Mono", ui-monospace, monospace;
+  --font-display: "Oswald", Impact, sans-serif;
+  --color-palette-1: #d01059;
+  --color-palette-2: #111111;
+  --color-palette-3: #d0d0d0;
+  --color-palette-4: #ebebeb;
+  --color-palette-5: #f2f2f0;
+  --color-background: #f2f2f0;
+  --color-foreground: #111111;
+  --color-card: #ffffff;
+  --color-card-foreground: #111111;
+  --color-primary: #d01059;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #ffffff;
+  --color-secondary-foreground: #111111;
+  --color-muted: #ebebeb;
+  --color-muted-foreground: #333333;
+  --color-accent: #d01059;
+  --color-accent-foreground: #ffffff;
+  --color-border: #111111;
+  --color-ring: #d01059;
+  --hero-media-radius: 0;
+  --hero-media-border: 3px solid #111111;
+  --radius-md: 0;
+}
+
+[data-theme="deco"] {
+  color-scheme: dark;
+  --font-script: "Great Vibes", cursive;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Cinzel", "Cormorant Garamond", serif;
+  --color-palette-1: #c9a227;
+  --color-palette-2: #a8841c;
+  --color-palette-3: #1a2e24;
+  --color-palette-4: #0f1a15;
+  --color-palette-5: #0a1210;
+  --color-background: #0a1210;
+  --color-foreground: #e8d9a8;
+  --color-card: rgba(15, 26, 21, 0.95);
+  --color-card-foreground: #e8d9a8;
+  --color-primary: #c9a227;
+  --color-primary-foreground: #0a1210;
+  --color-secondary: #0f1a15;
+  --color-secondary-foreground: #e8d9a8;
+  --color-muted: rgba(15, 26, 21, 0.85);
+  --color-muted-foreground: #b3a57a;
+  --color-accent: #c9a227;
+  --color-accent-foreground: #0a1210;
+  --color-border: rgba(201, 162, 39, 0.35);
+  --color-ring: #c9a227;
+  --hero-media-radius: 9999px;
+  --hero-media-border: 4px double #c9a227;
+  --radius-md: 0;
+}
+
+[data-theme="botanical"] {
+  color-scheme: light;
+  --font-script: "Great Vibes", cursive;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --color-palette-1: #7a2f45;
+  --color-palette-2: #5c6b4a;
+  --color-palette-3: #a8b59a;
+  --color-palette-4: #e7ebe2;
+  --color-palette-5: #f4f6f1;
+  --color-background: #f4f6f1;
+  --color-foreground: #2a3328;
+  --color-card: #ffffff;
+  --color-card-foreground: #2a3328;
+  --color-primary: #7a2f45;
+  --color-primary-foreground: #faf6f7;
+  --color-secondary: #e7ebe2;
+  --color-secondary-foreground: #2a3328;
+  --color-muted: #e7ebe2;
+  --color-muted-foreground: #5c6758;
+  --color-accent: #5c6b4a;
+  --color-accent-foreground: #f4f6f1;
+  --color-border: rgba(42, 51, 40, 0.14);
+  --color-ring: #7a2f45;
+  --hero-media-radius: 9999px;
+  --hero-media-border: 6px solid #7a2f45;
+  --radius-md: 12px;
+}
+
+[data-theme="noir"] body,
+body[data-theme="noir"] {
+  background-image:
+    radial-gradient(ellipse 70% 45% at 90% 0%, rgba(196, 163, 90, 0.08), transparent 50%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+[data-theme="atelier"] body,
+body[data-theme="atelier"] {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+[data-theme="brutalist"] body,
+body[data-theme="brutalist"] {
+  background-image:
+    linear-gradient(rgba(17, 17, 17, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 17, 17, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+[data-theme="deco"] body,
+body[data-theme="deco"] {
+  background-image:
+    radial-gradient(circle at 70% 30%, rgba(201, 162, 39, 0.12), transparent 42%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+[data-theme="botanical"] body,
+body[data-theme="botanical"] {
+  background-image:
+    radial-gradient(ellipse 50% 40% at 85% 20%, rgba(168, 181, 154, 0.45), transparent 60%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+.hero-media {
+  border-radius: var(--hero-media-radius);
+  border: var(--hero-media-border);
+}
+
+[data-theme="brutalist"] .hero-title {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+[data-theme="deco"] .hero-title,
+[data-theme="noir"] .hero-title,
+[data-theme="botanical"] .hero-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+[data-theme="atelier"] .hero-title {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+[data-theme="brutalist"] .site-card {
+  border-width: 2px;
+  border-radius: 0;
+}
+
+[data-theme="deco"] .site-card {
+  border-radius: 0;
+  border-color: rgba(201, 162, 39, 0.35);
+}
+
+/* Prefs bar styles live in theme-homes.css */

@@ -1,39 +1,49 @@
 import { renderToString } from "react-dom/server";
 import { StaticRouter } from "react-router";
 import { App } from "@/App";
+import { t } from "@/lib/i18n";
 import { InitialDataProvider } from "@/lib/InitialDataContext";
+import { parsePrefsFromSearch } from "@/lib/site-prefs";
 import type { SsrData } from "@/lib/ssr-data";
 
 export type RenderResult = {
   html: string;
   title: string;
   description: string;
+  style: string;
+  lang: string;
 };
 
 export function render(url: string, data: SsrData = {}): RenderResult {
+  const parsed = new URL(url, "http://localhost");
+  const prefs = parsePrefsFromSearch(parsed.search);
+  const style = data.style ?? prefs.style;
+  const lang = data.lang ?? prefs.lang;
+  const messages = t(lang);
+  const ssrData: SsrData = { ...data, style, lang };
+  const location = `${parsed.pathname}${parsed.search}`;
+
   const html = renderToString(
-    <InitialDataProvider value={data}>
-      <StaticRouter location={url}>
+    <InitialDataProvider value={ssrData}>
+      <StaticRouter location={location}>
         <App />
       </StaticRouter>
     </InitialDataProvider>
   );
 
   let title = "Valen's Tonic";
-  let description =
-    "Interactive cocktail labs where order, measure, and technique decide the pour.";
+  let description = messages.homeDescription;
 
-  if (url === "/" || url.startsWith("/?")) {
-    title = "Home · Valen's Tonic";
-  } else if (data.courseMissing) {
-    title = "Course not found · Valen's Tonic";
-    description = "That course could not be found.";
-  } else if (data.course) {
-    title = `${data.course.course.name} · Valen's Tonic`;
+  if (parsed.pathname === "/") {
+    title = messages.homeTitle;
+  } else if (ssrData.courseMissing) {
+    title = messages.notFoundTitle;
+    description = messages.notFoundDescription;
+  } else if (ssrData.course) {
+    title = `${ssrData.course.course.name} · Valen's Tonic`;
     description =
-      data.course.course.description?.trim() ||
-      "Interactive practice with process and technique.";
+      ssrData.course.course.description?.trim() || messages.courseFallbackDesc;
   }
 
-  return { html, title, description };
+  return { html, title, description, style, lang };
 }

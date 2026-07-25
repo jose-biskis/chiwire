@@ -1,55 +1,24 @@
+import { useSitePrefs } from "@/lib/useSitePrefs";
+
 export function SiteFooter() {
+  const { messages, href, style } = useSitePrefs();
+  const copy = messages.styles[style];
+
   return (
-    <footer className="mt-8 border-t border-border bg-palette-4 px-[clamp(1rem,4vw,2.5rem)] pb-6 pt-9">
-      <div className="mx-auto grid w-full max-w-[1100px] gap-6 md:grid-cols-[1.4fr_1fr_1fr]">
+    <footer className="mt-8 border-t border-border px-[clamp(1rem,4vw,2.5rem)] py-8">
+      <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <a href="/" className="font-script text-[1.65rem] leading-none text-primary">
-            Valen's Tonic
+          <a href={href("/")} className="font-script text-[1.65rem] leading-none text-primary">
+            {messages.brand}
           </a>
-          <p className="mt-3 max-w-sm text-sm text-muted-foreground">
-            Interactive cocktail labs where process, measure, and technique matter.
-          </p>
+          <p className="mt-2 max-w-sm text-sm text-muted-foreground">{copy.lead}</p>
         </div>
-        <div>
-          <h3 className="mb-3 font-sans text-[0.95rem] font-semibold text-foreground">Academy</h3>
-          <a href="/" className="mb-1.5 block text-sm text-muted-foreground hover:text-foreground">
-            Courses
-          </a>
-          <a
-            href="/practice/negroni?mode=procedural"
-            className="mb-1.5 block text-sm text-muted-foreground hover:text-foreground"
-          >
-            Negroni lab
-          </a>
-          <a href="/admin" className="mb-1.5 block text-sm text-muted-foreground hover:text-foreground">
-            Admin
-          </a>
-        </div>
-        <div>
-          <h3 className="mb-3 font-sans text-[0.95rem] font-semibold text-foreground">Practice</h3>
-          <a
-            href="/practice/negroni?mode=procedural"
-            className="mb-1.5 block text-sm text-muted-foreground hover:text-foreground"
-          >
-            Procedural mode
-          </a>
-          <a
-            href="/practice/negroni?mode=glb"
-            className="mb-1.5 block text-sm text-muted-foreground hover:text-foreground"
-          >
-            GLB mode
-          </a>
-          <a
-            href="/practice/negroni?debug=1"
-            className="mb-1.5 block text-sm text-muted-foreground hover:text-foreground"
-          >
-            Debug collisions
-          </a>
+        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+          <a href={href("/#courses")}>{messages.navCourses}</a>
+          <a href="/practice/negroni?mode=procedural">{messages.navLabs}</a>
+          <a href="/admin">{messages.navAdmin}</a>
         </div>
       </div>
-      <p className="mx-auto mt-6 w-full max-w-[1100px] border-t border-border pt-4 text-[0.82rem] text-muted-foreground">
-        Valenstonic Academy · Valen's Tonic
-      </p>
     </footer>
   );
 }
