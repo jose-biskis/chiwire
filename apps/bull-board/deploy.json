@@ -1,0 +1,24 @@
+{
+  "image": "chiwire/bull-board",
+  "tag": "latest",
+  "container": "bull-board",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 3000,
+    "visibility": "internal",
+    "hostPort": 3040,
+    "env": {
+      "REDIS_HOST": "redis-cache",
+      "REDIS_PORT": "6379",
+      "BULL_BOARD_USER": "admin"
+    },
+    "envFrom": [
+      "REDIS_PASSWORD",
+      "BULL_BOARD_PASSWORD"
+    ],
+    "network": "chiwire"
+  }
+}

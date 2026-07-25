@@ -2,13 +2,13 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import path from "node:path";
 import process from "node:process";
 import { filePage, homePage, notFoundPage, textPage } from "./pages.js";
+import { startContimitiPurgeWorker, stopContimitiPurgeJobs } from "./purgeJobs.js";
 import { ShareStore } from "./store.js";
 
 const DEFAULT_PORT = 3000;
 const DEFAULT_DATA_DIR = path.resolve(process.cwd(), "data");
 const MAX_JSON_BYTES = 1_000_000;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
-const PURGE_INTERVAL_MS = 5 * 60 * 1000;
 
 function readPort(): number {
   const configuredPort = process.env.PORT ?? String(DEFAULT_PORT);
@@ -89,6 +89,7 @@ const store = new ShareStore(readDataDir());
 const port = readPort();
 
 await store.init();
+await startContimitiPurgeWorker(store);
 
 const server = createServer((request, response) => {
   void handleRequest(request, response);
@@ -271,32 +272,44 @@ function parseJsonObject(raw: Buffer): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
-const purgeTimer = setInterval(() => {
-  void store.purgeExpired().then((result) => {
-    if (result.texts > 0 || result.files > 0) {
-      console.log(`purged expired shares: texts=${result.texts} files=${result.files}`);
-    }
-  });
-}, PURGE_INTERVAL_MS);
-purgeTimer.unref();
-
 server.listen(port, "0.0.0.0", () => {
   console.log(`contimiti listening on port ${port}`);
   console.log(`data directory: ${store.dataDir}`);
 });
 
-function shutdown(signal: NodeJS.Signals): void {
-  console.log(`received ${signal}; closing server`);
-  clearInterval(purgeTimer);
-  server.close((error) => {
-    if (error) {
-      console.error(error);
-      process.exitCode = 1;
-    }
+let shuttingDown = false;
 
-    process.exit();
+async function shutdown(signal: NodeJS.Signals): Promise<void> {
+  if (shuttingDown) {
+    return;
+  }
+  shuttingDown = true;
+
+  console.log(`received ${signal}; closing server`);
+
+  await new Promise<void>((resolve) => {
+    server.close((error) => {
+      if (error) {
+        console.error(error);
+        process.exitCode = 1;
+      }
+      resolve();
+    });
   });
+
+  try {
+    await stopContimitiPurgeJobs();
+  } catch (error) {
+    console.error(error);
+    process.exitCode = 1;
+  }
+
+  process.exit();
 }
 
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("SIGINT", (signal) => {
+  void shutdown(signal);
+});
+process.on("SIGTERM", (signal) => {
+  void shutdown(signal);
+});

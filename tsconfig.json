@@ -8,6 +8,7 @@
     { "path": "./apps/hello-http" },
     { "path": "./apps/mcps" },
     { "path": "./apps/contimiti" },
+    { "path": "./apps/bull-board" },
     { "path": "./apps/valenstonic-academy-backend" },
     { "path": "./apps/valenstonic-academy-frontend" }
   ]

@@ -12,7 +12,15 @@
     "hostPort": 8020,
     "volumes": [
       "chiwire-contimiti-data:/data"
-    ]
+    ],
+    "env": {
+      "REDIS_HOST": "redis-cache",
+      "REDIS_PORT": "6379"
+    },
+    "envFrom": [
+      "REDIS_PASSWORD"
+    ],
+    "network": "chiwire"
   },
   "proxy": {
     "type": "caddy",

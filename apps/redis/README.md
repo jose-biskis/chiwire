@@ -1,7 +1,7 @@
-# Redis cache
+# Redis
 
-Deploys a simple Redis cache container with persistence disabled and an LRU
-eviction policy.
+Deploys Redis on the internal `chiwire` Docker network for cache **and** BullMQ
+job keys.
 
 ## Deploy
 
@@ -33,7 +33,7 @@ The default deploy settings bind `127.0.0.1:6379` on the Docker host.
 
 - Persistence: disabled (`save ""`, `appendonly no`)
 - Max memory: `256mb`
-- Eviction: `allkeys-lru`
+- Eviction: `noeviction` (required so BullMQ keys are not LRU-evicted)
 
-Change `REDIS_MAXMEMORY` or `REDIS_MAXMEMORY_POLICY` in `deploy.json` for a
-different cache size or eviction policy.
+Change `REDIS_MAXMEMORY` or `REDIS_MAXMEMORY_POLICY` in `deploy.json` if you
+split cache and queues onto separate Redis instances later.

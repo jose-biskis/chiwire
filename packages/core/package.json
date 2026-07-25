@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./bullmq": {
+      "types": "./dist/bullmq/index.d.ts",
+      "default": "./dist/bullmq/index.js"
     }
   },
   "scripts": {
@@ -15,6 +19,8 @@
     "typecheck": "tsc --build --pretty false"
   },
   "dependencies": {
+    "bullmq": "^5.66.5",
+    "ioredis": "^5.6.1",
     "knex": "^3.1.0",
     "pg": "^8.16.3"
   },

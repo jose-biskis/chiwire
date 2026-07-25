@@ -6,10 +6,12 @@ link that lasts **one day**.
 - **Texts** — open in the browser, copy, and update until expiry
 - **Files** — upload, download, and delete (no in-place update)
 
-v1 stores shares on the local filesystem (`DATA_DIR`). Shared `@chiwire/core`
-already exposes Knex + Postgres helpers for later persistence work.
+v1 stores shares on the local filesystem (`DATA_DIR`). Expired shares are
+cleaned by a BullMQ repeatable job every 5 minutes (plus lazy delete on read).
 
 ## Run locally
+
+Redis must be available (`REDIS_HOST` / `REDIS_PORT`, optional `REDIS_PASSWORD`):
 
 ```sh
 npm install
@@ -19,6 +21,9 @@ npm run start:contimiti
 ```
 
 Open [http://localhost:3000/](http://localhost:3000/).
+
+Inspect the purge queue via Bull Board (`npm run start:bull-board` or
+`npm run tunnel:bull-board` after deploy).
 
 ## API sketch
 
@@ -35,7 +40,8 @@ Open [http://localhost:3000/](http://localhost:3000/).
 
 ## Deploy
 
-Subdomain: `contimiti.avilalabs.dev`
+Subdomain: `contimiti.avilalabs.dev`. Joins Docker network `chiwire` and talks
+to `redis-cache`.
 
 ```sh
 npm run deploy:contimiti
