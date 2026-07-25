@@ -18,7 +18,8 @@ single baseline for TypeScript configuration and developer scripts.
 │   ├── cadvisor/      # Per-container metrics for Prometheus
 │   ├── grafana/       # Grafana dashboards for Prometheus metrics
 │   ├── prometheus/    # Prometheus + node_exporter host metrics
-│   └── redis/         # Redis for cache + BullMQ
+│   ├── redis/         # Redis for cache + BullMQ
+│   └── cachicamo-coding-agent-local/ # Electron coding agent (Ollama local/cloud)
 ├── packages/          # Shared libraries, utilities, and project modules
 │   └── core/          # Ids, TTL, Knex/pg, BullMQ helpers
 ├── scripts/           # Reusable local development and deployment scripts
@@ -233,6 +234,19 @@ This repository uses npm workspaces:
 When adding a new app or package, create a `package.json` in the workspace
 folder and add its TypeScript project to the root `tsconfig.json` references if
 it should be included in `npm run typecheck`.
+
+## Cachicamo Coding Agent Local
+
+`apps/cachicamo-coding-agent-local` is an Electron desktop coding agent that talks to
+Ollama (local daemon or [ollama.com](https://ollama.com) cloud) and can edit a
+workspace folder via tools.
+
+```sh
+npm run dev:cachicamo-coding-agent-local
+```
+
+See [`apps/cachicamo-coding-agent-local/README.md`](apps/cachicamo-coding-agent-local/README.md)
+for setup details.
 
 ## TypeScript
 

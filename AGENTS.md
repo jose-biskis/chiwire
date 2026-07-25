@@ -20,6 +20,7 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 | Prometheus + node_exporter | `apps/prometheus` | `npm run deploy:prometheus` | 9090 |
 | cAdvisor (containers) | `apps/cadvisor` | `npm run deploy:cadvisor` | 8080 |
 | Grafana dashboards | `apps/grafana` | `npm run deploy:grafana` | 3030 |
+| Cachicamo Coding Agent Local (Electron) | `@chiwire/cachicamo-coding-agent-local` | `npm run dev:cachicamo-coding-agent-local` | desktop app |
 
 Shared code lives under `packages/` (`@chiwire/core` has ids, TTL, Knex/pg, and
 BullMQ helpers). Contimiti purge jobs use BullMQ against Redis; Postgres helpers
@@ -71,6 +72,10 @@ npm run start:mcps
 
 # AvilaLabs
 npm run dev:avila
+
+# Cachicamo Coding Agent Local (Electron desktop; needs Ollama local or cloud API key)
+# Supports rules/skills/MCP/subagents + localhost API for n8n on :3847
+npm run dev:cachicamo-coding-agent-local
 ```
 
 hello-http, Contimiti, Bull Board, and MCP servers must be built before their start scripts — they run

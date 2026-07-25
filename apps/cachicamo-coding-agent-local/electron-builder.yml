@@ -1,0 +1,40 @@
+appId: com.chiwire.cachicamo-coding-agent-local
+productName: Cachicamo Coding Agent Local
+copyright: Copyright © Chiwire
+electronVersion: 43.2.0
+directories:
+  buildResources: resources
+  output: release
+files:
+  - out/**/*
+  - package.json
+  - resources/**/*
+  - "!**/.vscode/*"
+  - "!src/*"
+  - "!templates/*"
+  - "!electron.vite.config.{js,ts,mjs,cjs}"
+  - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,CHANGELOG.md,README.md}"
+  - "!{.env,.env.*,.npmrc,pnpm-lock.yaml}"
+  - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,electron-builder.yml}"
+asarUnpack:
+  - resources/**
+win:
+  icon: resources/icon.png
+  executableName: CachicamoCodingAgentLocal
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+nsis:
+  artifactName: ${productName}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
+npmRebuild: false

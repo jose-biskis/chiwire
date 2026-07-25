@@ -1,0 +1,49 @@
+{
+  "name": "@chiwire/cachicamo-coding-agent-local",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first coding agent desktop app powered by Ollama (local or cloud).",
+  "author": "Chiwire",
+  "homepage": "https://github.com/chiwire/chiwire",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc -p tsconfig.node.json --pretty false --noEmit && tsc -p tsconfig.web.json --pretty false --noEmit",
+    "build:unpack": "npm run build && electron-builder --dir --config electron-builder.yml",
+    "build:win": "npm run build && electron-builder --win --config electron-builder.yml",
+    "build:linux": "npm run build && electron-builder --linux --config electron-builder.yml"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@radix-ui/react-scroll-area": "^1.2.9",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.2.5",
+    "@twemoji/api": "^17.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.525.0",
+    "ollama": "^0.6.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.7.0",
+    "electron": "43.2.0",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^5.0.0",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^6.0.3",
+    "vite": "^7.0.5"
+  }
+}

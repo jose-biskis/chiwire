@@ -10,6 +10,7 @@
     { "path": "./apps/contimiti" },
     { "path": "./apps/bull-board" },
     { "path": "./apps/valenstonic-academy-backend" },
-    { "path": "./apps/valenstonic-academy-frontend" }
+    { "path": "./apps/valenstonic-academy-frontend" },
+    { "path": "./apps/cachicamo-coding-agent-local" }
   ]
 }

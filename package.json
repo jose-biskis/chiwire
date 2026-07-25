@@ -31,6 +31,8 @@
     "dev:bull-board": "npm run build --workspace @chiwire/core && npm run build --workspace @chiwire/bull-board && npm run start --workspace @chiwire/bull-board",
     "dev:vtacademy-api": "npm run build --workspace @chiwire/core && npm run build --workspace @chiwire/valenstonic-academy-shared && npm run build --workspace @chiwire/valenstonic-academy-backend && npm run start --workspace @chiwire/valenstonic-academy-backend",
     "dev:vtacademy": "npm run build --workspace @chiwire/valenstonic-academy-shared && npm run build --workspace @chiwire/valenstonic-academy-frontend && npm run start --workspace @chiwire/valenstonic-academy-frontend",
+    "dev:cachicamo-coding-agent-local": "npm run dev --workspace @chiwire/cachicamo-coding-agent-local",
+    "build:cachicamo-coding-agent-local:win": "npm run build:win --workspace @chiwire/cachicamo-coding-agent-local",
     "start:hello": "npm run start --workspace @chiwire/hello-http",
     "start:mcps": "npm run start --workspace @chiwire/mcps",
     "start:contimiti": "npm run start --workspace @chiwire/contimiti",
