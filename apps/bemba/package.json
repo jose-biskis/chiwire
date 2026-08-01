@@ -1,0 +1,22 @@
+{
+  "name": "@chiwire/bemba",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bemba CLI — open Radiobemba SSH reverse tunnels from localhost.",
+  "type": "module",
+  "bin": {
+    "bemba": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --build --pretty false"
+  },
+  "dependencies": {
+    "@chiwire/radiobemba-shared": "*",
+    "ssh2": "^1.17.0"
+  },
+  "devDependencies": {
+    "@types/ssh2": "^1.15.5"
+  }
+}

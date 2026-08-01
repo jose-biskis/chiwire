@@ -1,0 +1,43 @@
+{
+  "image": "chiwire/radiobemba",
+  "tag": "latest",
+  "container": "radiobemba",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 3000,
+    "visibility": "domain",
+    "hostPort": 8040,
+    "env": {
+      "RADIOBEMBA_BASE_DOMAIN": "bemba.avilalabs.dev",
+      "RADIOBEMBA_PUBLIC_ORIGIN": "https://bemba.avilalabs.dev",
+      "RADIOBEMBA_SSH_HOST": "bemba.avilalabs.dev",
+      "RADIOBEMBA_SSH_PORT": "2222",
+      "RADIOBEMBA_DATA_DIR": "/data",
+      "RADIOBEMBA_PERSISTENCE": "postgres",
+      "PGHOST": "postgres-pgbouncer",
+      "PGPORT": "6432",
+      "PGUSER": "chiwire",
+      "PGDATABASE": "chiwire"
+    },
+    "envFrom": [
+      "RADIOBEMBA_AUTH_TOKEN",
+      "PGPASSWORD"
+    ],
+    "volumes": [
+      "radiobemba-data:/data"
+    ],
+    "network": "chiwire",
+    "runArgs": [
+      "-p",
+      "0.0.0.0:2222:2222"
+    ]
+  },
+  "proxy": {
+    "type": "caddy",
+    "domain": "bemba.avilalabs.dev",
+    "wildcard": true
+  }
+}

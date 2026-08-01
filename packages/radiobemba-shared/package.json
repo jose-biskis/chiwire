@@ -1,0 +1,17 @@
+{
+  "name": "@chiwire/radiobemba-shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared protocol and helpers for Radiobemba tunnels.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build --pretty false"
+  }
+}
