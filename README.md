@@ -19,9 +19,12 @@ single baseline for TypeScript configuration and developer scripts.
 │   ├── grafana/       # Grafana dashboards for Prometheus metrics
 │   ├── prometheus/    # Prometheus + node_exporter host metrics
 │   ├── redis/         # Redis for cache + BullMQ
+│   ├── radiobemba/    # Self-hosted HTTP tunnel control plane + proxy
+│   ├── bemba/         # CLI for Radiobemba tunnels
 │   └── cachicamo-coding-agent-local/ # Electron coding agent (Ollama local/cloud)
 ├── packages/          # Shared libraries, utilities, and project modules
-│   └── core/          # Ids, TTL, Knex/pg, BullMQ helpers
+│   ├── core/          # Ids, TTL, Knex/pg, BullMQ helpers
+│   └── radiobemba-shared/ # Radiobemba wire protocol + slug helpers
 ├── scripts/           # Reusable local development and deployment scripts
 ├── package.json       # Root workspace metadata and scripts
 ├── tsconfig.base.json # Shared TypeScript compiler options
@@ -234,6 +237,25 @@ This repository uses npm workspaces:
 When adding a new app or package, create a `package.json` in the workspace
 folder and add its TypeScript project to the root `tsconfig.json` references if
 it should be included in `npm run typecheck`.
+
+## Radiobemba
+
+Radiobemba is a self-hosted ngrok-style HTTP tunnel over **SSH reverse
+forwards**. Public URLs look like `{slug}.bemba.avilalabs.dev`.
+
+```sh
+# server (local, in-memory permanent store)
+npm run dev:radiobemba
+
+# CLI (another terminal)
+npm run build --workspace @chiwire/bemba
+npm run bemba -- http 3000
+# permanent:
+# npm run bemba -- http 3000 --permanent --subdomain myapp --token secret
+```
+
+See [`apps/radiobemba/README.md`](apps/radiobemba/README.md) and
+[`apps/bemba/README.md`](apps/bemba/README.md).
 
 ## Cachicamo Coding Agent Local
 

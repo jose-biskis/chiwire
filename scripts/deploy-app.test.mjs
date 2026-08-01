@@ -92,6 +92,36 @@ test("domain visibility binds locally and configures reverse proxy", () => {
   });
 });
 
+test("proxy.wildcard adds --wildcard for caddy domain deploys", () => {
+  withFixture({
+    image: "chiwire/radiobemba",
+    container: "radiobemba",
+    runtime: {
+      containerPort: 3000,
+      visibility: "domain",
+      hostPort: 8040,
+    },
+    proxy: {
+      type: "caddy",
+      domain: "bemba.example.com",
+      wildcard: true,
+    },
+  }, ({ repoRoot }) => {
+    const loaded = loadDeploySettings({
+      appPath: "apps/hello-http",
+      cwd: repoRoot,
+    });
+    const plan = buildDeployPlan({
+      ...loaded,
+      repoRoot,
+    });
+
+    const proxyCommand = formatCommand(plan.commands[1]);
+    assert.match(proxyCommand, /--domain bemba\.example\.com/);
+    assert.match(proxyCommand, /--wildcard/);
+  });
+});
+
 test("CLI env entries override matching deploy settings", () => {
   withFixture({
     image: "chiwire/hello-http",

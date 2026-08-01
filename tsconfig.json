@@ -5,12 +5,15 @@
     { "path": "./packages/core" },
     { "path": "./packages/db-migrate" },
     { "path": "./packages/valenstonic-academy-shared" },
+    { "path": "./packages/radiobemba-shared" },
     { "path": "./apps/hello-http" },
     { "path": "./apps/mcps" },
     { "path": "./apps/contimiti" },
     { "path": "./apps/bull-board" },
     { "path": "./apps/valenstonic-academy-backend" },
     { "path": "./apps/valenstonic-academy-frontend" },
-    { "path": "./apps/cachicamo-coding-agent-local" }
+    { "path": "./apps/cachicamo-coding-agent-local" },
+    { "path": "./apps/radiobemba" },
+    { "path": "./apps/bemba" }
   ]
 }

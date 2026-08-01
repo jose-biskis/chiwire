@@ -503,6 +503,13 @@ export function buildDeployPlan({
       upstream,
     ];
 
+    if (proxy.wildcard === true) {
+      if (proxyType !== "caddy") {
+        fail("proxy.wildcard is only supported with proxy.type=caddy");
+      }
+      proxyArgs.push("--wildcard");
+    }
+
     const email = optionalString(cliOptions.email, "--email") ??
       optionalString(proxy.tlsEmail, "proxy.tlsEmail");
     if (email) {

@@ -16,6 +16,7 @@ Common options:
   --proxy caddy|nginx        Reverse proxy to configure (default: caddy)
   --upstream HOST:PORT       Upstream address (default: 127.0.0.1:3000)
                              May also include http:// or https://
+  --wildcard                 Also serve *.DOMAIN (Caddy on-demand TLS)
   --email EMAIL              Let's Encrypt email for nginx/certbot
   --skip-tls                 Configure HTTP only
 
@@ -88,10 +89,17 @@ DOMAIN="${PROXY_DOMAIN:-}"
 UPSTREAM="${PROXY_UPSTREAM:-127.0.0.1:3000}"
 EMAIL="${PROXY_TLS_EMAIL:-}"
 ENABLE_TLS="1"
+ENABLE_WILDCARD="0"
 SSH_PORT_OPTION=""
 IDENTITY_FILE_OPTION=""
 SUDO_COMMAND="sudo"
 CADDYFILE="/etc/caddy/Caddyfile"
+
+case "${PROXY_WILDCARD:-}" in
+  1|true|TRUE|yes|YES)
+    ENABLE_WILDCARD="1"
+    ;;
+esac
 
 SSH_OPTIONS=()
 
@@ -118,6 +126,10 @@ while [[ $# -gt 0 ]]; do
     --upstream)
       UPSTREAM="${2:-}"
       shift 2
+      ;;
+    --wildcard)
+      ENABLE_WILDCARD="1"
+      shift
       ;;
     --email)
       EMAIL="${2:-}"
@@ -178,6 +190,10 @@ if [[ "$DOMAIN" == *"/"* || "$DOMAIN" == *":"* ]]; then
   fail "--domain must be a hostname only, for example host.dev or app.host.dev"
 fi
 
+if [[ "$ENABLE_WILDCARD" == "1" && "$PROXY" != "caddy" ]]; then
+  fail "--wildcard is only supported with --proxy caddy"
+fi
+
 require_command ssh
 if [[ -n "${SSHPASS:-}" ]]; then
   require_command sshpass
@@ -210,6 +226,7 @@ ENABLE_TLS="$4"
 EMAIL="$5"
 SUDO_COMMAND="$6"
 CADDYFILE="$7"
+ENABLE_WILDCARD="$8"
 
 fail() {
   echo "error: $*" >&2
@@ -314,11 +331,107 @@ normalize_nginx_upstream() {
   esac
 }
 
+normalize_http_upstream() {
+  case "$UPSTREAM" in
+    http://*|https://*)
+      printf '%s\n' "$UPSTREAM"
+      ;;
+    *)
+      printf 'http://%s\n' "$UPSTREAM"
+      ;;
+  esac
+}
+
+ensure_caddy_on_demand_ask() {
+  local ask_url="$1"
+  local start_marker="# chiwire on_demand_tls begin"
+  local end_marker="# chiwire on_demand_tls end"
+  local block
+  local current
+  local next
+
+  block="$(cat <<CADDY_ON_DEMAND
+$start_marker
+{
+	on_demand_tls {
+		ask $ask_url
+	}
+}
+$end_marker
+CADDY_ON_DEMAND
+)"
+
+  current="$(mktemp)"
+  next="$(mktemp)"
+
+  if run_root test -f "$CADDYFILE"; then
+    run_root cat "$CADDYFILE" > "$current"
+  else
+    : > "$current"
+  fi
+
+  # Drop any previous chiwire on_demand_tls markers, then ensure a single
+  # global options block is not duplicated: if the file already starts with
+  # `{`, inject ask into that block; otherwise prepend our marked global block.
+  awk -v start="$start_marker" -v end="$end_marker" '
+    $0 == start { skip = 1; next }
+    $0 == end { skip = 0; next }
+    skip != 1 { print }
+  ' "$current" > "$next"
+
+  if grep -q 'on_demand_tls' "$next"; then
+    if ! grep -Fq "ask $ask_url" "$next"; then
+      # Replace existing ask line or append ask inside first on_demand_tls block.
+      awk -v ask="$ask_url" '
+        BEGIN { in_od = 0; replaced = 0 }
+        /on_demand_tls[[:space:]]*\{/ { in_od = 1 }
+        in_od && /ask[[:space:]]/ && replaced == 0 {
+          print "\t\task " ask
+          replaced = 1
+          next
+        }
+        in_od && /^[[:space:]]*\}/ && replaced == 0 {
+          print "\t\task " ask
+          replaced = 1
+        }
+        { print }
+        in_od && /^[[:space:]]*\}/ { in_od = 0 }
+      ' "$next" > "$current"
+      mv "$current" "$next"
+    fi
+    run_root install -m 0644 "$next" "$CADDYFILE"
+  else
+    if head -n 1 "$next" | grep -q '^{'; then
+      awk -v ask="$ask_url" '
+        NR == 1 {
+          print
+          print "\ton_demand_tls {"
+          print "\t\task " ask
+          print "\t}"
+          next
+        }
+        { print }
+      ' "$next" > "$current"
+      run_root install -m 0644 "$current" "$CADDYFILE"
+    else
+      {
+        printf '%s\n\n' "$block"
+        cat "$next"
+      } > "$current"
+      run_root install -m 0644 "$current" "$CADDYFILE"
+    fi
+  fi
+
+  rm -f "$current" "$next"
+}
+
 configure_caddy() {
   local site_address="$DOMAIN"
   local start_marker="# chiwire reverse proxy begin $DOMAIN"
   local end_marker="# chiwire reverse proxy end $DOMAIN"
   local block
+  local http_upstream
+  local ask_url
 
   require_remote_command caddy
 
@@ -326,7 +439,32 @@ configure_caddy() {
     site_address="http://$DOMAIN"
   fi
 
-  block="$(cat <<CADDY_SITE
+  if [[ "$ENABLE_WILDCARD" == "1" ]]; then
+    if [[ "$ENABLE_TLS" == "1" ]]; then
+      site_address="$DOMAIN, *.$DOMAIN"
+    else
+      site_address="http://$DOMAIN, http://*.$DOMAIN"
+    fi
+  fi
+
+  if [[ "$ENABLE_WILDCARD" == "1" && "$ENABLE_TLS" == "1" ]]; then
+    http_upstream="$(normalize_http_upstream)"
+    ask_url="${http_upstream%/}/v1/tls-ask"
+    echo "Enabling Caddy on-demand TLS ask -> $ask_url"
+    ensure_caddy_on_demand_ask "$ask_url"
+    block="$(cat <<CADDY_SITE
+$start_marker
+$site_address {
+	tls {
+		on_demand
+	}
+	reverse_proxy $UPSTREAM
+}
+$end_marker
+CADDY_SITE
+)"
+  else
+    block="$(cat <<CADDY_SITE
 $start_marker
 $site_address {
 	reverse_proxy $UPSTREAM
@@ -334,8 +472,9 @@ $site_address {
 $end_marker
 CADDY_SITE
 )"
+  fi
 
-  echo "Configuring Caddy reverse proxy for $DOMAIN -> $UPSTREAM"
+  echo "Configuring Caddy reverse proxy for $site_address -> $UPSTREAM"
   update_marked_file "$CADDYFILE" "$start_marker" "$end_marker" "$block"
   run_root caddy fmt --overwrite "$CADDYFILE" >/dev/null
   run_root caddy validate --config "$CADDYFILE"
@@ -421,7 +560,7 @@ fi
 REMOTE_SCRIPT
 )
 
-REMOTE_ARGS=("$PROXY" "$DOMAIN" "$UPSTREAM" "$ENABLE_TLS" "$EMAIL" "$SUDO_COMMAND" "$CADDYFILE")
+REMOTE_ARGS=("$PROXY" "$DOMAIN" "$UPSTREAM" "$ENABLE_TLS" "$EMAIL" "$SUDO_COMMAND" "$CADDYFILE" "$ENABLE_WILDCARD")
 REMOTE_ARG_STRING=""
 for arg in "${REMOTE_ARGS[@]}"; do
   REMOTE_ARG_STRING+=" $(quote "$arg")"

@@ -21,9 +21,11 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 | cAdvisor (containers) | `apps/cadvisor` | `npm run deploy:cadvisor` | 8080 |
 | Grafana dashboards | `apps/grafana` | `npm run deploy:grafana` | 3030 |
 | Cachicamo Coding Agent Local (Electron) | `@chiwire/cachicamo-coding-agent-local` | `npm run dev:cachicamo-coding-agent-local` | desktop app |
+| Radiobemba tunnel server | `@chiwire/radiobemba` | `npm run dev:radiobemba` (HTTP :3000 + SSH :2222) | 3000 / 2222 |
+| Bemba tunnel CLI | `@chiwire/bemba` | build then `npm run bemba -- http <port>` | n/a |
 
 Shared code lives under `packages/` (`@chiwire/core` has ids, TTL, Knex/pg, and
-BullMQ helpers). Contimiti purge jobs use BullMQ against Redis; Postgres helpers
+BullMQ helpers; `@chiwire/radiobemba-shared` has the tunnel wire protocol). Contimiti purge jobs use BullMQ against Redis; Postgres helpers
 are available for later persistence.
 
 There is no `docker-compose`, Makefile, or `.devcontainer`. Local development only requires Node.js and npm.
@@ -46,6 +48,7 @@ See `README.md` for full details. Common commands:
 - Verify Bull Board: `curl http://localhost:3000/health` and open `http://localhost:3000/bullboard`
 - Verify hello-http: `curl http://localhost:3000/` and `curl http://localhost:3000/health`
 - Verify MCP servers: `curl http://localhost:3000/`, `curl http://localhost:3000/health`, and `curl -X POST http://localhost:3000/trello -H "content-type: application/json" -H "accept: application/json, text/event-stream" --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'`
+- Radiobemba: `npm run dev:radiobemba` (SSH reverse tunnels on :2222); CLI `npm run build --workspace @chiwire/bemba` then `npm run bemba -- http <port>`; verify `curl http://localhost:3000/health`
 
 ### Running dev servers
 
@@ -76,9 +79,12 @@ npm run dev:avila
 # Cachicamo Coding Agent Local (Electron desktop; needs Ollama local or cloud API key)
 # Supports rules/skills/MCP/subagents + localhost API for n8n on :3847
 npm run dev:cachicamo-coding-agent-local
+
+# Radiobemba (HTTP :3000 + SSH :2222; memory persistence by default in dev script)
+npm run dev:radiobemba
 ```
 
-hello-http, Contimiti, Bull Board, and MCP servers must be built before their start scripts — they run
+hello-http, Contimiti, Bull Board, MCP servers, and Radiobemba must be built before their start scripts — they run
 `node dist/index.js`.
 
 ### Lint / test notes
