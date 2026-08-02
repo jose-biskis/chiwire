@@ -91,6 +91,7 @@ async function handleRegister(
       connectionId: state.id,
       kind: hello.kind,
       forwardPort: state.forwardPort,
+      localTls: hello.localTls === true,
       ...(hello.subdomain ? { requestedSlug: hello.subdomain } : {}),
       ownerToken: hello.token ?? null
     });

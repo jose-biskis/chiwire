@@ -3,6 +3,7 @@ export type HttpCommand = {
   port: number;
   subdomain: string | null;
   permanent: boolean;
+  localTls: boolean;
   serverUrl: string;
   sshHost: string | null;
   sshPort: number | null;
@@ -53,10 +54,12 @@ Options:
   --ssh-port <port>    SSH port (default: $BEMBA_SSH_PORT or 2222)
   --token <token>      Owner token for --permanent; also SSH password when
                        the server sets RADIOBEMBA_AUTH_TOKEN (default: $BEMBA_TOKEN)
+  --local-tls          Local app speaks HTTPS (self-signed OK), e.g. Jitsi :8443
 
 Examples:
   bemba http 3000
   bemba http 5173 --subdomain demo
+  bemba http 8443 --local-tls --subdomain jitsi
   bemba http 3000 --permanent --subdomain myapp --token secret
   bemba http 3000 --server https://bemba.avilalabs.dev --ssh-port 2222
 `);
@@ -85,6 +88,7 @@ export function parseArgs(argv: string[]): CliCommand {
 
   let subdomain: string | null = null;
   let permanent = false;
+  let localTls = false;
   let serverUrl = process.env.BEMBA_SERVER?.trim() || "http://localhost:3000";
   let sshHost = process.env.BEMBA_SSH_HOST?.trim() || null;
   let sshPort: number | null = process.env.BEMBA_SSH_PORT
@@ -105,6 +109,12 @@ export function parseArgs(argv: string[]): CliCommand {
 
     if (arg === "--permanent") {
       permanent = true;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--local-tls") {
+      localTls = true;
       index += 1;
       continue;
     }
@@ -161,6 +171,7 @@ export function parseArgs(argv: string[]): CliCommand {
     port,
     subdomain,
     permanent,
+    localTls,
     serverUrl,
     sshHost,
     sshPort,

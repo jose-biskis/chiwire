@@ -9,6 +9,8 @@ export type AgentHelloMessage = {
   subdomain?: string;
   /** Owner token for permanent reservations (and optional SSH identity). */
   token?: string;
+  /** Local upstream speaks TLS (e.g. Jitsi on :8443). */
+  localTls?: boolean;
 };
 
 export type ServerReadyMessage = {

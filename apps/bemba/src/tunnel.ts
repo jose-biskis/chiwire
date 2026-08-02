@@ -48,7 +48,8 @@ function registerTunnel(
         type: "hello",
         kind: command.permanent ? "permanent" : "temp",
         ...(command.subdomain ? { subdomain: command.subdomain } : {}),
-        ...(command.token ? { token: command.token } : {})
+        ...(command.token ? { token: command.token } : {}),
+        ...(command.localTls ? { localTls: true } : {})
       };
 
       let buffer = "";
@@ -131,6 +132,9 @@ export async function runHttpTunnel(command: HttpCommand): Promise<void> {
               console.log(`Public URL  ${ready.url}`);
               console.log(`Path URL    ${ready.pathUrl}`);
               console.log(`Kind        ${command.permanent ? "permanent" : "temp"}`);
+              console.log(
+                `Local       ${command.localTls ? "https" : "http"}://127.0.0.1:${command.port}`
+              );
               console.log(`SSH         ${host}:${port} (remote :${ready.forwardPort})`);
               console.log("(Ctrl+C to stop)");
             })

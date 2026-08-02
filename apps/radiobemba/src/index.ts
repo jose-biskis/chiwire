@@ -1,10 +1,18 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse
+} from "node:http";
+import type { Duplex } from "node:stream";
 import process from "node:process";
 import { slugFromHost } from "@chiwire/radiobemba-shared";
 import { loadConfig } from "./config.js";
 import { getDb, migrate } from "./db.js";
 import { loadOrCreateHostKey } from "./host-key.js";
-import { proxyToForwardPort } from "./http-proxy.js";
+import {
+  proxyToForwardPort,
+  proxyUpgradeToForwardPort
+} from "./http-proxy.js";
 import {
   MemoryReservationStore,
   PostgresReservationStore,
@@ -66,12 +74,78 @@ async function main(): Promise<void> {
   ): Promise<void> {
     const live = registry.get(slug);
     if (live) {
-      proxyToForwardPort(request, response, live.forwardPort, pathWithQuery);
+      proxyToForwardPort(
+        request,
+        response,
+        live.forwardPort,
+        pathWithQuery,
+        live.localTls
+      );
       return;
     }
 
     const reserved = await reservations.get(slug);
     handleOfflineOrMissing(response, slug, Boolean(reserved));
+  }
+
+  function resolveTunnelTarget(
+    request: IncomingMessage
+  ): { forwardPort: number; localTls: boolean; pathWithQuery: string } | null {
+    const host = request.headers.host ?? "localhost";
+    const url = new URL(request.url ?? "/", `http://${host}`);
+    const pathWithQuery = `${url.pathname}${url.search}`;
+
+    const hostSlug = slugFromHost(host, config.baseDomain);
+    if (hostSlug) {
+      const live = registry.get(hostSlug);
+      if (!live) {
+        return null;
+      }
+      return {
+        forwardPort: live.forwardPort,
+        localTls: live.localTls,
+        pathWithQuery
+      };
+    }
+
+    const pathMatch = url.pathname.match(/^\/t\/([a-z0-9-]+)(\/.*)?$/);
+    if (!pathMatch) {
+      return null;
+    }
+
+    const live = registry.get(pathMatch[1]!);
+    if (!live) {
+      return null;
+    }
+
+    const rest = pathMatch[2] ?? "/";
+    return {
+      forwardPort: live.forwardPort,
+      localTls: live.localTls,
+      pathWithQuery: `${rest}${url.search}`
+    };
+  }
+
+  function handleUpgrade(
+    request: IncomingMessage,
+    socket: Duplex,
+    head: Buffer
+  ): void {
+    const target = resolveTunnelTarget(request);
+    if (!target) {
+      socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+
+    proxyUpgradeToForwardPort(
+      request,
+      socket,
+      head,
+      target.forwardPort,
+      target.pathWithQuery,
+      target.localTls
+    );
   }
 
   async function handleRequest(
@@ -157,6 +231,15 @@ async function main(): Promise<void> {
         writeJson(response, 500, { error: "Internal server error" });
       }
     });
+  });
+
+  server.on("upgrade", (request, socket, head) => {
+    try {
+      handleUpgrade(request, socket, head);
+    } catch (error) {
+      console.error(error);
+      socket.destroy();
+    }
   });
 
   server.listen(config.port, "0.0.0.0", () => {

@@ -6,6 +6,8 @@ export type LiveTunnel = {
   kind: TunnelKind;
   /** Port on 127.0.0.1 where the SSH reverse forward is listening. */
   forwardPort: number;
+  /** Agent's local process speaks TLS (self-signed OK). */
+  localTls: boolean;
   connectionId: string;
   createdAt: number;
 };
@@ -23,12 +25,14 @@ export class TunnelRegistry {
     slug: string;
     kind: TunnelKind;
     forwardPort: number;
+    localTls: boolean;
     createdAt: number;
   }> {
     return [...this.#bySlug.values()].map((tunnel) => ({
       slug: tunnel.slug,
       kind: tunnel.kind,
       forwardPort: tunnel.forwardPort,
+      localTls: tunnel.localTls,
       createdAt: tunnel.createdAt
     }));
   }
@@ -45,6 +49,7 @@ export class TunnelRegistry {
     connectionId: string;
     kind: TunnelKind;
     forwardPort: number;
+    localTls?: boolean;
     requestedSlug?: string;
     ownerToken: string | null;
   }): Promise<LiveTunnel> {
@@ -97,6 +102,7 @@ export class TunnelRegistry {
       slug,
       kind: input.kind,
       forwardPort: input.forwardPort,
+      localTls: input.localTls === true,
       connectionId: input.connectionId,
       createdAt: Date.now()
     };

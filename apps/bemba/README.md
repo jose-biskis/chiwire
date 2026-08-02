@@ -11,6 +11,7 @@ npm run build --workspace @chiwire/bemba
 
 npm run bemba -- http 3000
 npm run bemba -- http 5173 --subdomain demo
+npm run bemba -- http 8443 --local-tls --subdomain jitsi
 npm run bemba -- http 3000 --permanent --subdomain myapp --token secret
 npm run bemba -- http 3000 --server https://bemba.avilalabs.dev --ssh-port 2222
 ```
@@ -25,3 +26,4 @@ npm run bemba -- http 3000 --server https://bemba.avilalabs.dev --ssh-port 2222
 | `--token` / `BEMBA_TOKEN` | SSH password / permanent owner token |
 | `--subdomain` | Requested slug |
 | `--permanent` | Durable reservation (needs subdomain + token) |
+| `--local-tls` | Local upstream is HTTPS (e.g. Jitsi); self-signed OK |
