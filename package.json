@@ -27,6 +27,7 @@
     "tunnel:grafana": "./scripts/tunnel-deploy-ssh.sh --app apps/grafana",
     "tunnel:bull-board": "./scripts/tunnel-deploy-ssh.sh --app apps/bull-board",
     "tunnel:socks": "./scripts/tunnel-socks-deploy-ssh.sh",
+    "tunnel:internal": "./scripts/tunnel-internal-deploy-ssh.sh",
     "deploy:redis": "./scripts/deploy-app.sh apps/redis",
     "deploy:radiobemba": "./scripts/deploy-app.sh apps/radiobemba",
     "dev:contimiti": "npm run build --workspace @chiwire/core && npm run build --workspace @chiwire/contimiti && npm run start --workspace @chiwire/contimiti",

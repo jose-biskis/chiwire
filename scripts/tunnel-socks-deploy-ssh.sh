@@ -6,8 +6,16 @@ usage() {
 Open a dynamic SSH SOCKS proxy to the deploy host.
 
 Uses the same SSH variables as deploy-docker-ssh.sh and connect-deploy-ssh.sh.
-With the proxy up, point a SOCKS5 client at the local port and reach internal
-binds on the remote host (for example http://127.0.0.1:3030 for Grafana).
+
+Important: a normal browser does NOT use this automatically. Opening
+http://localhost:3030 or http://localhost:1080 will fail unless the browser
+(or curl) is configured for SOCKS5. Many browsers also bypass proxies for
+localhost. For one-click local URLs like tunnel:grafana, use:
+
+  npm run tunnel:internal
+
+Verify with:
+  curl --socks5-hostname 127.0.0.1:1080 http://127.0.0.1:3030/
 
 Usage:
   ./scripts/tunnel-socks-deploy-ssh.sh [options]
@@ -117,9 +125,20 @@ if [[ -n "${SSHPASS:-}" ]]; then
   require_command sshpass
 fi
 
+if { command -v ss >/dev/null 2>&1 && ss -ltn "( sport = :${LOCAL_PORT} )" 2>/dev/null | tail -n +2 | grep -q .; } \
+  || { command -v lsof >/dev/null 2>&1 && lsof -iTCP:"${LOCAL_PORT}" -sTCP:LISTEN >/dev/null 2>&1; }; then
+  fail "local port ${LOCAL_PORT} is already in use; stop the other process or pass --local-port"
+fi
+
 SOCKS_FORWARD="${BIND_ADDRESS}:${LOCAL_PORT}"
 
-SSH_COMMAND=(ssh -N -D "$SOCKS_FORWARD" -p "$SSH_PORT")
+SSH_COMMAND=(
+  ssh
+  -N
+  -o ExitOnForwardFailure=yes
+  -D "$SOCKS_FORWARD"
+  -p "$SSH_PORT"
+)
 
 if [[ -n "$IDENTITY_FILE" ]]; then
   SSH_COMMAND+=(-i "$IDENTITY_FILE")
@@ -137,7 +156,8 @@ fi
 SSH_COMMAND+=("$HOST")
 
 echo "SOCKS5 proxy on ${BIND_ADDRESS}:${LOCAL_PORT} via ${HOST}"
-echo "Point a SOCKS5 client at socks5://${BIND_ADDRESS}:${LOCAL_PORT}"
-echo "Then open internal services as http://127.0.0.1:<remote-port> (e.g. Grafana :3030)."
+echo "Configure a SOCKS5 client for socks5://${BIND_ADDRESS}:${LOCAL_PORT}"
+echo "Test: curl --socks5-hostname ${BIND_ADDRESS}:${LOCAL_PORT} http://127.0.0.1:3030/"
+echo "For browser-friendly local ports without a proxy, use: npm run tunnel:internal"
 echo "Leave this session open; Ctrl+C to stop."
 exec "${SSH_COMMAND[@]}"
