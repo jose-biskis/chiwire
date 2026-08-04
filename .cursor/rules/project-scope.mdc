@@ -1,0 +1,55 @@
+---
+description: Require a project scope before work; limit reads/edits to that app and its deps unless FORCED_RUN
+alwaysApply: true
+---
+
+# Project scope gate (token budget)
+
+Before any exploratory reads, searches, builds, or edits: establish **project scope**.
+
+## Gate
+
+1. If the user message includes `PROJECT: <name>` (or clearly names one workspace/app), use that as scope.
+2. If scope is missing, **ask once** and **stop** — do not scan the monorepo.
+3. Bypass only when the user includes `FORCED_RUN: TRUE` (repo-wide, multi-app, or root tooling work).
+
+Acceptable scope forms: workspace name (`@chiwire/contimiti`), path (`apps/contimiti`), or short alias below.
+
+## Known projects
+
+| Alias / name | Path | Typical deps |
+|--------------|------|----------------|
+| avila / avila-labs | `apps/avila-labs` | — |
+| contimiti | `apps/contimiti` | `packages/core` |
+| bull-board | `apps/bull-board` | `packages/core` |
+| vtacademy / valenstonic frontend | `apps/valenstonic-academy-frontend` | `packages/valenstonic-academy-shared` |
+| vtacademy-api / valenstonic backend | `apps/valenstonic-academy-backend` | `packages/core`, `packages/valenstonic-academy-shared`, `packages/db-migrate` |
+| hello / hello-http | `apps/hello-http` | — |
+| mcps | `apps/mcps` | — |
+| cachicamo | `apps/cachicamo-coding-agent-local` | — |
+| radiobemba | `apps/radiobemba` | `packages/core`, `packages/radiobemba-shared`, `packages/db-migrate` |
+| bemba | `apps/bemba` | `packages/radiobemba-shared` |
+| core | `packages/core` | — |
+| radiobemba-shared | `packages/radiobemba-shared` | — |
+| valenstonic-shared | `packages/valenstonic-academy-shared` | — |
+| db-migrate | `packages/db-migrate` | `packages/core` |
+| prometheus / grafana / cadvisor / postgres / redis | `apps/<name>` | deploy scripts under `scripts/` as needed |
+
+## After scope is set
+
+- Read/edit only the scoped tree plus **confirmed** workspace dependencies (from that package’s `package.json` / `@chiwire/*` deps). Prefer `npm run dependency-map` only when dep edges are unclear — do not dump the whole graph into context.
+- Root files (`package.json`, `AGENTS.md`, `scripts/`) only when required for the scoped task.
+- Prefer workspace-scoped commands (`npm run build --workspace @chiwire/<name>`) over repo-wide `typecheck` / `build` unless asked or `FORCED_RUN: TRUE`.
+- Do not open unrelated apps “just in case.”
+
+## Examples
+
+```text
+PROJECT: contimiti
+Fix the purge job TTL.
+```
+
+```text
+FORCED_RUN: TRUE
+Update deploy scripts used by every app.
+```
