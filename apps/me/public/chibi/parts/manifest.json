@@ -1,0 +1,65 @@
+{
+  "standing": {
+    "width": 307,
+    "height": 501,
+    "counts": {
+      "leg_l": 14817,
+      "leg_r": 16327,
+      "torso": 12162,
+      "arm_l": 2274,
+      "arm_r": 4791,
+      "head": 47810
+    },
+    "diffPixels": 0,
+    "layers": [
+      "leg_l",
+      "leg_r",
+      "torso",
+      "arm_l",
+      "arm_r",
+      "head"
+    ]
+  },
+  "sitting": {
+    "width": 524,
+    "height": 861,
+    "counts": {
+      "leg_l": 35935,
+      "leg_r": 46158,
+      "torso": 23915,
+      "arm_l": 17081,
+      "arm_r": 24043,
+      "head": 114642
+    },
+    "diffPixels": 0,
+    "layers": [
+      "leg_l",
+      "leg_r",
+      "torso",
+      "arm_l",
+      "arm_r",
+      "head"
+    ]
+  },
+  "pointing": {
+    "width": 473,
+    "height": 929,
+    "counts": {
+      "leg_l": 30924,
+      "leg_r": 33360,
+      "torso": 36632,
+      "arm_l": 22742,
+      "arm_r": 27170,
+      "head": 142062
+    },
+    "diffPixels": 0,
+    "layers": [
+      "leg_l",
+      "leg_r",
+      "torso",
+      "arm_l",
+      "arm_r",
+      "head"
+    ]
+  }
+}

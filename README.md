@@ -10,6 +10,7 @@ single baseline for TypeScript configuration and developer scripts.
 .
 ├── apps/              # Deployable apps and experiments
 │   ├── avila-labs/    # Astro landing page for AvilaLabs
+│   ├── me/            # Persona site for josebiskis.com
 │   ├── contimiti/     # One-day text and file shares
 │   ├── bull-board/    # Internal BullMQ dashboard (SSH tunnel)
 │   ├── hello-http/    # Minimal HTTP service for Docker deployment testing
@@ -60,6 +61,29 @@ Build the static site:
 
 ```sh
 npm run build --workspace @chiwire/avila-labs
+```
+
+## Persona site (`josebiskis.com`)
+
+The `apps/me` workspace is a Vite + React persona site using the Internal
+design-system archetype (light mode) and a chibi character mascot.
+
+Run it locally:
+
+```sh
+npm run dev:me
+```
+
+Build the static site:
+
+```sh
+npm run build --workspace @chiwire/me
+```
+
+Deploy (after DNS points `josebiskis.com` at the host):
+
+```sh
+npm run deploy:me
 ```
 
 ## Hello HTTP test app
@@ -229,6 +253,7 @@ beside the app:
 
 ```sh
 npm run deploy:avila
+npm run deploy:me
 npm run deploy:hello
 npm run deploy:contimiti
 npm run deploy:bull-board

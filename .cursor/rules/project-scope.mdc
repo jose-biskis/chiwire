@@ -20,6 +20,7 @@ Acceptable scope forms: workspace name (`@chiwire/contimiti`), path (`apps/conti
 | Alias / name | Path | Typical deps |
 |--------------|------|----------------|
 | avila / avila-labs | `apps/avila-labs` | — |
+| me / josebiskis | `apps/me` | `packages/ui` |
 | contimiti | `apps/contimiti` | `packages/core` |
 | bull-board | `apps/bull-board` | `packages/core` |
 | design-system | `apps/design-system` | `packages/ui` |

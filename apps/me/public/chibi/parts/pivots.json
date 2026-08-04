@@ -1,0 +1,122 @@
+{
+  "standing": {
+    "canvasWidth": 307,
+    "canvasHeight": 501,
+    "pivots": {
+      "head": {
+        "x": 166,
+        "y": 252
+      },
+      "torso": {
+        "x": 166,
+        "y": 368
+      },
+      "arm_l": {
+        "x": 95,
+        "y": 278
+      },
+      "arm_r": {
+        "x": 235,
+        "y": 278
+      },
+      "leg_l": {
+        "x": 125,
+        "y": 378
+      },
+      "leg_r": {
+        "x": 205,
+        "y": 378
+      }
+    },
+    "coverage": {
+      "head": 53820,
+      "torso": 14432,
+      "arm_l": 7585,
+      "arm_r": 6594,
+      "leg_l": 9773,
+      "leg_r": 9645
+    },
+    "maxDiff": 0,
+    "miss": 0
+  },
+  "sitting": {
+    "canvasWidth": 524,
+    "canvasHeight": 861,
+    "pivots": {
+      "head": {
+        "x": 275,
+        "y": 450
+      },
+      "torso": {
+        "x": 245,
+        "y": 560
+      },
+      "arm_l": {
+        "x": 195,
+        "y": 460
+      },
+      "arm_r": {
+        "x": 310,
+        "y": 480
+      },
+      "leg_l": {
+        "x": 190,
+        "y": 570
+      },
+      "leg_r": {
+        "x": 290,
+        "y": 575
+      }
+    },
+    "coverage": {
+      "head": 147824,
+      "torso": 16852,
+      "arm_l": 24942,
+      "arm_r": 14258,
+      "leg_l": 25478,
+      "leg_r": 39672
+    },
+    "maxDiff": 0,
+    "miss": 0
+  },
+  "pointing": {
+    "canvasWidth": 473,
+    "canvasHeight": 929,
+    "pivots": {
+      "head": {
+        "x": 220,
+        "y": 430
+      },
+      "torso": {
+        "x": 220,
+        "y": 630
+      },
+      "arm_l": {
+        "x": 145,
+        "y": 470
+      },
+      "arm_r": {
+        "x": 295,
+        "y": 470
+      },
+      "leg_l": {
+        "x": 155,
+        "y": 650
+      },
+      "leg_r": {
+        "x": 295,
+        "y": 650
+      }
+    },
+    "coverage": {
+      "head": 160594,
+      "torso": 29385,
+      "arm_l": 22126,
+      "arm_r": 27868,
+      "leg_l": 28994,
+      "leg_r": 31521
+    },
+    "maxDiff": 0,
+    "miss": 0
+  }
+}

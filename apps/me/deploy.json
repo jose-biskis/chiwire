@@ -1,0 +1,18 @@
+{
+  "image": "chiwire/me",
+  "tag": "latest",
+  "container": "me",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 80,
+    "visibility": "domain",
+    "hostPort": 8002
+  },
+  "proxy": {
+    "type": "caddy",
+    "domain": "josebiskis.com"
+  }
+}

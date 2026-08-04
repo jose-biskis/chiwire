@@ -21,6 +21,7 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 | App | Workspace | Dev command | Default port |
 |-----|-----------|-------------|--------------|
 | AvilaLabs landing page | `@chiwire/avila-labs` | `npm run dev:avila` | 4321 |
+| Jose Biskis persona site | `@chiwire/me` | `npm run dev:me` | 5199 |
 | Contimiti share app | `@chiwire/contimiti` | build then `npm run start:contimiti` (React + `@chiwire/ui`) | 3000 |
 | Bull Board (queues UI) | `@chiwire/bull-board` | build then `npm run start:bull-board` | 3000 (deploy host 3040) |
 | Design system (Storybook) | `@chiwire/design-system` | `npm run dev:design-system` | 6006 (deploy host 3050) |
@@ -51,6 +52,7 @@ See `README.md` for full details. Common commands:
 - Typecheck all workspaces: `npm run typecheck`
 - Deploy script tests: `npm run test:deploy-settings`
 - AvilaLabs dev server: `npm run dev:avila`
+- Persona site (josebiskis.com): `npm run dev:me`
 - Contimiti: Redis required; `npm run build --workspace @chiwire/core` then `npm run build --workspace @chiwire/contimiti` then `npm run start:contimiti`
 - Bull Board: `npm run build --workspace @chiwire/core` then `npm run build --workspace @chiwire/bull-board` then `npm run start:bull-board` (or `npm run tunnel:bull-board` after deploy)
 - Design system: `npm run dev:design-system` locally; after deploy `npm run tunnel:design-system` → http://localhost:3050
@@ -89,6 +91,9 @@ npm run start:mcps
 
 # AvilaLabs
 npm run dev:avila
+
+# Persona site (josebiskis.com) — Vite + @chiwire/ui internal light
+npm run dev:me
 
 # Cachicamo Coding Agent Local (Electron desktop; needs Ollama local or cloud API key)
 # Supports rules/skills/MCP/subagents + localhost API for n8n on :3847
