@@ -27,7 +27,9 @@ function normalizeSettings(raw: Partial<AgentSettings>): AgentSettings {
             ...(server.headers && typeof server.headers === "object" ? { headers: server.headers } : {})
           })
         )
-      : []
+      : [],
+    uiArchetype: raw.uiArchetype === "valenstonic" ? "valenstonic" : "internal",
+    uiColorMode: raw.uiColorMode === "light" ? "light" : "dark"
   };
 
   if (!merged.apiToken.trim()) {

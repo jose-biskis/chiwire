@@ -3,10 +3,12 @@ FROM node:24-alpine AS build
 WORKDIR /repo
 
 COPY package.json package-lock.json tsconfig.base.json tsconfig.json ./
+COPY packages/ui/package.json packages/ui/package.json
 COPY apps/design-system/package.json apps/design-system/package.json
 
 RUN npm ci
 
+COPY packages/ui packages/ui
 COPY apps/design-system apps/design-system
 
 RUN npm run build --workspace @chiwire/design-system

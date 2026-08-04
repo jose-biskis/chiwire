@@ -1,8 +1,9 @@
 import type { CourseDetail, CourseSummary } from "@/lib/api";
-import type { LangId, StyleId } from "@/lib/site-prefs";
+import type { ArchetypeId, ColorMode, LangId } from "@/lib/site-prefs";
 
 export type SsrData = {
-  style?: StyleId;
+  archetype?: ArchetypeId;
+  theme?: ColorMode;
   lang?: LangId;
   courses?: CourseSummary[];
   course?: CourseDetail | null;

@@ -4,11 +4,13 @@ WORKDIR /repo
 
 COPY package.json package-lock.json tsconfig.base.json tsconfig.json ./
 COPY packages/core/package.json packages/core/package.json
+COPY packages/ui/package.json packages/ui/package.json
 COPY apps/contimiti/package.json apps/contimiti/package.json
 
 RUN npm ci
 
 COPY packages/core packages/core
+COPY packages/ui packages/ui
 COPY apps/contimiti apps/contimiti
 
 RUN npm run build --workspace @chiwire/core \
@@ -24,12 +26,14 @@ WORKDIR /repo
 
 COPY package.json package-lock.json ./
 COPY packages/core/package.json packages/core/package.json
+COPY packages/ui/package.json packages/ui/package.json
 COPY apps/contimiti/package.json apps/contimiti/package.json
 
 RUN npm ci --omit=dev --workspace @chiwire/contimiti && npm cache clean --force
 
 COPY --from=build /repo/packages/core/dist packages/core/dist
 COPY --from=build /repo/apps/contimiti/dist apps/contimiti/dist
+COPY --from=build /repo/apps/contimiti/client-dist apps/contimiti/client-dist
 
 RUN mkdir -p /data && chown node:node /data
 

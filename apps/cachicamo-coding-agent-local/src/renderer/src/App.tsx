@@ -18,16 +18,21 @@ import type {
   ModelInfo,
   RuleInfo,
   SkillInfo,
-  ToolCallEvent
+  ToolCallEvent,
+  UiArchetype,
+  UiColorMode
 } from "../../shared/types";
 import { TitleBar } from "@/components/TitleBar";
 import { Markdown } from "@/components/Markdown";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { Button, Input, ScrollArea, Switch, Textarea } from "@chiwire/ui/internal";
 import { cn } from "@/lib/utils";
+
+function applyUiAppearance(archetype: UiArchetype, colorMode: UiColorMode): void {
+  for (const el of [document.documentElement, document.body]) {
+    el.dataset.archetype = archetype;
+    el.dataset.theme = colorMode;
+  }
+}
 
 type UiMessage =
   | { id: string; kind: "user"; content: string }
@@ -78,8 +83,16 @@ export default function App() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    void window.cachicamoAgent.getSettings().then(setSettings);
+    void window.cachicamoAgent.getSettings().then((loaded: AgentSettings) => {
+      applyUiAppearance(loaded.uiArchetype, loaded.uiColorMode);
+      setSettings(loaded);
+    });
   }, []);
+
+  useEffect(() => {
+    if (!settings) return;
+    applyUiAppearance(settings.uiArchetype, settings.uiColorMode);
+  }, [settings?.uiArchetype, settings?.uiColorMode]);
 
   useEffect(() => {
     const unsubscribe = window.cachicamoAgent.onAgentEvent((event: AgentStreamEvent) => {
@@ -269,10 +282,14 @@ export default function App() {
   ];
 
   return (
-    <div className="flex h-full flex-col bg-card text-foreground shadow-[inset_0_0_0_1px_#2b2b2b]">
+    <div className="flex h-full flex-col bg-card text-foreground shadow-[inset_0_0_0_1px_var(--color-border)]">
       <TitleBar
         onOpenFolder={() => void onPickWorkspace()}
         onToggleSidebar={() => setSidebarVisible((value) => !value)}
+        uiArchetype={settings.uiArchetype}
+        uiColorMode={settings.uiColorMode}
+        onUiArchetype={(uiArchetype) => void persist({ ...settings, uiArchetype })}
+        onUiColorMode={(uiColorMode) => void persist({ ...settings, uiColorMode })}
       />
       <div className="flex min-h-0 flex-1">
         {/* Activity bar */}
@@ -287,7 +304,7 @@ export default function App() {
                 title={item.label}
                 onClick={() => setSidebarTab(item.id)}
                 className={cn(
-                  "relative flex size-12 items-center justify-center text-[#858585] transition-colors hover:text-foreground",
+                  "relative flex size-12 items-center justify-center text-muted-foreground transition-colors hover:text-foreground",
                   active && "text-foreground"
                 )}
               >
@@ -303,7 +320,7 @@ export default function App() {
             type="button"
             title="Settings"
             onClick={() => setSidebarTab("agent")}
-            className="flex size-12 items-center justify-center text-[#858585] hover:text-foreground"
+            className="flex size-12 items-center justify-center text-muted-foreground hover:text-foreground"
           >
             <Settings2 className="size-6 stroke-[1.5]" />
           </button>

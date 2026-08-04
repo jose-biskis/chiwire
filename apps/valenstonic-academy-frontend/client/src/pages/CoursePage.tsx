@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@chiwire/ui/valenstonic";
 import { PrefsBar } from "@/components/site/PrefsBar";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchCourse, type CourseDetail } from "@/lib/api";
 import { useInitialData } from "@/lib/InitialDataContext";
 import { useSitePrefs } from "@/lib/useSitePrefs";
@@ -30,14 +37,15 @@ export function CoursePage() {
   }, [slug, ssrMatches]);
 
   return (
-    <>
+    <div className="theme-home theme-atelier">
+      <div className="theme-grain" aria-hidden />
       <PrefsBar />
       <SiteHeader />
-      <main className="mx-auto w-full max-w-[1100px] px-[1.25rem] py-10">
+      <main className="relative z-[1] mx-auto w-full max-w-[1100px] px-[1.25rem] py-10">
         {missing ? (
-          <Card className="site-card">
+          <Card className="border-border">
             <CardHeader>
-              <CardTitle>{messages.courseNotFound}</CardTitle>
+              <CardTitle className="uppercase tracking-tight">{messages.courseNotFound}</CardTitle>
               <CardDescription>
                 <a href={href("/")}>{messages.backHome}</a>
               </CardDescription>
@@ -47,43 +55,44 @@ export function CoursePage() {
           <p className="text-muted-foreground">{messages.loading}</p>
         ) : (
           <>
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              {data.course.category}
-            </p>
-            <h1 className="hero-title mt-2 text-[clamp(1.6rem,3vw,2.2rem)] tracking-tight">
+            <p className="vt-eyebrow">{data.course.category}</p>
+            <h1 className="mt-2 font-sans text-[clamp(1.75rem,3.5vw,2.6rem)] font-extrabold uppercase tracking-[-0.03em]">
               {data.course.name}
             </h1>
-            <p className="mt-3 max-w-2xl text-muted-foreground">{data.course.description}</p>
+            <p className="font-editorial mt-3 max-w-2xl text-lg text-muted-foreground">
+              {data.course.description}
+            </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               {data.lessons.map((lesson) =>
                 lesson.kind === "interactive" && lesson.scene_slug ? (
-                  <Card key={lesson.lesson_order} className="site-card overflow-hidden">
+                  <Card key={lesson.lesson_order} className="overflow-hidden border-border">
                     <div
                       aria-hidden
-                      className="aspect-[16/10] border-b border-border bg-gradient-to-br from-palette-3 to-palette-5"
+                      className="aspect-[16/10] border-b border-border bg-cover bg-center"
+                      style={{ backgroundImage: "url(/themes/hero-atelier.jpg)" }}
                     />
                     <CardHeader>
-                      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      <p className="vt-eyebrow">
                         Lesson {lesson.lesson_order} · {messages.lessonInteractive}
                       </p>
                       <CardTitle>{lesson.title}</CardTitle>
                       <CardDescription>{messages.lessonInteractiveDesc}</CardDescription>
                     </CardHeader>
                     <CardFooter className="flex flex-wrap gap-2">
-                      <Button asChild>
-                        <a href={`/practice/${lesson.scene_slug}?mode=procedural`}>
+                      <Button asChild className="uppercase tracking-[0.08em]">
+                        <a href={href(`/practice/${lesson.scene_slug}?mode=procedural`)}>
                           {messages.startPractice}
                         </a>
                       </Button>
-                      <Button asChild variant="secondary">
-                        <a href={`/practice/${lesson.scene_slug}?mode=glb`}>{messages.glbMode}</a>
+                      <Button asChild variant="secondary" className="uppercase tracking-[0.08em]">
+                        <a href={href(`/practice/${lesson.scene_slug}?mode=glb`)}>{messages.glbMode}</a>
                       </Button>
                     </CardFooter>
                   </Card>
                 ) : (
-                  <Card key={lesson.lesson_order} className="site-card">
+                  <Card key={lesson.lesson_order} className="border-border">
                     <CardHeader>
-                      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      <p className="vt-eyebrow">
                         Lesson {lesson.lesson_order} · {messages.lessonReading}
                       </p>
                       <CardTitle className="text-base">{lesson.title}</CardTitle>
@@ -99,6 +108,6 @@ export function CoursePage() {
         )}
       </main>
       <SiteFooter />
-    </>
+    </div>
   );
 }

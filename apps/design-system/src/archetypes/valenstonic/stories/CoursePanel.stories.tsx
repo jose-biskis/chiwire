@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { ScriptMark } from "@chiwire/ui/valenstonic/exclusive";
 import { Alert, AlertDescription, AlertTitle } from "../components/alert";
 import { Badge } from "../components/badge";
 import { Button } from "../components/button";
@@ -22,7 +23,7 @@ const meta = {
 export default meta;
 type Story = StoryObj;
 
-/** Composition in Valen's Tonic voice — script brand + rose atelier chrome. */
+/** Composition in Valen's Tonic voice — script brand + atelier chrome (palette from theme). */
 export const EnrollDraft: Story = {
   render: () => (
     <div
@@ -30,7 +31,7 @@ export const EnrollDraft: Story = {
       style={{ background: "var(--archetype-surface-tint)" }}
     >
       <div className="space-y-1">
-        <p className="font-script text-4xl text-primary">Valen's Tonic</p>
+        <ScriptMark>Valen's Tonic</ScriptMark>
         <p className="text-sm text-muted-foreground">
           Draft a lesson note before you step into the lab.
         </p>

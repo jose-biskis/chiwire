@@ -15,6 +15,7 @@ export default defineConfig(({ isSsrBuild }) => ({
     outDir: isSsrBuild
       ? path.resolve(__dirname, "dist/ssr")
       : path.resolve(__dirname, "dist/client"),
+    // Only empty the Vite outDir itself — never wipe sibling tsc output (dist/index.js).
     emptyOutDir: true,
     sourcemap: true
   },

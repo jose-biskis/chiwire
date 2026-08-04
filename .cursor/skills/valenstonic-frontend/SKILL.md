@@ -15,12 +15,20 @@ Never ship default shadcn/zinc/Inter aesthetics.
 
 ## Aesthetic direction
 
-**Late-night cocktail atelier** — refined, sober, rose-ink monochrome.
+One atelier composition; two palettes:
+
+| Mode | Palette | Notes |
+|------|---------|-------|
+| **Light** | Warm paper `#f7f4f0`, wine `#6d1d2a` | Valen's chosen daylight |
+| **Dark** | Charcoal `#332d2f`, rose `#d01059` | Same layout (crest, photo circle, torn strip, Cormorant lead) |
+
+**Shape** matches Internal (radii 6/8/10/14, system UI sans, medium buttons). Brand script
+(Great Vibes) + Cormorant editorial stay. Sharp Figtree atelier archived in
+`packages/ui/src/valenstonic/legacy/` (not imported).
 
 - Purpose: Learn cocktails by making them in interactive 3D labs.
 - Tone: Luxury/refined bar school, not playful edtech, not generic LMS dashboard.
-- Signature memory: Script brand wordmark (**Great Vibes**) + thick accent ring around a circular hero media plane.
-- Structure reference: UpStudy cooking-tutor layout (header / hero / features / course grid / categories / promo / footer) — adapt content, keep hierarchy.
+- Do not reintroduce a separate UpStudy/night home for dark.
 
 ## Stack recipe
 
@@ -28,13 +36,15 @@ Never ship default shadcn/zinc/Inter aesthetics.
 |-------|--------|
 | App shell | Vite + React + TypeScript under `client/` |
 | Styling | Tailwind CSS v4 (`@tailwindcss/vite`) |
-| Primitives | shadcn/ui (copied into `client/src/components/ui`) |
-| Tokens | CSS variables in `client/src/styles/globals.css` (`--palette-*` + semantic) |
+| Primitives | `@chiwire/ui/valenstonic` (+ exclusive `ScriptMark`) |
+| Tokens | `@chiwire/ui/valenstonic/theme.css` (`data-archetype="valenstonic"` + light/dark) |
 | Server | Existing Node server: API proxy, practice HTML, admin HTML; **SSR + hydrate** for `/` and `/courses/*` (`dist/ssr`) |
 
 Practice labs (`static/practice-engine.js`) stay vanilla Three.js — do not force React into the 3D engine.
 
 ## Brand tokens (source of truth)
+
+Dark brand ladder:
 
 ```css
 --palette-1: #D01059; /* main accent */
@@ -44,29 +54,29 @@ Practice labs (`static/practice-engine.js`) stay vanilla Three.js — do not for
 --palette-5: #332D2F; /* page bg */
 ```
 
-Semantic mapping:
+Light (Daylight atelier): primary/wine `#6d1d2a`, paper `#f7f4f0`, muted taupe `#6b5f58`, shell `#ebe4da`.
 
-- `--bg` → palette-5 · `--accent` → palette-1 · `--ink` → `#e6d9de` · `--muted` → `#9a858c`
-- Accent is for **CTAs, script brand, focus rings, hero circle border** — not large washes of pink.
-- Surfaces stay flat charcoal with thin `rgba` lines; avoid purple gradients, cream/terracotta tropes, glow stacks.
+- Dark: accent for CTAs, script brand, focus rings, hero circle — not large pink washes; charcoal surfaces.
+- Light: wine CTAs on warm paper; sharp geometry; grain overlay.
 
 ## Typography
 
 | Role | Face | Use |
 |------|------|-----|
-| Brand / script | Great Vibes | Logo, hero accent word only |
-| Body / UI | Figtree | Nav, copy, buttons, cards |
-| Display (sparing) | Fraunces | Optional editorial moments — never overpower the script brand |
+| Brand / script | Great Vibes | ScriptMark, hero accent word only |
+| Body / UI | System UI (Internal shape) | Nav, copy, buttons, cards |
+| Editorial | Cormorant Garamond | Atelier lead copy |
 
-Avoid Inter, Roboto, Arial, Space Grotesk as brand fonts.
+Avoid Inter, Roboto, Arial, Space Grotesk as brand fonts. Figtree/Fraunces sharp stack is in
+`valenstonic/legacy/` if restoring.
 
 ## Layout rules (marketing)
 
 1. **Brand first** — first viewport must still read as Valen's Tonic if nav is removed.
-2. **Hero budget** — brand script, one headline, one lead, one CTA group, one circular media plane + organic blob.
-3. **No hero cards / badges / stat strips** on the media.
-4. **One job per section** — features, courses, categories, promo, footer.
-5. **Full-bleed atmosphere** — grain/noise or soft blob behind hero; not a flat single slab with inset cards as the hero idea.
+2. **Hero budget** — crest brand + uppercase headline + Cormorant lead + CTAs + photo circle + seal (torn strip below).
+3. **No hero cards / badges** on the media (seal is part of the circular composition).
+4. **One job per section** — feature strip, courses, footer.
+5. **Full-bleed atmosphere** — grain overlay; not a flat single slab with inset cards as the hero idea.
 
 ## shadcn usage
 
@@ -90,7 +100,7 @@ Prefer CSS/`motion` for React; no noisy perpetual particle systems on the landin
 
 **Do**
 
-- Keep monochrome rose atelier look coherent across React and any leftover SSR pages.
+- Keep atelier look coherent across React marketing and server HTML (admin/practice/login use DS tokens via `src/ds-styles.ts`).
 - Link primary CTA to Negroni practice lab.
 - Reuse tokens — never hardcode random pinks.
 
@@ -103,7 +113,8 @@ Prefer CSS/`motion` for React; no noisy perpetual particle systems on the landin
 
 ## When implementing
 
-1. Read `client/src/styles/globals.css` for tokens.
-2. Prefer existing `components/ui` + `components/site` before inventing new primitives.
-3. Match UpStudy **structure** when touching the landing page; keep Valen's Tonic **voice and palette**.
-4. After UI changes: `npm run build --workspace @chiwire/valenstonic-academy-frontend` and verify `http://localhost:3000/`.
+1. Import primitives from `@chiwire/ui/valenstonic`; brand-only bits from `…/exclusive`.
+2. Prefer `components/site` compositions before inventing new chrome.
+3. Match the shared atelier home composition (crest / photo circle / torn strip); keep Valen's Tonic voice and palettes.
+4. PrefsBar keeps ArchetypeSelect (Internal / Valenstonic) for now — default Valenstonic; product will lock later. Theme is dark/light only (no noir/brutalist style pickers).
+5. After UI changes: `npm run build --workspace @chiwire/valenstonic-academy-frontend` and verify `http://localhost:3000/`.

@@ -1,8 +1,8 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
 import process from "node:process";
-import { filePage, homePage, notFoundPage, textPage } from "./pages.js";
 import { startContimitiPurgeWorker, stopContimitiPurgeJobs } from "./purgeJobs.js";
+import { serveSpaIndex, tryServeClientAsset } from "./static.js";
 import { ShareStore } from "./store.js";
 
 const DEFAULT_PORT = 3000;
@@ -31,14 +31,6 @@ function json(response: ServerResponse, status: number, body: unknown): void {
     "cache-control": "no-store"
   });
   response.end(`${JSON.stringify(body)}\n`);
-}
-
-function html(response: ServerResponse, status: number, body: string): void {
-  response.writeHead(status, {
-    "content-type": "text/html; charset=utf-8",
-    "cache-control": "no-store"
-  });
-  response.end(body);
 }
 
 async function readBody(request: IncomingMessage, limit: number): Promise<Buffer> {
@@ -85,6 +77,15 @@ function matchPath(pathname: string, pattern: RegExp): string | undefined {
   return match?.[1];
 }
 
+function isSpaPath(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    pathname.startsWith("/t/") ||
+    pathname.startsWith("/f/") ||
+    pathname === "/404"
+  );
+}
+
 const store = new ShareStore(readDataDir());
 const port = readPort();
 
@@ -103,11 +104,6 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
   try {
     if (method === "GET" && pathname === "/health") {
       json(response, 200, { ok: true });
-      return;
-    }
-
-    if (method === "GET" && pathname === "/") {
-      html(response, 200, homePage());
       return;
     }
 
@@ -185,6 +181,17 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       return;
     }
 
+    const fileMetaId = matchPath(pathname, /^\/api\/files\/([^/]+)\/meta$/);
+    if (fileMetaId && method === "GET") {
+      const meta = await store.getFileMeta(fileMetaId);
+      if (!meta) {
+        json(response, 404, { error: "Not found" });
+        return;
+      }
+      json(response, 200, meta);
+      return;
+    }
+
     const fileId = matchPath(pathname, /^\/api\/files\/([^/]+)$/);
     if (fileId) {
       if (method === "GET") {
@@ -220,34 +227,26 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       return;
     }
 
-    const viewTextId = matchPath(pathname, /^\/t\/([^/]+)$/);
-    if (method === "GET" && viewTextId) {
-      const share = await store.getText(viewTextId);
-      if (!share) {
-        html(response, 404, notFoundPage());
-        return;
-      }
-      html(response, 200, textPage(share));
-      return;
-    }
-
-    const viewFileId = matchPath(pathname, /^\/f\/([^/]+)$/);
-    if (method === "GET" && viewFileId) {
-      const meta = await store.getFileMeta(viewFileId);
-      if (!meta) {
-        html(response, 404, notFoundPage());
-        return;
-      }
-      html(response, 200, filePage(meta));
-      return;
-    }
-
     if (pathname.startsWith("/api/")) {
       json(response, 404, { error: "Not found" });
       return;
     }
 
-    html(response, 404, notFoundPage("Page not found."));
+    if (tryServeClientAsset(request, response, pathname)) {
+      return;
+    }
+
+    if ((method === "GET" || method === "HEAD") && isSpaPath(pathname)) {
+      serveSpaIndex(response);
+      return;
+    }
+
+    if (method === "GET" || method === "HEAD") {
+      serveSpaIndex(response);
+      return;
+    }
+
+    json(response, 404, { error: "Not found" });
   } catch (error) {
     if (error instanceof BodyLimitError) {
       json(response, 413, { error: error.message });

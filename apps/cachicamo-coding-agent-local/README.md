@@ -5,9 +5,12 @@ Local-first coding agent desktop app for the Chiwire monorepo.
 **Cachicamo** is the Venezuelan name for armadillo — the app icon is a flat toon
 cachicamo in `resources/icon.png` / `resources/icon.svg`.
 
-Stack: **Electron**, **React**, **shadcn/ui**, **Ollama** (local or cloud), with
-**rules**, **skills**, **MCP tools**, **subagents**, and a **localhost HTTP API**
-for n8n / external callers.
+Stack: **Electron**, **React**, **@chiwire/ui** (Internal / Valenstonic),
+**Ollama** (local or cloud), with **rules**, **skills**, **MCP tools**,
+**subagents**, and a **localhost HTTP API** for n8n / external callers.
+
+Appearance defaults to **Internal + dark**. Change via **View → Archetype / Theme**;
+the choice is saved in app settings.
 
 ## Run
 

@@ -16,6 +16,10 @@ let apiHandle: ApiServerHandle | null = null;
 
 const isDev = !app.isPackaged;
 
+function applyNativeTheme(settings: AgentSettings): void {
+  nativeTheme.themeSource = settings.uiColorMode === "light" ? "light" : "dark";
+}
+
 function resolveAppIcon(): string | undefined {
   const candidates = [
     join(app.getAppPath(), "resources", "icon.png"),
@@ -105,8 +109,10 @@ function registerIpc(): void {
 
   ipcMain.handle("settings:set", async (_event, next: AgentSettings) => {
     saveSettings(next);
+    const saved = loadSettings();
+    applyNativeTheme(saved);
     await restartApiServer();
-    return loadSettings();
+    return saved;
   });
 
   ipcMain.handle("workspace:pick", async () => {
@@ -197,7 +203,7 @@ function registerIpc(): void {
 }
 
 app.whenReady().then(async () => {
-  nativeTheme.themeSource = "dark";
+  applyNativeTheme(loadSettings());
   // Kill native File/Edit/View/Help — replaced by the in-app title bar.
   Menu.setApplicationMenu(null);
   registerIpc();

@@ -10,17 +10,19 @@ export type RenderResult = {
   html: string;
   title: string;
   description: string;
-  style: string;
+  archetype: string;
+  theme: string;
   lang: string;
 };
 
 export function render(url: string, data: SsrData = {}): RenderResult {
   const parsed = new URL(url, "http://localhost");
   const prefs = parsePrefsFromSearch(parsed.search);
-  const style = data.style ?? prefs.style;
+  const archetype = data.archetype ?? prefs.archetype;
+  const theme = data.theme ?? prefs.theme;
   const lang = data.lang ?? prefs.lang;
   const messages = t(lang);
-  const ssrData: SsrData = { ...data, style, lang };
+  const ssrData: SsrData = { ...data, archetype, theme, lang };
   const location = `${parsed.pathname}${parsed.search}`;
 
   const html = renderToString(
@@ -45,5 +47,5 @@ export function render(url: string, data: SsrData = {}): RenderResult {
       ssrData.course.course.description?.trim() || messages.courseFallbackDesc;
   }
 
-  return { html, title, description, style, lang };
+  return { html, title, description, archetype, theme, lang };
 }

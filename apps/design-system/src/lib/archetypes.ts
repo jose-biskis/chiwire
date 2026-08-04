@@ -5,6 +5,15 @@ export type Archetype = (typeof ARCHETYPES)[number];
 
 export const DEFAULT_ARCHETYPE: Archetype = "internal";
 
+export type ColorMode = "light" | "dark";
+
+export const DEFAULT_COLOR_MODE: ColorMode = "light";
+
+/** Per-archetype default when Storybook color mode is unset. */
+export function defaultColorModeFor(archetype: Archetype): ColorMode {
+  return archetype === "valenstonic" ? "dark" : "light";
+}
+
 const TITLE_MAP: Record<string, Archetype> = {
   internal: "internal",
   valenstonic: "valenstonic"

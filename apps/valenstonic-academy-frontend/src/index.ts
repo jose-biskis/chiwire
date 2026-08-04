@@ -9,6 +9,7 @@ import {
   notFoundPage,
   practicePage
 } from "./pages.js";
+import { resolveAppearance } from "./appearance.js";
 
 const DEFAULT_PORT = 3000;
 const DEFAULT_API_BASE = "http://localhost:3001";
@@ -20,7 +21,8 @@ const CLIENT_DIR = path.resolve(__dirname, "client");
 const SSR_ENTRY = path.resolve(__dirname, "ssr/entry-server.js");
 
 type SsrData = {
-  style?: string;
+  archetype?: string;
+  theme?: string;
   lang?: string;
   courses?: unknown[];
   course?: unknown;
@@ -32,7 +34,8 @@ type SsrRender = (url: string, data?: SsrData) => {
   html: string;
   title: string;
   description: string;
-  style: string;
+  archetype: string;
+  theme: string;
   lang: string;
 };
 
@@ -231,27 +234,21 @@ async function loadSsrRender(): Promise<SsrRender | null> {
   return ssrRender;
 }
 
-function parseStyleParam(value: string | null): string {
-  const allowed = new Set(["original", "noir", "atelier", "brutalist", "deco", "botanical"]);
-  return value && allowed.has(value) ? value : "noir";
-}
-
-function parseLangParam(value: string | null): string {
-  return value === "es" ? "es" : "en";
-}
-
 async function renderMarketingPage(
   pathname: string,
-  search: string
+  search: string,
+  cookieHeader?: string | null
 ): Promise<{ status: number; body: string } | null> {
   const template = loadClientTemplate();
   const render = await loadSsrRender();
   if (!template || !render) return null;
 
-  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
-  const style = parseStyleParam(params.get("style"));
-  const lang = parseLangParam(params.get("lang"));
-  const data: SsrData = { style, lang };
+  const appearance = resolveAppearance(search, cookieHeader);
+  const data: SsrData = {
+    archetype: appearance.archetype,
+    theme: appearance.theme,
+    lang: appearance.lang
+  };
   let status = 200;
 
   if (pathname === "/") {
@@ -275,12 +272,20 @@ async function renderMarketingPage(
   }
 
   const requestUrl = `${pathname}${search.startsWith("?") || search === "" ? search : `?${search}`}`;
-  const { html, title, description } = render(requestUrl, data);
+  const {
+    html,
+    title,
+    description,
+    archetype: renderedArchetype,
+    theme: renderedTheme,
+    lang: renderedLang
+  } = render(requestUrl, data);
   const body = template
     .replaceAll("<!--app-title-->", escapeHtml(title))
     .replaceAll("<!--app-description-->", escapeHtml(description))
-    .replaceAll("<!--app-theme-->", escapeHtml(style))
-    .replaceAll("<!--app-lang-->", escapeHtml(lang))
+    .replaceAll("<!--app-archetype-->", escapeHtml(renderedArchetype))
+    .replaceAll("<!--app-theme-->", escapeHtml(renderedTheme))
+    .replaceAll("<!--app-lang-->", escapeHtml(renderedLang))
     .replace("<!--app-html-->", html)
     .replace("<!--app-data-->", serializeSsrData(data));
 
@@ -301,7 +306,12 @@ async function apiFetch(
   return fetch(`${apiBase()}${pathname}`, { ...init, headers });
 }
 
-async function adminContext(token: string, section: string, flash?: string) {
+async function adminContext(
+  token: string,
+  section: string,
+  appearance: ReturnType<typeof resolveAppearance>,
+  flash?: string
+) {
   const res = await apiFetch("/api/admin/bootstrap", { token });
   if (!res.ok) {
     throw new Error(`Admin bootstrap failed (${res.status})`);
@@ -323,6 +333,7 @@ async function adminContext(token: string, section: string, flash?: string) {
 
   const pageInput: Parameters<typeof adminPage>[0] = {
     section,
+    appearance,
     assets: data.assets,
     actions: data.actions,
     tools: data.tools,
@@ -344,19 +355,20 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     const method = request.method ?? "GET";
     const url = new URL(request.url ?? "/", "http://localhost");
     const { pathname } = url;
+    const appearance = resolveAppearance(url.search, request.headers.cookie);
 
     if (method === "GET" && pathname.startsWith("/static/")) {
-      if (!serveStatic(response, pathname)) html(response, 404, notFoundPage());
+      if (!serveStatic(response, pathname)) html(response, 404, notFoundPage(appearance));
       return;
     }
 
     if (method === "GET" && pathname.startsWith("/assets/")) {
-      if (!serveClientAsset(response, pathname)) html(response, 404, notFoundPage());
+      if (!serveClientAsset(response, pathname)) html(response, 404, notFoundPage(appearance));
       return;
     }
 
     if (method === "GET" && pathname.startsWith("/themes/")) {
-      if (!serveClientAsset(response, pathname)) html(response, 404, notFoundPage());
+      if (!serveClientAsset(response, pathname)) html(response, 404, notFoundPage(appearance));
       return;
     }
 
@@ -372,13 +384,13 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     }
 
     if (method === "GET" && (pathname === "/" || pathname.startsWith("/courses/"))) {
-      const rendered = await renderMarketingPage(pathname, url.search);
+      const rendered = await renderMarketingPage(pathname, url.search, request.headers.cookie);
       if (rendered) {
         html(response, rendered.status, rendered.body);
         return;
       }
       // Fallback: client-only shell if SSR bundle/template is missing.
-      if (!serveSpa(response)) html(response, 503, notFoundPage());
+      if (!serveSpa(response)) html(response, 503, notFoundPage(appearance));
       return;
     }
 
@@ -386,12 +398,12 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       const slug = decodeURIComponent(pathname.slice("/practice/".length));
       const mode = url.searchParams.get("mode") === "glb" ? "glb" : "procedural";
       const debug = url.searchParams.get("debug") === "1";
-      html(response, 200, practicePage(slug, mode, browserApiBase(), debug));
+      html(response, 200, practicePage(slug, mode, browserApiBase(), debug, appearance));
       return;
     }
 
     if (method === "GET" && pathname === "/admin/login") {
-      html(response, 200, loginPage());
+      html(response, 200, loginPage(undefined, appearance));
       return;
     }
 
@@ -405,7 +417,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
         })
       });
       if (!res.ok) {
-        html(response, 401, loginPage("Invalid credentials"));
+        html(response, 401, loginPage("Invalid credentials", appearance));
         return;
       }
       const data = (await res.json()) as { token: string };
@@ -432,7 +444,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       if (method === "GET" && pathname === "/admin") {
         const section = url.searchParams.get("section") || "overview";
         const flash = url.searchParams.get("flash") || undefined;
-        html(response, 200, await adminContext(token, section, flash));
+        html(response, 200, await adminContext(token, section, appearance, flash));
         return;
       }
 
@@ -543,7 +555,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       }
     }
 
-    html(response, 404, notFoundPage());
+    html(response, 404, notFoundPage(appearance));
   } catch (error) {
     console.error(error);
     response.writeHead(500, { "content-type": "application/json; charset=utf-8" });

@@ -1,53 +1,9 @@
-@import "tailwindcss";
-@import "./themes.css";
-@import "./theme-homes.css";
-
-@theme inline {
-  --font-script: "Great Vibes", cursive;
-  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Fraunces", Georgia, serif;
-
-  --color-palette-1: #d01059;
-  --color-palette-2: #9e2c58;
-  --color-palette-3: #6b3349;
-  --color-palette-4: #38262d;
-  --color-palette-5: #332d2f;
-
-  --color-background: var(--color-palette-5);
-  --color-foreground: #e6d9de;
-  --color-card: rgba(51, 45, 47, 0.92);
-  --color-card-foreground: #e6d9de;
-  --color-popover: #38262d;
-  --color-popover-foreground: #e6d9de;
-  --color-primary: var(--color-palette-1);
-  --color-primary-foreground: #faf6f7;
-  --color-secondary: var(--color-palette-4);
-  --color-secondary-foreground: #e6d9de;
-  --color-muted: rgba(56, 38, 45, 0.72);
-  --color-muted-foreground: #9a858c;
-  --color-accent: var(--color-palette-3);
-  --color-accent-foreground: #e6d9de;
-  --color-destructive: var(--color-palette-2);
-  --color-destructive-foreground: #faf6f7;
-  --color-border: rgba(230, 217, 222, 0.1);
-  --color-input: rgba(230, 217, 222, 0.12);
-  --color-ring: var(--color-palette-1);
-
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-}
+/* Internal first (scoped); Valenstonic theme last so its palette wins when selected. */
+@import "@chiwire/ui/internal/tokens.css";
+@import "@chiwire/ui/valenstonic/theme.css";
+@import "./atelier-home.css";
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply m-0 min-h-screen bg-background font-sans text-foreground antialiased;
-  }
-
   a {
     @apply text-foreground no-underline transition-colors;
   }
@@ -64,6 +20,10 @@
 
   .font-display {
     font-family: var(--font-display);
+  }
+
+  .font-editorial {
+    font-family: var(--font-editorial, var(--font-display));
   }
 
   .animate-rise {
@@ -96,4 +56,85 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Prefs bar (theme + language) */
+.prefs-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.55rem clamp(1rem, 4vw, 2.5rem);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  font-size: 0.78rem;
+}
+
+.prefs-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.prefs-group strong {
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.65rem;
+}
+
+.prefs-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.prefs-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.prefs-pill:hover {
+  color: var(--color-foreground);
+  border-color: var(--color-secondary-hover);
+}
+
+.prefs-pill[aria-current="true"] {
+  background: var(--color-secondary);
+  color: var(--color-foreground);
+  border-color: var(--color-border);
+}
+
+.vt-eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
+.vt-section-title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.vt-section-lead {
+  margin: 0.55rem 0 0;
+  max-width: 36rem;
+  color: var(--color-muted-foreground);
+  line-height: 1.55;
 }

@@ -1,5 +1,9 @@
 export type OllamaMode = "local" | "cloud";
 
+/** Mirrors `@chiwire/ui/base` — kept local so main-process tsc stays extension-free. */
+export type UiArchetype = "internal" | "valenstonic";
+export type UiColorMode = "light" | "dark";
+
 export type McpServerConfig = {
   id: string;
   name: string;
@@ -29,6 +33,9 @@ export type AgentSettings = {
   apiEnabled: boolean;
   apiPort: number;
   apiToken: string;
+  /** UI appearance — View menu; persisted across launches */
+  uiArchetype: UiArchetype;
+  uiColorMode: UiColorMode;
 };
 
 export type ChatRole = "user" | "assistant" | "system" | "tool";
@@ -92,7 +99,9 @@ export const DEFAULT_SETTINGS: AgentSettings = {
   mcpServers: [],
   apiEnabled: true,
   apiPort: 3847,
-  apiToken: ""
+  apiToken: "",
+  uiArchetype: "internal",
+  uiColorMode: "dark"
 };
 
 export type CachicamoAgentApi = {

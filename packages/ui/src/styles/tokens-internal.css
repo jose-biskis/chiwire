@@ -1,0 +1,107 @@
+/*
+  Internal archetype — default for new / internal Chiwire tools.
+  Light: plain shadcn zinc. Dark: VS Code Dark Modern (from Cachicamo).
+  Scoped so it does not override other archetypes when both token sheets are loaded.
+  Default on :root only when data-archetype is unset.
+*/
+
+:root:not([data-archetype]),
+[data-archetype="internal"],
+[data-archetype="internal"][data-theme="light"] {
+  color-scheme: light;
+
+  --archetype-font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --archetype-font-display: ui-sans-serif, system-ui, sans-serif;
+  --archetype-font-script: ui-sans-serif, system-ui, sans-serif;
+  --archetype-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New",
+    monospace;
+
+  --archetype-background: #ffffff;
+  --archetype-foreground: #09090b;
+  --archetype-card: #ffffff;
+  --archetype-card-foreground: #09090b;
+  --archetype-popover: #ffffff;
+  --archetype-popover-foreground: #09090b;
+  --archetype-primary: #18181b;
+  --archetype-primary-foreground: #fafafa;
+  --archetype-secondary: #f4f4f5;
+  --archetype-secondary-foreground: #18181b;
+  --archetype-muted: #f4f4f5;
+  --archetype-muted-foreground: #71717a;
+  --archetype-accent: #f4f4f5;
+  --archetype-accent-foreground: #18181b;
+  --archetype-destructive: #ef4444;
+  --archetype-destructive-foreground: #fafafa;
+  --archetype-border: #e4e4e7;
+  --archetype-input: #e4e4e7;
+  --archetype-ring: #18181b;
+  --archetype-success: #16a34a;
+  --archetype-success-foreground: #f0fdf4;
+  --archetype-warning: #ca8a04;
+  --archetype-warning-foreground: #fefce8;
+
+  --archetype-shell: #f4f4f5;
+  --archetype-moss: #71717a;
+  --archetype-activity: #ffffff;
+  --archetype-statusbar: #f4f4f5;
+  --archetype-selection: #e4e4e7;
+  --archetype-chat-user: #f4f4f5;
+
+  --archetype-radius-sm: 6px;
+  --archetype-radius-md: 8px;
+  --archetype-radius-lg: 10px;
+  --archetype-radius-xl: 14px;
+
+  --archetype-surface-tint: #ffffff;
+}
+
+:root:not([data-archetype])[data-theme="dark"],
+[data-archetype="internal"][data-theme="dark"] {
+  color-scheme: dark;
+
+  --archetype-font-sans: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Ubuntu",
+    "Droid Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji",
+    sans-serif;
+  --archetype-font-display: "Segoe UI", system-ui, sans-serif;
+  --archetype-font-script: "Segoe UI", system-ui, sans-serif;
+  --archetype-font-mono: "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace;
+
+  --archetype-background: #1f1f1f;
+  --archetype-foreground: #cccccc;
+  --archetype-card: #181818;
+  --archetype-card-foreground: #cccccc;
+  --archetype-popover: #252526;
+  --archetype-popover-foreground: #cccccc;
+  --archetype-primary: #341f97;
+  --archetype-primary-foreground: #ffffff;
+  --archetype-secondary: #2b2b2b;
+  --archetype-secondary-foreground: #cccccc;
+  --archetype-muted: #252526;
+  --archetype-muted-foreground: #9d9d9d;
+  --archetype-accent: #2a2d2e;
+  --archetype-accent-foreground: #ffffff;
+  --archetype-destructive: #f14c4c;
+  --archetype-destructive-foreground: #ffffff;
+  --archetype-border: #2b2b2b;
+  --archetype-input: #313131;
+  --archetype-ring: #341f97;
+  --archetype-success: #89d185;
+  --archetype-success-foreground: #181818;
+  --archetype-warning: #cca700;
+  --archetype-warning-foreground: #181818;
+
+  --archetype-shell: #313131;
+  --archetype-moss: #6e7681;
+  --archetype-activity: #181818;
+  --archetype-statusbar: #181818;
+  --archetype-selection: #25166a;
+  --archetype-chat-user: #2a1878;
+
+  --archetype-radius-sm: 6px;
+  --archetype-radius-md: 8px;
+  --archetype-radius-lg: 10px;
+  --archetype-radius-xl: 14px;
+
+  --archetype-surface-tint: #181818;
+}

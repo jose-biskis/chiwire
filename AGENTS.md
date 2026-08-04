@@ -21,7 +21,7 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 | App | Workspace | Dev command | Default port |
 |-----|-----------|-------------|--------------|
 | AvilaLabs landing page | `@chiwire/avila-labs` | `npm run dev:avila` | 4321 |
-| Contimiti share app | `@chiwire/contimiti` | build then `npm run start:contimiti` | 3000 |
+| Contimiti share app | `@chiwire/contimiti` | build then `npm run start:contimiti` (React + `@chiwire/ui`) | 3000 |
 | Bull Board (queues UI) | `@chiwire/bull-board` | build then `npm run start:bull-board` | 3000 (deploy host 3040) |
 | Design system (Storybook) | `@chiwire/design-system` | `npm run dev:design-system` | 6006 (deploy host 3050) |
 | Valenstonic Academy frontend | `@chiwire/valenstonic-academy-frontend` | build then `npm run start:vtacademy` | 3000 |
@@ -36,7 +36,9 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 | Bemba tunnel CLI | `@chiwire/bemba` | build then `npm run bemba -- http <port>` | n/a |
 
 Shared code lives under `packages/` (`@chiwire/core` has ids, TTL, Knex/pg, and
-BullMQ helpers; `@chiwire/radiobemba-shared` has the tunnel wire protocol). Contimiti purge jobs use BullMQ against Redis; Postgres helpers
+BullMQ helpers; `@chiwire/ui` has base contract + archetype React primitives
+(`internal`, `valenstonic`, each with optional `exclusive/`);
+`@chiwire/radiobemba-shared` has the tunnel wire protocol). Contimiti purge jobs use BullMQ against Redis; Postgres helpers
 are available for later persistence.
 
 There is no `docker-compose`, Makefile, or `.devcontainer`. Local development only requires Node.js and npm.

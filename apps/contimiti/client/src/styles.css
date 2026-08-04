@@ -1,0 +1,12 @@
+@import "@chiwire/ui/styles/theme.css";
+@import "@chiwire/ui/valenstonic/tokens.css";
+
+@layer utilities {
+  .font-script {
+    font-family: var(--font-script);
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
+}

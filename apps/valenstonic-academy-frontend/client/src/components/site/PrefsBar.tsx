@@ -1,25 +1,43 @@
-import { LANG_IDS, STYLE_IDS, STYLE_META } from "@/lib/site-prefs";
+import { ArchetypeSelect, ThemeSelect } from "@chiwire/ui/base";
+import { LANG_IDS } from "@/lib/site-prefs";
 import { useSitePrefs } from "@/lib/useSitePrefs";
 
 export function PrefsBar() {
-  const { style, lang, messages, switchStyle, switchLang } = useSitePrefs();
+  const {
+    archetype,
+    theme,
+    lang,
+    messages,
+    switchArchetype,
+    switchTheme,
+    switchLang
+  } = useSitePrefs();
 
   return (
-    <div className="prefs-bar" role="region" aria-label={`${messages.styleLabel} / ${messages.langLabel}`}>
+    <div
+      className="prefs-bar"
+      role="region"
+      aria-label={`${messages.archetypeLabel} / ${messages.themeLabel} / ${messages.langLabel}`}
+    >
       <div className="prefs-group">
-        <strong>{messages.styleLabel}</strong>
-        <div className="prefs-pills">
-          {STYLE_IDS.map((id) => (
-            <a
-              key={id}
-              href={switchStyle(id)}
-              className="prefs-pill"
-              aria-current={style === id ? "true" : undefined}
-            >
-              {lang === "es" ? STYLE_META[id].labelEs : STYLE_META[id].labelEn}
-            </a>
-          ))}
-        </div>
+        <strong>{messages.archetypeLabel}</strong>
+        <ArchetypeSelect
+          variant="pills"
+          value={archetype}
+          getHref={switchArchetype}
+          aria-label={messages.archetypeLabel}
+        />
+      </div>
+      <div className="prefs-group">
+        <strong>{messages.themeLabel}</strong>
+        <ThemeSelect
+          variant="pills"
+          value={theme}
+          options={["dark", "light"]}
+          getHref={switchTheme}
+          labels={{ dark: messages.themeDark, light: messages.themeLight }}
+          aria-label={messages.themeLabel}
+        />
       </div>
       <div className="prefs-group prefs-group-lang">
         <strong>{messages.langLabel}</strong>

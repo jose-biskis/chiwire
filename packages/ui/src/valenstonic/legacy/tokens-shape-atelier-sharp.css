@@ -1,0 +1,19 @@
+/*
+  LEGACY — sharp daylight atelier shape (not loaded).
+  Overlay onto [data-archetype="valenstonic"] to restore Figtree UI + 2px radii.
+*/
+
+[data-archetype="valenstonic"],
+[data-archetype="valenstonic"][data-theme="dark"],
+[data-archetype="valenstonic"][data-theme="light"] {
+  --archetype-font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --archetype-font-display: "Fraunces", Georgia, serif;
+  --archetype-font-script: "Great Vibes", cursive;
+  --archetype-font-editorial: "Cormorant Garamond", Georgia, serif;
+  --archetype-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --archetype-radius-sm: 2px;
+  --archetype-radius-md: 2px;
+  --archetype-radius-lg: 4px;
+  --archetype-radius-xl: 8px;
+}

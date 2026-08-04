@@ -15,20 +15,21 @@ import { Textarea } from "../components/textarea";
 
 const meta = {
   title: "Archetypes/Internal/Examples/Share panel",
-  parameters: { layout: "padded" }
+  parameters: { layout: "fullscreen" }
 } satisfies Meta;
 
 export default meta;
 type Story = StoryObj;
 
-/** Contimiti-shaped composition: card + tabs + fields + status. */
+/** Contimiti-shaped composition — same shell width and hierarchy as the app. */
 export const CreateShare: Story = {
   render: () => (
-    <div className="w-[min(32rem,92vw)] space-y-4">
-      <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">Contimiti</h1>
-        <p className="text-sm text-muted-foreground">
-          Share a note or a file for a day.
+    <div className="mx-auto w-[min(36rem,calc(100%-2rem))] space-y-6 py-2">
+      <div>
+        <h1 className="mb-1 text-3xl font-semibold tracking-tight">Contimiti</h1>
+        <p className="mb-0 max-w-xl text-sm text-muted-foreground">
+          Share a note or a file for a day. Texts stay editable in the browser; files are upload,
+          download, and delete only.
         </p>
       </div>
 

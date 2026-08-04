@@ -9,9 +9,11 @@ const swatches: Swatch[] = [
   { name: "Muted", token: "--color-muted", className: "bg-muted" },
   { name: "Accent", token: "--color-accent", className: "bg-accent" },
   { name: "Border", token: "--color-border", className: "bg-border" },
+  { name: "Input", token: "--color-input", className: "bg-input" },
   { name: "Destructive", token: "--color-destructive", className: "bg-destructive" },
   { name: "Success", token: "--color-success", className: "bg-success" },
-  { name: "Warning", token: "--color-warning", className: "bg-warning" }
+  { name: "Chat user", token: "--color-chat-user", className: "bg-chat-user" },
+  { name: "Selection", token: "--color-selection", className: "bg-selection" }
 ];
 
 const meta = {
@@ -28,7 +30,8 @@ export const Palette: Story = {
       <div className="mb-6 space-y-1">
         <p className="text-xl font-semibold tracking-tight text-foreground">Internal</p>
         <p className="max-w-md text-sm text-muted-foreground">
-          Default archetype for new tools — plain shadcn neutral (zinc).
+          Default archetype — light zinc / dark VS Code Modern. Use the toolbar Color mode
+          control to switch.
         </p>
       </div>
       <ColorSwatchGrid swatches={swatches} />

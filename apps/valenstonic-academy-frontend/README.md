@@ -4,8 +4,7 @@ Learner UI, backoffice, and 3D practice labs. Talks to `@chiwire/valenstonic-aca
 
 ## Stack
 
-- **Marketing / courses**: Vite + React + Tailwind v4 + shadcn (`client/`), **SSR + hydrate** for `/` and `/courses/*`
-- **Design system**: Valen's Tonic tokens in `client/src/styles/globals.css` (see `.cursor/skills/valenstonic-frontend`)
+- **Marketing / courses**: Vite + React + Tailwind v4 + `@chiwire/ui/valenstonic` (rose atelier), **SSR + hydrate** for `/` and `/courses/*`
 - **Admin**: server-rendered HTML (for now)
 - **Practice labs**: static Three.js (`static/`)
 
@@ -29,8 +28,8 @@ npm run dev:client --workspace @chiwire/valenstonic-academy-frontend
 ```
 
 - Site: http://localhost:3000/
-- Styles: `?style=original|noir|atelier|brutalist|deco|botanical`
-- Language: `?lang=en|es` (combine, e.g. `/?style=deco&lang=es`)
+- Theme: `?theme=dark|light` (default dark atelier)
+- Language: `?lang=en|es`
 - Practice: http://localhost:3000/practice/negroni?mode=procedural
 - Admin: http://localhost:3000/admin (`admin` / `1234`)
 
@@ -42,4 +41,3 @@ Browser API calls go to same-origin `/api/*`, which the frontend proxies to
 In Docker/deploy, containers share the `chiwire` network:
 - Frontend → `http://valenstonic-academy-backend:3000`
 - Backend → `postgres-pgbouncer:6432` / `redis-cache:6379`
-

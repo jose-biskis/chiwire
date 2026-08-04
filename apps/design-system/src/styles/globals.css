@@ -1,11 +1,17 @@
 @import "tailwindcss";
-@import "../archetypes/internal/tokens.css";
-@import "../archetypes/valenstonic/tokens.css";
+@import "@chiwire/ui/internal/tokens.css";
+@import "@chiwire/ui/valenstonic/tokens.css";
+
+/* Scan base + both archetypes (including exclusive/). */
+@source "../../../../packages/ui/src/base";
+@source "../../../../packages/ui/src/internal";
+@source "../../../../packages/ui/src/valenstonic";
 
 @theme inline {
   --font-sans: var(--archetype-font-sans);
   --font-display: var(--archetype-font-display);
   --font-script: var(--archetype-font-script);
+  --font-mono: var(--archetype-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
 
   --color-background: var(--archetype-background);
   --color-foreground: var(--archetype-foreground);
@@ -13,6 +19,14 @@
   --color-card-foreground: var(--archetype-card-foreground);
   --color-popover: var(--archetype-popover);
   --color-popover-foreground: var(--archetype-popover-foreground);
+  --color-palette-1: var(--archetype-palette-1, var(--archetype-primary));
+  --color-palette-2: var(--archetype-palette-2, var(--archetype-destructive));
+  --color-palette-3: var(--archetype-palette-3, var(--archetype-accent));
+  --color-palette-4: var(--archetype-palette-4, var(--archetype-secondary));
+  --color-palette-5: var(--archetype-palette-5, var(--archetype-background));
+  --color-primary-hover: var(--archetype-primary-hover, var(--archetype-primary));
+  --color-secondary-hover: var(--archetype-secondary-hover, var(--archetype-accent));
+
   --color-primary: var(--archetype-primary);
   --color-primary-foreground: var(--archetype-primary-foreground);
   --color-secondary: var(--archetype-secondary);
@@ -30,6 +44,12 @@
   --color-success-foreground: var(--archetype-success-foreground);
   --color-warning: var(--archetype-warning);
   --color-warning-foreground: var(--archetype-warning-foreground);
+  --color-shell: var(--archetype-shell);
+  --color-moss: var(--archetype-moss);
+  --color-activity: var(--archetype-activity);
+  --color-statusbar: var(--archetype-statusbar);
+  --color-selection: var(--archetype-selection);
+  --color-chat-user: var(--archetype-chat-user);
 
   --radius-sm: var(--archetype-radius-sm);
   --radius-md: var(--archetype-radius-md);
@@ -38,21 +58,14 @@
 }
 
 @layer base {
-  :root,
-  [data-archetype="internal"] {
-    color-scheme: light;
-  }
-
-  [data-archetype="valenstonic"] {
-    color-scheme: dark;
-  }
-
   * {
     @apply border-border;
   }
 
-  body {
-    @apply m-0 min-h-screen bg-background font-sans text-foreground antialiased;
+  html,
+  body,
+  #storybook-root {
+    @apply m-0 min-h-full bg-background font-sans text-foreground antialiased;
   }
 }
 
@@ -63,5 +76,9 @@
 
   .font-display {
     font-family: var(--font-display);
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
   }
 }

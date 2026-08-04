@@ -1,33 +1,20 @@
+import { Button } from "@chiwire/ui/valenstonic";
 import type { CourseSummary } from "@/lib/api";
 import { CoursesRail } from "@/components/site/CoursesRail";
+import { SiteFooter } from "@/components/site/SiteFooter";
+import { SiteHeader } from "@/components/site/SiteHeader";
 import { useSitePrefs } from "@/lib/useSitePrefs";
 
+/** Shared atelier home — same composition in light and dark; palette from tokens. */
 export function AtelierHome(props: { courses: CourseSummary[] }) {
   const { messages, href } = useSitePrefs();
-  const copy = messages.styles.atelier;
+  const copy = messages.home;
 
   return (
     <div className="theme-home theme-atelier">
       <div className="theme-grain" aria-hidden />
 
-      <header className="atelier-header">
-        <a className="atelier-mark" href={href("/")}>
-          <span className="atelier-crest">VT</span>
-          <span>
-            <strong>VALEN'S TONIC</strong>
-            <small>{copy.brandSub}</small>
-          </span>
-        </a>
-        <nav>
-          <a href={href("/")}>{messages.navHome}</a>
-          <a href={href("/#courses")}>{messages.navCourses}</a>
-          <a href="/practice/negroni?mode=procedural">{messages.navLabs}</a>
-          <a href="/admin">{messages.navAdmin}</a>
-        </nav>
-        <a className="atelier-book" href="/practice/negroni?mode=procedural">
-          {copy.featuredSub} →
-        </a>
-      </header>
+      <SiteHeader bookLabel={copy.featuredSub} />
 
       <section className="atelier-hero">
         <div className="atelier-copy">
@@ -38,9 +25,9 @@ export function AtelierHome(props: { courses: CourseSummary[] }) {
           </h1>
           <p className="atelier-lead">{copy.lead}</p>
           <div className="atelier-actions">
-            <a className="atelier-btn" href="/practice/negroni?mode=procedural">
-              {copy.primaryCta} →
-            </a>
+            <Button asChild size="lg" className="uppercase tracking-[0.1em]">
+              <a href={href("/practice/negroni?mode=procedural")}>{copy.primaryCta} →</a>
+            </Button>
             <a className="atelier-textlink" href={href("/#courses")}>
               {copy.secondaryCta}
             </a>
@@ -58,7 +45,7 @@ export function AtelierHome(props: { courses: CourseSummary[] }) {
               </textPath>
             </text>
           </svg>
-          <a className="atelier-circle" href="/practice/negroni?mode=procedural">
+          <a className="atelier-circle" href={href("/practice/negroni?mode=procedural")}>
             <img src="/themes/hero-atelier.jpg" alt="" />
           </a>
           <div className="atelier-seal">
@@ -83,6 +70,7 @@ export function AtelierHome(props: { courses: CourseSummary[] }) {
       </section>
 
       <CoursesRail courses={props.courses} />
+      <SiteFooter />
     </div>
   );
 }

@@ -1,3 +1,10 @@
+import { dsDocumentStyles, FONT_HREF } from "./ds-styles.js";
+import {
+  DEFAULT_APPEARANCE,
+  withAppearance,
+  type ServerAppearance
+} from "./appearance.js";
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -6,393 +13,52 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
-/** Brand palette + semantic tokens. Change --palette-* to retheme the whole site. */
-const paletteStyles = `
-  :root {
-    /* Raw palette (monochromatic rose) */
-    --palette-1: #D01059;
-    --palette-2: #9E2C58;
-    --palette-3: #6B3349;
-    --palette-4: #38262D;
-    --palette-5: #332D2F;
-
-    /* Named aliases */
-    --color-primary: var(--palette-1);
-    --color-primary-deep: var(--palette-2);
-    --color-primary-mid: var(--palette-3);
-    --color-surface: var(--palette-4);
-    --color-surface-deep: var(--palette-5);
-
-    /* Semantic UI — sober defaults; accent reserved for CTAs / focus */
-    --bg: var(--palette-5);
-    --bg-2: var(--palette-4);
-    --accent: var(--palette-1);
-    --accent-2: var(--palette-2);
-    --accent-3: var(--palette-3);
-    --ink: #e6d9de;
-    --ink-on-accent: #faf6f7;
-    --muted: #9a858c;
-    --panel: rgba(56, 38, 45, 0.72);
-    --panel-strong: rgba(51, 45, 47, 0.92);
-    --line: rgba(230, 217, 222, 0.1);
-    --danger: var(--palette-2);
-    --bad: var(--palette-2);
-    --ok: var(--palette-3);
-    --glow: rgba(208, 16, 89, 0.08);
-    --radius: 8px;
-    --font-display: "Fraunces", Georgia, serif;
-    --font-body: "Figtree", system-ui, sans-serif;
-  }
-`;
-
-const baseStyles = `
-  ${paletteStyles}
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    min-height: 100vh;
-    font-family: var(--font-body);
-    color: var(--ink);
-    background: var(--bg);
-  }
-  a { color: var(--ink); text-decoration: none; }
-  a:hover { color: var(--accent); }
-  .site-header {
-    position: sticky; top: 0; z-index: 40;
-    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-    padding: 0.85rem clamp(1rem, 4vw, 2.5rem);
-    background: color-mix(in srgb, var(--bg) 92%, transparent);
-    border-bottom: 1px solid var(--line);
-    backdrop-filter: blur(10px);
-  }
-  .logo {
-    font-family: "Great Vibes", cursive;
-    font-size: 1.65rem;
-    color: var(--accent);
-    line-height: 1;
-    white-space: nowrap;
-  }
-  .logo:hover { color: var(--accent-2); }
-  .site-nav { display: flex; gap: 1.35rem; flex-wrap: wrap; justify-content: center; }
-  .site-nav a { color: var(--muted); font-size: 0.92rem; font-weight: 500; }
-  .site-nav a:hover { color: var(--ink); }
-  .header-actions { display: flex; align-items: center; gap: 0.85rem; }
-  .header-actions .login { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
-  .wrap { width: min(1100px, calc(100% - 2.5rem)); margin: 0 auto; padding: 2rem 0 3rem; }
-  .page-title {
-    font-family: var(--font-display);
-    font-weight: 500;
-    font-size: clamp(1.5rem, 3vw, 2rem);
-    margin: 0 0 1rem;
-    color: var(--ink);
-  }
-  .eyebrow {
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    font-size: 0.68rem;
-    font-weight: 600;
-  }
-  .card {
-    background: var(--panel-strong);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 1.15rem 1.25rem;
-  }
-  .grid { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-  h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 500; color: var(--ink); }
-  p, li { color: var(--muted); line-height: 1.6; }
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
-    border: 0; border-radius: 999px; padding: 0.65rem 1.15rem; cursor: pointer;
-    font-weight: 600; font-size: 0.9rem; font-family: var(--font-body);
-    background: var(--accent); color: var(--ink-on-accent);
-  }
-  .btn:hover { background: var(--accent-2); color: var(--ink-on-accent); }
-  .btn.secondary {
-    background: transparent; color: var(--ink); border: 1px solid var(--line);
-  }
-  .btn.secondary:hover { border-color: var(--accent-3); color: var(--ink); }
-  .btn.danger { background: var(--accent-2); color: var(--ink-on-accent); }
-  label { display: block; font-size: 0.8rem; color: var(--muted); margin: 0.7rem 0 0.3rem; }
-  input, select, textarea {
-    width: 100%; border-radius: var(--radius); border: 1px solid var(--line);
-    background: var(--color-surface-deep); color: var(--ink); padding: 0.6rem 0.7rem; font: inherit;
-  }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-3); }
-  textarea { min-height: 110px; font-family: ui-monospace, monospace; font-size: 0.85rem; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-  th, td { text-align: left; padding: 0.55rem 0.35rem; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
-  .flash {
-    padding: 0.7rem 0.9rem; border-radius: var(--radius); margin-bottom: 1rem;
-    background: rgba(107, 51, 73, 0.35); color: var(--ink); border: 1px solid var(--line);
-  }
-  .tabs { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 1rem; }
-  .tabs a {
-    padding: 0.4rem 0.75rem; border-radius: var(--radius); border: 1px solid var(--line);
-    color: var(--muted); font-size: 0.85rem;
-  }
-  .tabs a:hover { color: var(--ink); }
-  .tabs a.active {
-    background: var(--palette-4); color: var(--ink); border-color: var(--accent-3);
-  }
-
-  /* Landing structure (UpStudy-like) */
-  .hero {
-    position: relative;
-    overflow: hidden;
-    padding: clamp(2rem, 5vw, 4rem) clamp(1rem, 4vw, 2.5rem) clamp(2.5rem, 6vw, 4.5rem);
-  }
-  .hero-blob {
-    position: absolute;
-    right: -8%;
-    top: -10%;
-    width: min(58vw, 640px);
-    height: min(58vw, 640px);
-    border-radius: 46% 54% 42% 58% / 52% 38% 62% 48%;
-    background: var(--palette-4);
-    opacity: 0.85;
-    z-index: 0;
-    pointer-events: none;
-  }
-  .hero-inner {
-    position: relative; z-index: 1;
-    width: min(1100px, 100%);
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1.05fr 0.95fr;
-    gap: clamp(1.5rem, 4vw, 3rem);
-    align-items: center;
-  }
-  .hero-script {
-    margin: 0 0 0.35rem;
-    font-family: "Great Vibes", cursive;
-    font-size: clamp(2.4rem, 5vw, 3.4rem);
-    color: var(--accent);
-    line-height: 1;
-  }
-  .hero h1 {
-    margin: 0;
-    font-family: var(--font-body);
-    font-weight: 700;
-    font-size: clamp(2rem, 4.5vw, 3.35rem);
-    line-height: 1.12;
-    letter-spacing: -0.03em;
-    color: var(--ink);
-  }
-  .hero .lead {
-    margin: 1rem 0 1.4rem;
-    max-width: 34rem;
-    color: var(--muted);
-    font-size: 1.02rem;
-  }
-  .hero-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; }
-  .hero-visual { display: flex; justify-content: center; }
-  .hero-circle {
-    position: relative;
-    width: min(100%, 380px);
-    aspect-ratio: 1;
-    border-radius: 50%;
-    border: 8px solid var(--accent);
-    background:
-      radial-gradient(circle at 35% 30%, var(--palette-3), var(--palette-5) 70%);
-    display: grid;
-    place-items: center;
-    box-shadow: 0 0 0 14px rgba(208, 16, 89, 0.08);
-    overflow: hidden;
-  }
-  .hero-circle span {
-    font-family: "Great Vibes", cursive;
-    font-size: clamp(2rem, 4vw, 2.8rem);
-    color: var(--ink);
-    text-align: center;
-    padding: 1rem;
-  }
-  .hero-circle .play {
-    position: absolute;
-    width: 4rem; height: 4rem; border-radius: 50%;
-    background: var(--accent); color: var(--ink-on-accent);
-    display: grid; place-items: center;
-    font-size: 1.1rem;
-    bottom: 18%;
-  }
-  .section {
-    width: min(1100px, calc(100% - 2.5rem));
-    margin: 0 auto;
-    padding: clamp(2rem, 4vw, 3.25rem) 0;
-  }
-  .section-head {
-    text-align: center;
-    max-width: 36rem;
-    margin: 0 auto 1.75rem;
-  }
-  .section-head h2 {
-    margin: 0.35rem 0 0.5rem;
-    font-family: var(--font-body);
-    font-weight: 700;
-    font-size: clamp(1.45rem, 2.6vw, 1.9rem);
-    letter-spacing: -0.02em;
-  }
-  .features {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-  .feature {
-    text-align: center;
-    padding: 1.35rem 1rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--panel-strong);
-  }
-  .feature-icon {
-    width: 3rem; height: 3rem; margin: 0 auto 0.85rem;
-    border-radius: 50%;
-    display: grid; place-items: center;
-    background: rgba(208, 16, 89, 0.12);
-    color: var(--accent);
-    font-size: 1.15rem;
-  }
-  .feature h3 {
-    margin: 0 0 0.4rem;
-    font-family: var(--font-body);
-    font-weight: 650;
-    font-size: 1.05rem;
-  }
-  .feature p { margin: 0; font-size: 0.92rem; }
-  .course-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 1rem;
-  }
-  .course-card {
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--panel-strong);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-  .course-card-media {
-    aspect-ratio: 16 / 10;
-    background:
-      linear-gradient(145deg, var(--palette-3), var(--palette-5));
-    border-bottom: 1px solid var(--line);
-  }
-  .course-card-body { padding: 1rem 1.05rem 1.15rem; flex: 1; display: flex; flex-direction: column; }
-  .course-card h3 {
-    margin: 0.35rem 0 0.45rem;
-    font-family: var(--font-body);
-    font-weight: 650;
-    font-size: 1.05rem;
-  }
-  .course-card p { margin: 0 0 1rem; font-size: 0.9rem; flex: 1; }
-  .categories {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 0.75rem;
-  }
-  .category {
-    text-align: center;
-    padding: 1.1rem 0.75rem;
-    border-radius: var(--radius);
-    border: 1px solid var(--line);
-    background: var(--palette-4);
-  }
-  .category strong {
-    display: block;
-    font-family: var(--font-body);
-    font-size: 0.92rem;
-    color: var(--ink);
-    font-weight: 600;
-  }
-  .split-promo {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    align-items: center;
-    padding: 1.5rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--panel-strong);
-  }
-  .split-promo h2 {
-    margin: 0 0 0.6rem;
-    font-family: var(--font-body);
-    font-weight: 700;
-    font-size: clamp(1.35rem, 2.4vw, 1.75rem);
-  }
-  .site-footer {
-    margin-top: 2rem;
-    border-top: 1px solid var(--line);
-    background: var(--palette-4);
-    padding: 2.25rem clamp(1rem, 4vw, 2.5rem) 1.5rem;
-  }
-  .footer-grid {
-    width: min(1100px, 100%);
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr;
-    gap: 1.5rem;
-  }
-  .site-footer h3 {
-    margin: 0 0 0.7rem;
-    font-family: var(--font-body);
-    font-size: 0.95rem;
-    font-weight: 650;
-  }
-  .site-footer a { color: var(--muted); font-size: 0.9rem; display: block; margin: 0.35rem 0; }
-  .site-footer a:hover { color: var(--ink); }
-  .footer-copy {
-    width: min(1100px, 100%);
-    margin: 1.5rem auto 0;
-    padding-top: 1rem;
-    border-top: 1px solid var(--line);
-    color: var(--muted);
-    font-size: 0.82rem;
-  }
-  @media (max-width: 860px) {
-    .site-nav { display: none; }
-    .hero-inner, .features, .split-promo, .footer-grid { grid-template-columns: 1fr; }
-    .hero-blob { width: 120%; right: -30%; top: -5%; opacity: 0.55; }
-  }
-`;
-
-function siteHeader(options?: { admin?: boolean }): string {
-  return `<header class="site-header">
-    <a class="logo" href="/">Valen's Tonic</a>
+function siteHeader(appearance: ServerAppearance, options?: { admin?: boolean }): string {
+  const adminLabel = options?.admin ? "Backoffice" : "Admin";
+  const p = (path: string) => withAppearance(path, appearance);
+  return `<header class="atelier-header site-header">
+    <a class="atelier-mark" href="${p("/")}">
+      <span class="atelier-crest">VT</span>
+      <span>
+        <strong>VALEN'S TONIC</strong>
+        <small>Cocktail School</small>
+      </span>
+    </a>
     <nav class="site-nav" aria-label="Primary">
-      <a href="/">Home</a>
-      <a href="/#courses">Courses</a>
-      <a href="/practice/negroni?mode=procedural">Labs</a>
-      <a href="/admin">${options?.admin ? "Backoffice" : "Admin"}</a>
+      <a href="${p("/")}">Home</a>
+      <a href="${p("/#courses")}">Courses</a>
+      <a href="${p("/practice/negroni?mode=procedural")}">Labs</a>
+      <a href="${p("/admin")}">${adminLabel}</a>
     </nav>
     <div class="header-actions">
-      <a class="login" href="/admin/login">Login</a>
-      <a class="btn" href="/practice/negroni?mode=procedural">Get Started</a>
+      <a class="login" href="${p("/admin/login")}">Login</a>
+      <a class="btn" href="${p("/practice/negroni?mode=procedural")}">Book a class →</a>
     </div>
   </header>`;
 }
 
-function siteFooter(): string {
+function siteFooter(appearance: ServerAppearance): string {
+  const p = (path: string) => withAppearance(path, appearance);
   return `<footer class="site-footer">
     <div class="footer-grid">
       <div>
-        <a class="logo" href="/">Valen's Tonic</a>
+        <a class="atelier-mark" href="${p("/")}">
+          <span class="atelier-crest">VT</span>
+          <span><strong>VALEN'S TONIC</strong><small>Cocktail School</small></span>
+        </a>
         <p style="margin:0.75rem 0 0;max-width:22rem">Interactive cocktail labs where process, measure, and technique matter.</p>
       </div>
       <div>
         <h3>Academy</h3>
-        <a href="/">Courses</a>
-        <a href="/practice/negroni?mode=procedural">Negroni lab</a>
-        <a href="/admin">Admin</a>
+        <a href="${p("/")}">Courses</a>
+        <a href="${p("/practice/negroni?mode=procedural")}">Negroni lab</a>
+        <a href="${p("/admin")}">Admin</a>
       </div>
       <div>
         <h3>Practice</h3>
-        <a href="/practice/negroni?mode=procedural">Procedural mode</a>
-        <a href="/practice/negroni?mode=glb">GLB mode</a>
-        <a href="/practice/negroni?debug=1">Debug collisions</a>
+        <a href="${p("/practice/negroni?mode=procedural")}">Procedural mode</a>
+        <a href="${p("/practice/negroni?mode=glb")}">GLB mode</a>
+        <a href="${p("/practice/negroni?debug=1")}">Debug collisions</a>
       </div>
     </div>
     <p class="footer-copy">Valenstonic Academy · Valen's Tonic</p>
@@ -402,9 +68,11 @@ function siteFooter(): string {
 export function layout(options: {
   title: string;
   body: string;
-  admin?: boolean;
-  bare?: boolean;
+  admin?: boolean | undefined;
+  bare?: boolean | undefined;
+  appearance?: ServerAppearance | undefined;
 }): string {
+  const appearance = options.appearance ?? DEFAULT_APPEARANCE;
   const main = options.bare
     ? options.body
     : `<div class="wrap">
@@ -413,179 +81,30 @@ export function layout(options: {
       </div>`;
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${appearance.lang}" data-archetype="${appearance.archetype}" data-theme="${appearance.theme}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeHtml(options.title)} · Valen's Tonic</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Great+Vibes&display=swap" rel="stylesheet" />
+  <link href="${FONT_HREF}" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <style>${baseStyles}</style>
+  <style>${dsDocumentStyles}</style>
 </head>
-<body>
-  ${siteHeader(options.admin ? { admin: true } : undefined)}
+<body data-archetype="${appearance.archetype}" data-theme="${appearance.theme}">
+  ${siteHeader(appearance, options.admin ? { admin: true } : undefined)}
   ${main}
-  ${siteFooter()}
+  ${siteFooter(appearance)}
 </body>
 </html>`;
 }
 
-export function homePage(courses: Array<{
-  slug: string;
-  name: string;
-  description: string | null;
-  category: string;
-}>): string {
-  const courseCards =
-    courses.length === 0
-      ? `<article class="course-card"><div class="course-card-body"><p class="eyebrow">Coming soon</p><h3>Classic Cocktails Lab</h3><p>Seed will create the first course on API boot.</p></div></article>`
-      : courses
-          .map(
-            (course) => `<article class="course-card">
-          <div class="course-card-media" aria-hidden="true"></div>
-          <div class="course-card-body">
-            <p class="eyebrow">${escapeHtml(course.category)}</p>
-            <h3>${escapeHtml(course.name)}</h3>
-            <p>${escapeHtml(course.description ?? "Interactive practice with process and technique.")}</p>
-            <a class="btn secondary" href="/courses/${escapeHtml(course.slug)}">Explore now</a>
-          </div>
-        </article>`
-          )
-          .join("");
-
-  const body = `
-  <section class="hero">
-    <div class="hero-blob" aria-hidden="true"></div>
-    <div class="hero-inner">
-      <div>
-        <p class="hero-script">Valen's Tonic</p>
-        <h1>Cocktail &amp; Recipe Online Labs</h1>
-        <p class="lead">Learn by making — interactive 3D stations where order, measure, and technique decide the pour.</p>
-        <div class="hero-actions">
-          <a class="btn" href="/practice/negroni?mode=procedural">Start Negroni lab</a>
-          <a class="btn secondary" href="#courses">Browse courses</a>
-        </div>
-      </div>
-      <div class="hero-visual">
-        <a class="hero-circle" href="/practice/negroni?mode=procedural" aria-label="Open Negroni practice lab">
-          <span>Enter the bar</span>
-          <div class="play"><i class="fa-solid fa-play"></i></div>
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="features">
-      <article class="feature">
-        <div class="feature-icon"><i class="fa-solid fa-flask"></i></div>
-        <h3>Interactive labs</h3>
-        <p>Practice builds in 3D — ice, jigger, stir, and strain with real process rules.</p>
-      </article>
-      <article class="feature">
-        <div class="feature-icon"><i class="fa-solid fa-user-graduate"></i></div>
-        <h3>Technique first</h3>
-        <p>Wrong order still runs, but the station tells you when the pour is compromised.</p>
-      </article>
-      <article class="feature">
-        <div class="feature-icon"><i class="fa-solid fa-certificate"></i></div>
-        <h3>Measure &amp; finish</h3>
-        <p>Two-sided jigger pours, overflow, and garnish — finish the drink cleanly.</p>
-      </article>
-    </div>
-  </section>
-
-  <section class="section" id="courses">
-    <div class="section-head">
-      <p class="eyebrow">Curriculum</p>
-      <h2>Our expert cocktail courses</h2>
-      <p>Start with Classic Cocktails Lab, then open the Negroni practice station.</p>
-    </div>
-    <div class="course-grid">${courseCards}</div>
-  </section>
-
-  <section class="section">
-    <div class="section-head">
-      <p class="eyebrow">Topics</p>
-      <h2>Our top categories</h2>
-    </div>
-    <div class="categories">
-      <div class="category"><strong>Stirred classics</strong></div>
-      <div class="category"><strong>Measured pours</strong></div>
-      <div class="category"><strong>Garnish &amp; serve</strong></div>
-      <div class="category"><strong>Bar tools</strong></div>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="split-promo">
-      <div>
-        <p class="eyebrow">Practice</p>
-        <h2>Take your skills to the next level at the bar</h2>
-        <p>Whether you are learning your first Negroni or refining technique, the lab tracks process from ice to peel.</p>
-        <p style="margin-top:1rem"><a class="btn" href="/practice/negroni?mode=procedural">Open the lab</a></p>
-      </div>
-      <div class="hero-circle" style="width:min(100%,320px);margin:0 auto;border-width:6px" aria-hidden="true">
-        <span style="font-size:2rem">Negroni</span>
-      </div>
-    </div>
-  </section>`;
-
-  return layout({
-    title: "Home",
-    bare: true,
-    body
-  });
-}
-
-export function coursePage(options: {
-  course: { name: string; description: string | null; category: string };
-  lessons: Array<{
-    lesson_order: number;
-    title: string;
-    kind: string;
-    body: string | null;
-    scene_slug: string | null;
-  }>;
-}): string {
-  const lessons = options.lessons
-    .map((lesson) => {
-      if (lesson.kind === "interactive" && lesson.scene_slug) {
-        return `<article class="course-card">
-          <div class="course-card-media" aria-hidden="true"></div>
-          <div class="course-card-body">
-            <p class="eyebrow">Lesson ${lesson.lesson_order} · Interactive</p>
-            <h3>${escapeHtml(lesson.title)}</h3>
-            <p>Hands-on 3D practice for this recipe.</p>
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-              <a class="btn" href="/practice/${escapeHtml(lesson.scene_slug)}?mode=procedural">Start practice</a>
-              <a class="btn secondary" href="/practice/${escapeHtml(lesson.scene_slug)}?mode=glb">GLB mode</a>
-            </div>
-          </div>
-        </article>`;
-      }
-      return `<article class="card">
-        <p class="eyebrow">Lesson ${lesson.lesson_order} · Reading</p>
-        <h2 style="font-family:var(--font-body);font-size:1.1rem;margin:0.3rem 0">${escapeHtml(lesson.title)}</h2>
-        <p>${escapeHtml(lesson.body ?? "")}</p>
-      </article>`;
-    })
-    .join("");
-
-  return layout({
-    title: options.course.name,
-    body: `<p class="eyebrow">${escapeHtml(options.course.category)}</p>
-      <p>${escapeHtml(options.course.description ?? "")}</p>
-      <div class="course-grid" style="margin-top:1.5rem">${lessons}</div>`
-  });
-}
-
-export function loginPage(error?: string): string {
+export function loginPage(error?: string, appearance?: ServerAppearance): string {
   return layout({
     title: "Admin login",
-    body: `${error ? `<div class="flash" style="background:rgba(180,35,24,0.25);color:#ffd7d3">${escapeHtml(error)}</div>` : ""}
+    ...(appearance ? { appearance } : {}),
+    body: `${error ? `<div class="flash error">${escapeHtml(error)}</div>` : ""}
       <form class="card" method="post" action="/admin/login" style="max-width:420px">
         <label>Username</label>
         <input name="username" autocomplete="username" required />
@@ -599,6 +118,7 @@ export function loginPage(error?: string): string {
 export function adminPage(options: {
   section: string;
   flash?: string;
+  appearance?: ServerAppearance;
   assets: Array<{ slug: string; name: string; kind: string; model_type: string; procedural_key: string | null }>;
   actions: Array<{ slug: string; name: string; kind: string; ui_hint: string | null }>;
   tools: Array<{ slug: string; name: string; enabled_actions: string[] }>;
@@ -607,10 +127,10 @@ export function adminPage(options: {
   courses: Array<{ slug: string; name: string; category: string }>;
 }): string {
   const tabs = ["overview", "assets", "actions", "tools", "recipes", "scenes", "courses"]
-    .map(
-      (tab) =>
-        `<a class="${tab === options.section ? "active" : ""}" href="/admin?section=${tab}">${tab}</a>`
-    )
+    .map((tab) => {
+      const href = withAppearance(`/admin?section=${tab}`, options.appearance ?? DEFAULT_APPEARANCE);
+      return `<a class="${tab === options.section ? "active" : ""}" href="${href}">${tab}</a>`;
+    })
     .join("");
 
   let panel = "";
@@ -738,10 +258,13 @@ export function adminPage(options: {
           <h3>Scenes</h3>
           <table><thead><tr><th>Slug</th><th>Name</th><th>Open</th></tr></thead>
           <tbody>${options.scenes
-            .map(
-              (s) =>
-                `<tr><td>${escapeHtml(s.slug)}</td><td>${escapeHtml(s.name)}</td><td><a href="/practice/${escapeHtml(s.slug)}">Practice</a></td></tr>`
-            )
+            .map((s) => {
+              const practiceHref = withAppearance(
+                `/practice/${escapeHtml(s.slug)}`,
+                options.appearance ?? DEFAULT_APPEARANCE
+              );
+              return `<tr><td>${escapeHtml(s.slug)}</td><td>${escapeHtml(s.name)}</td><td><a href="${practiceHref}">Practice</a></td></tr>`;
+            })
             .join("")}</tbody></table>
         </div>
       </div>`;
@@ -781,13 +304,14 @@ export function adminPage(options: {
       <div class="card"><h3>Scenes</h3><p>${options.scenes.length} interactive labs</p></div>
       <div class="card"><h3>Courses</h3><p>${options.courses.length} course shells</p></div>
     </div>
-    <p style="margin-top:1.5rem"><a class="btn" href="/practice/negroni">Open Negroni practice</a>
+    <p style="margin-top:1.5rem"><a class="btn" href="${withAppearance("/practice/negroni", options.appearance ?? DEFAULT_APPEARANCE)}">Open Negroni practice</a>
     <a class="btn secondary" href="/admin/logout" style="margin-left:0.5rem">Log out</a></p>`;
   }
 
   return layout({
     title: "Backoffice",
     admin: true,
+    ...(options.appearance ? { appearance: options.appearance } : {}),
     body: `${options.flash ? `<div class="flash">${escapeHtml(options.flash)}</div>` : ""}
       <div class="tabs">${tabs}</div>
       ${panel}`
@@ -798,25 +322,27 @@ export function practicePage(
   slug: string,
   mode: "procedural" | "glb",
   apiBase: string,
-  debug = false
+  debug = false,
+  appearance: ServerAppearance = DEFAULT_APPEARANCE
 ): string {
+  const p = (path: string) => withAppearance(path, appearance);
   const debugQuery = debug ? "&debug=1" : "";
-  const proceduralHref = `/practice/${encodeURIComponent(slug)}?mode=procedural${debugQuery}`;
-  const glbHref = `/practice/${encodeURIComponent(slug)}?mode=glb${debugQuery}`;
-  const debugOnHref = `/practice/${encodeURIComponent(slug)}?mode=${mode}&debug=1`;
-  const debugOffHref = `/practice/${encodeURIComponent(slug)}?mode=${mode}`;
+  const proceduralHref = p(`/practice/${encodeURIComponent(slug)}?mode=procedural${debugQuery}`);
+  const glbHref = p(`/practice/${encodeURIComponent(slug)}?mode=glb${debugQuery}`);
+  const debugOnHref = p(`/practice/${encodeURIComponent(slug)}?mode=${mode}&debug=1`);
+  const debugOffHref = p(`/practice/${encodeURIComponent(slug)}?mode=${mode}`);
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${appearance.lang}" data-archetype="${appearance.archetype}" data-theme="${appearance.theme}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Practice · Valenstonic Academy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Fraunces:opsz,wght@9..144,600&family=Great+Vibes&display=swap" rel="stylesheet" />
+  <link href="${FONT_HREF}" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    ${paletteStyles}
+    ${dsDocumentStyles}
     body { margin:0; overflow:hidden; user-select:none; font-family:var(--font-body); color:var(--ink); background:var(--bg); }
     #canvas-container { width:100vw; height:100vh; display:block; }
     .glass {
@@ -904,7 +430,7 @@ export function practicePage(
     }
   </style>
 </head>
-<body>
+<body data-archetype="${appearance.archetype}" data-theme="${appearance.theme}">
   <div id="loading">
     <div style="text-align:center;padding:1.5rem">
       <h1>Valenstonic Bar Lab</h1>
@@ -915,7 +441,7 @@ export function practicePage(
   </div>
 
   <div class="top-link">
-    <a href="/">← Academy</a>
+    <a href="${p("/")}">← Academy</a>
     <div class="mode-switch" title="Switch 3D render source">
       <a class="${mode === "procedural" ? "active" : ""}" href="${proceduralHref}">Procedural</a>
       <a class="${mode === "glb" ? "active" : ""}" href="${glbHref}">GLB</a>
@@ -984,10 +510,12 @@ export function practicePage(
 </html>`;
 }
 
-export function notFoundPage(): string {
+export function notFoundPage(appearance?: ServerAppearance): string {
+  const appearanceSafe = appearance ?? DEFAULT_APPEARANCE;
   return layout({
     title: "Not found",
-    body: `<div class="card"><p>That page does not exist.</p><p><a href="/">Back home</a></p></div>`
+    appearance: appearanceSafe,
+    body: `<div class="card"><p>That page does not exist.</p><p><a href="${withAppearance("/", appearanceSafe)}">Back home</a></p></div>`
   });
 }
 

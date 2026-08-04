@@ -1,0 +1,41 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+import {
+  ALERT_VARIANTS,
+  BADGE_VARIANTS,
+  BUTTON_CORE_VARIANTS,
+  BUTTON_EXTENDED_VARIANTS,
+  BUTTON_SIZES,
+  SHARED_COMPONENTS
+} from "@chiwire/ui/base";
+
+<Meta title="Base/Overview" />
+
+# Base (hidden layer)
+
+Base is **not** a product archetype. It is the semantic contract that Internal and
+Valenstonic stay aligned on. Product surfaces import `@chiwire/ui/internal` or
+`@chiwire/ui/valenstonic`. **Exception:** app chrome may import `ArchetypeSelect`
+and `ThemeSelect` from `@chiwire/ui/base` (see **Base → Appearance selects**).
+
+## Shared components
+
+{SHARED_COMPONENTS.join(", ")}
+
+Identical implementations live in `packages/ui/src/base` today (`Separator`,
+`ScrollArea`) and are re-exported by each archetype.
+
+## Appearance chrome
+
+- `ArchetypeSelect` — Internal / Valenstonic (`pills` or `menu`)
+- `ThemeSelect` — light / dark (`pills` or `menu`, optional `getHref` for SSR prefs)
+
+## Variant contracts
+
+- **Button core:** {BUTTON_CORE_VARIANTS.join(", ")}
+- **Button extended (optional):** {BUTTON_EXTENDED_VARIANTS.join(", ")}
+- **Button sizes:** {BUTTON_SIZES.join(", ")}
+- **Badge:** {BADGE_VARIANTS.join(", ")}
+- **Alert:** {ALERT_VARIANTS.join(", ")}
+
+Archetypes may narrow (e.g. Valenstonic omits outline/destructive buttons) or
+extend. Brand-only UI goes in each archetype's `exclusive/` folder.

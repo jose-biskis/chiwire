@@ -6,6 +6,10 @@ import { Meta } from "@storybook/addon-docs/blocks";
 
 UI documentation by **archetype**. New projects use **Internal** by default.
 
+**Base** is a hidden contract layer (shared catalog + variant names) — see **Base → Overview**.
+Product apps import `@chiwire/ui/internal` or `@chiwire/ui/valenstonic`, not base. Brand-only UI
+lives in each archetype’s `exclusive/` folder.
+
 ## Archetypes
 
 <table>
@@ -20,18 +24,26 @@ UI documentation by **archetype**. New projects use **Internal** by default.
       <td>
         <strong>Internal</strong>
       </td>
-      <td>Internal tools, dashboards, new apps without a brand kit</td>
+      <td>
+        Internal tools (default). Light zinc + dark VS Code Modern. Toolbar Color mode: Auto →
+        light.
+      </td>
     </tr>
     <tr>
       <td>
         <strong>Valenstonic</strong>
       </td>
-      <td>Valen's Tonic / Academy marketing and product UI</td>
+      <td>
+        Valen's Tonic / Academy cocktail atelier — one layout, two palettes (paper+wine /
+        charcoal+rose). Shape matches Internal (soft radii). Toolbar Color mode: Auto → dark.
+        Exclusive: ScriptMark.
+      </td>
     </tr>
   </tbody>
 </table>
 
-Browse **Archetypes → Internal** or **Archetypes → Valenstonic** in the sidebar.
+Browse **Archetypes → Internal** or **Valenstonic** in the sidebar. Use **Color mode** (Auto /
+Light / Dark) in the toolbar to compare themes.
 
 ## Deployed preview
 

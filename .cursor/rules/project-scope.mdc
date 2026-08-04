@@ -22,12 +22,13 @@ Acceptable scope forms: workspace name (`@chiwire/contimiti`), path (`apps/conti
 | avila / avila-labs | `apps/avila-labs` | — |
 | contimiti | `apps/contimiti` | `packages/core` |
 | bull-board | `apps/bull-board` | `packages/core` |
-| design-system | `apps/design-system` | — |
+| design-system | `apps/design-system` | `packages/ui` |
+| ui | `packages/ui` | — |
 | vtacademy / valenstonic frontend | `apps/valenstonic-academy-frontend` | `packages/valenstonic-academy-shared` |
 | vtacademy-api / valenstonic backend | `apps/valenstonic-academy-backend` | `packages/core`, `packages/valenstonic-academy-shared`, `packages/db-migrate` |
 | hello / hello-http | `apps/hello-http` | — |
 | mcps | `apps/mcps` | — |
-| cachicamo | `apps/cachicamo-coding-agent-local` | — |
+| cachicamo | `apps/cachicamo-coding-agent-local` | `packages/ui` |
 | radiobemba | `apps/radiobemba` | `packages/core`, `packages/radiobemba-shared`, `packages/db-migrate` |
 | bemba | `apps/bemba` | `packages/radiobemba-shared` |
 | core | `packages/core` | — |

@@ -1,0 +1,66 @@
+@import "tailwindcss";
+@import "./tokens-valenstonic.css";
+
+@source "../base";
+@source "../valenstonic";
+
+@theme inline {
+  --font-sans: var(--archetype-font-sans);
+  --font-display: var(--archetype-font-display);
+  --font-script: var(--archetype-font-script);
+  --font-editorial: var(--archetype-font-editorial, var(--archetype-font-display));
+  --font-mono: var(--archetype-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+
+  --color-palette-1: var(--archetype-palette-1);
+  --color-palette-2: var(--archetype-palette-2);
+  --color-palette-3: var(--archetype-palette-3);
+  --color-palette-4: var(--archetype-palette-4);
+  --color-palette-5: var(--archetype-palette-5);
+  --color-primary-hover: var(--archetype-primary-hover);
+  --color-secondary-hover: var(--archetype-secondary-hover);
+
+  --color-background: var(--archetype-background);
+  --color-foreground: var(--archetype-foreground);
+  --color-card: var(--archetype-card);
+  --color-card-foreground: var(--archetype-card-foreground);
+  --color-popover: var(--archetype-popover);
+  --color-popover-foreground: var(--archetype-popover-foreground);
+  --color-primary: var(--archetype-primary);
+  --color-primary-foreground: var(--archetype-primary-foreground);
+  --color-secondary: var(--archetype-secondary);
+  --color-secondary-foreground: var(--archetype-secondary-foreground);
+  --color-muted: var(--archetype-muted);
+  --color-muted-foreground: var(--archetype-muted-foreground);
+  --color-accent: var(--archetype-accent);
+  --color-accent-foreground: var(--archetype-accent-foreground);
+  --color-destructive: var(--archetype-destructive);
+  --color-destructive-foreground: var(--archetype-destructive-foreground);
+  --color-border: var(--archetype-border);
+  --color-input: var(--archetype-input);
+  --color-ring: var(--archetype-ring);
+  --color-success: var(--archetype-success);
+  --color-success-foreground: var(--archetype-success-foreground);
+  --color-warning: var(--archetype-warning);
+  --color-warning-foreground: var(--archetype-warning-foreground);
+  --color-shell: var(--archetype-shell);
+  --color-moss: var(--archetype-moss);
+  --color-activity: var(--archetype-activity);
+  --color-statusbar: var(--archetype-statusbar);
+  --color-selection: var(--archetype-selection);
+  --color-chat-user: var(--archetype-chat-user);
+
+  --radius-sm: var(--archetype-radius-sm);
+  --radius-md: var(--archetype-radius-md);
+  --radius-lg: var(--archetype-radius-lg);
+  --radius-xl: var(--archetype-radius-xl);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-background font-sans text-foreground antialiased;
+  }
+}

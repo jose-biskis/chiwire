@@ -1,0 +1,125 @@
+/*
+  Valenstonic — cocktail atelier (one layout; two palettes).
+  Color: light paper+wine / dark charcoal+rose.
+  Shape: Internal geometry (soft radii + system UI sans). Brand script/editorial kept.
+  Sharp Figtree atelier shape archived in valenstonic/legacy/ (not imported).
+  Toggle with data-theme="light" | "dark" on [data-archetype="valenstonic"].
+*/
+
+[data-archetype="valenstonic"],
+[data-archetype="valenstonic"][data-theme="dark"] {
+  color-scheme: dark;
+
+  --archetype-font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --archetype-font-display: ui-sans-serif, system-ui, sans-serif;
+  --archetype-font-script: "Great Vibes", cursive;
+  --archetype-font-editorial: "Cormorant Garamond", Georgia, serif;
+  --archetype-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Dark atelier — rose charcoal counterpart to daylight wine/paper */
+  --archetype-palette-1: #d01059;
+  --archetype-palette-2: #9e2c58;
+  --archetype-palette-3: #6b3349;
+  --archetype-palette-4: #38262d;
+  --archetype-palette-5: #332d2f;
+  --archetype-primary-hover: #9e2c58;
+  --archetype-secondary-hover: #6b3349;
+
+  --archetype-background: #332d2f;
+  --archetype-foreground: #e6d9de;
+  --archetype-card: #38262d;
+  --archetype-card-foreground: #e6d9de;
+  --archetype-popover: #38262d;
+  --archetype-popover-foreground: #e6d9de;
+  --archetype-primary: #d01059;
+  --archetype-primary-foreground: #faf6f7;
+  --archetype-secondary: #38262d;
+  --archetype-secondary-foreground: #e6d9de;
+  --archetype-muted: #3a3034;
+  --archetype-muted-foreground: #9a858c;
+  --archetype-accent: #d01059;
+  --archetype-accent-foreground: #faf6f7;
+  --archetype-destructive: #9e2c58;
+  --archetype-destructive-foreground: #faf6f7;
+  --archetype-border: rgba(230, 217, 222, 0.12);
+  --archetype-input: rgba(230, 217, 222, 0.12);
+  --archetype-ring: #d01059;
+  --archetype-success: #9e2c58;
+  --archetype-success-foreground: #faf6f7;
+  --archetype-warning: #d01059;
+  --archetype-warning-foreground: #faf6f7;
+
+  --archetype-shell: #2a2426;
+  --archetype-moss: #9a858c;
+  --archetype-activity: #332d2f;
+  --archetype-statusbar: #38262d;
+  --archetype-selection: #6b3349;
+  --archetype-chat-user: #6b3349;
+
+  /* Internal shape (soft). Legacy sharp atelier: valenstonic/legacy/ */
+  --archetype-radius-sm: 6px;
+  --archetype-radius-md: 8px;
+  --archetype-radius-lg: 10px;
+  --archetype-radius-xl: 14px;
+
+  --archetype-surface-tint: #2f292b;
+}
+
+[data-archetype="valenstonic"][data-theme="light"] {
+  color-scheme: light;
+
+  --archetype-font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --archetype-font-display: ui-sans-serif, system-ui, sans-serif;
+  --archetype-font-script: "Great Vibes", cursive;
+  --archetype-font-editorial: "Cormorant Garamond", Georgia, serif;
+  --archetype-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Daylight atelier — warm paper + wine ink (Valen's chosen light) */
+  --archetype-palette-1: #6d1d2a;
+  --archetype-palette-2: #9e2c58;
+  --archetype-palette-3: #c4b8ae;
+  --archetype-palette-4: #efeae4;
+  --archetype-palette-5: #f7f4f0;
+  --archetype-primary-hover: #54151f;
+  --archetype-secondary-hover: #6d1d2a;
+
+  --archetype-background: #f7f4f0;
+  --archetype-foreground: #1f1a18;
+  --archetype-card: #ffffff;
+  --archetype-card-foreground: #1f1a18;
+  --archetype-popover: #ffffff;
+  --archetype-popover-foreground: #1f1a18;
+  --archetype-primary: #6d1d2a;
+  --archetype-primary-foreground: #faf6f7;
+  --archetype-secondary: #efeae4;
+  --archetype-secondary-foreground: #1f1a18;
+  --archetype-muted: #efeae4;
+  --archetype-muted-foreground: #6b5f58;
+  --archetype-accent: #6d1d2a;
+  --archetype-accent-foreground: #faf6f7;
+  --archetype-destructive: #9e2c58;
+  --archetype-destructive-foreground: #faf6f7;
+  --archetype-border: rgba(31, 26, 24, 0.12);
+  --archetype-input: rgba(31, 26, 24, 0.08);
+  --archetype-ring: #6d1d2a;
+  --archetype-success: #9e2c58;
+  --archetype-success-foreground: #faf6f7;
+  --archetype-warning: #6d1d2a;
+  --archetype-warning-foreground: #faf6f7;
+
+  --archetype-shell: #ebe4da;
+  --archetype-moss: #6b5f58;
+  --archetype-activity: #f7f4f0;
+  --archetype-statusbar: #efeae4;
+  --archetype-selection: #e2c9cf;
+  --archetype-chat-user: #efeae4;
+
+  --archetype-radius-sm: 6px;
+  --archetype-radius-md: 8px;
+  --archetype-radius-lg: 10px;
+  --archetype-radius-xl: 14px;
+
+  --archetype-surface-tint: #f6f2ec;
+}
