@@ -2,6 +2,16 @@
 
 Guidance for AI agents working in the Chiwire monorepo.
 
+## Project scope gate
+
+Before any exploratory reads, searches, builds, or edits: establish **project scope**.
+
+1. If the user message includes `PROJECT: <name>` (or clearly names one workspace/app), use that as scope.
+2. If scope is missing, **ask once** and **stop** — do not scan the monorepo.
+3. Bypass only when the user includes `FORCED_RUN: TRUE` (repo-wide, multi-app, or root tooling).
+
+After scope is set: read/edit only that app (or package) plus its confirmed `@chiwire/*` deps. Prefer workspace-scoped npm commands. Full alias table and details: `.cursor/rules/project-scope.mdc`.
+
 ## Cursor Cloud specific instructions
 
 ### Repository overview
