@@ -5,11 +5,10 @@ const swatches: Swatch[] = [
   { name: "Background", token: "--color-background", className: "bg-background" },
   { name: "Foreground", token: "--color-foreground", className: "bg-foreground" },
   { name: "Primary", token: "--color-primary", className: "bg-primary" },
-  { name: "Accent", token: "--color-accent", className: "bg-accent" },
   { name: "Secondary", token: "--color-secondary", className: "bg-secondary" },
   { name: "Muted", token: "--color-muted", className: "bg-muted" },
-  { name: "Success", token: "--color-success", className: "bg-success" },
-  { name: "Warning", token: "--color-warning", className: "bg-warning" },
+  { name: "Accent", token: "--color-accent", className: "bg-accent" },
+  { name: "Border", token: "--color-border", className: "bg-border" },
   { name: "Destructive", token: "--color-destructive", className: "bg-destructive" }
 ];
 
@@ -23,15 +22,11 @@ type Story = StoryObj;
 
 export const Palette: Story = {
   render: () => (
-    <div
-      className="rounded-xl p-6"
-      style={{ background: "var(--archetype-surface-tint)" }}
-    >
+    <div className="rounded-lg border border-border bg-background p-6">
       <div className="mb-6 space-y-1">
-        <p className="font-display text-xl font-semibold text-foreground">Internal</p>
+        <p className="text-xl font-semibold tracking-tight text-foreground">Internal</p>
         <p className="max-w-md text-sm text-muted-foreground">
-          Default archetype for new tools — shadcn-shaped tokens with teal primary and
-          amber accent.
+          Default archetype for new tools — plain shadcn neutral (zinc).
         </p>
       </div>
       <ColorSwatchGrid swatches={swatches} />

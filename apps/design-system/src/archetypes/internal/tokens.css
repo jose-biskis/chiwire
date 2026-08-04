@@ -1,50 +1,43 @@
 /*
   Internal archetype — default for new / internal Chiwire tools.
-  shadcn-shaped tokens with a restrained teal primary and amber accent.
-  Fonts load via .storybook/preview-head.html (Manrope + Sora).
+  Plain shadcn neutral (zinc) — no brand color wash.
 */
 
 :root,
 [data-archetype="internal"] {
-  --archetype-font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --archetype-font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
-  --archetype-font-script: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --archetype-font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --archetype-font-display: ui-sans-serif, system-ui, sans-serif;
+  --archetype-font-script: ui-sans-serif, system-ui, sans-serif;
 
-  --archetype-background: #f4f7f8;
-  --archetype-foreground: #15202b;
+  --archetype-background: #ffffff;
+  --archetype-foreground: #09090b;
   --archetype-card: #ffffff;
-  --archetype-card-foreground: #15202b;
+  --archetype-card-foreground: #09090b;
   --archetype-popover: #ffffff;
-  --archetype-popover-foreground: #15202b;
-  --archetype-primary: #0f766e;
-  --archetype-primary-foreground: #f0fdfa;
-  --archetype-secondary: #e7eef1;
-  --archetype-secondary-foreground: #1f3340;
-  --archetype-muted: #e8eef1;
-  --archetype-muted-foreground: #5b6b76;
-  --archetype-accent: #d97706;
-  --archetype-accent-foreground: #fffbeb;
-  --archetype-destructive: #dc2626;
-  --archetype-destructive-foreground: #fef2f2;
-  --archetype-border: rgba(21, 32, 43, 0.12);
-  --archetype-input: rgba(21, 32, 43, 0.1);
-  --archetype-ring: #0f766e;
-  --archetype-success: #059669;
-  --archetype-success-foreground: #ecfdf5;
-  --archetype-warning: #d97706;
-  --archetype-warning-foreground: #fffbeb;
+  --archetype-popover-foreground: #09090b;
+  --archetype-primary: #18181b;
+  --archetype-primary-foreground: #fafafa;
+  --archetype-secondary: #f4f4f5;
+  --archetype-secondary-foreground: #18181b;
+  --archetype-muted: #f4f4f5;
+  --archetype-muted-foreground: #71717a;
+  --archetype-accent: #f4f4f5;
+  --archetype-accent-foreground: #18181b;
+  --archetype-destructive: #ef4444;
+  --archetype-destructive-foreground: #fafafa;
+  --archetype-border: #e4e4e7;
+  --archetype-input: #e4e4e7;
+  --archetype-ring: #18181b;
+  --archetype-success: #18181b;
+  --archetype-success-foreground: #fafafa;
+  --archetype-warning: #71717a;
+  --archetype-warning-foreground: #fafafa;
 
   --archetype-radius-sm: 6px;
   --archetype-radius-md: 8px;
-  --archetype-radius-lg: 12px;
-  --archetype-radius-xl: 16px;
+  --archetype-radius-lg: 10px;
+  --archetype-radius-xl: 14px;
 
-  /* Atmosphere */
-  --archetype-surface-tint: radial-gradient(
-    120% 80% at 10% 0%,
-    rgba(15, 118, 110, 0.1),
-    transparent 55%
-  ),
-    radial-gradient(90% 70% at 100% 10%, rgba(217, 119, 6, 0.08), transparent 50%),
-    #f4f7f8;
+  --archetype-surface-tint: #ffffff;
 }

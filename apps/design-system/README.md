@@ -4,7 +4,7 @@ Storybook for Chiwire UI archetypes. Stories are grouped by archetype:
 
 | Archetype | Default for | Look |
 |-----------|-------------|------|
-| **Internal** | New / internal tools (default) | shadcn-inspired, light, restrained teal + amber |
+| **Internal** | New / internal tools (default) | Plain shadcn neutral (zinc) |
 | **Valenstonic** | Valen's Tonic Academy | Late-night rose atelier |
 
 ## Run locally
