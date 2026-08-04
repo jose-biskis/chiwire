@@ -22,6 +22,7 @@ Acceptable scope forms: workspace name (`@chiwire/contimiti`), path (`apps/conti
 | avila / avila-labs | `apps/avila-labs` | — |
 | contimiti | `apps/contimiti` | `packages/core` |
 | bull-board | `apps/bull-board` | `packages/core` |
+| design-system | `apps/design-system` | — |
 | vtacademy / valenstonic frontend | `apps/valenstonic-academy-frontend` | `packages/valenstonic-academy-shared` |
 | vtacademy-api / valenstonic backend | `apps/valenstonic-academy-backend` | `packages/core`, `packages/valenstonic-academy-shared`, `packages/db-migrate` |
 | hello / hello-http | `apps/hello-http` | — |

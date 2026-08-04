@@ -1,0 +1,15 @@
+{
+  "image": "chiwire/design-system",
+  "tag": "latest",
+  "container": "design-system",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 3000,
+    "visibility": "internal",
+    "hostPort": 3050,
+    "network": "chiwire"
+  }
+}

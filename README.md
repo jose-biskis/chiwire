@@ -160,6 +160,25 @@ npm run tunnel:bull-board
 Open [http://localhost:3040/bullboard](http://localhost:3040/bullboard). See
 [`apps/bull-board/README.md`](apps/bull-board/README.md).
 
+## Design system
+
+Storybook for Chiwire UI archetypes (Internal default, Valenstonic, …):
+
+```sh
+npm run dev:design-system
+```
+
+Open [http://localhost:6006](http://localhost:6006). Deployed preview (same tunnel
+pattern as Grafana / Bull Board):
+
+```sh
+npm run deploy:design-system
+npm run tunnel:design-system
+```
+
+Open [http://localhost:3050](http://localhost:3050). See
+[`apps/design-system/README.md`](apps/design-system/README.md).
+
 ## Service sections
 
 The `apps/postgres`, `apps/prometheus`, `apps/cadvisor`, `apps/grafana`, and
@@ -184,7 +203,8 @@ npm run deploy:redis -- --env REDIS_PASSWORD=change-me
 
 Prometheus + node_exporter collect host hardware metrics on
 `127.0.0.1:9090`. cAdvisor adds per-container CPU/memory. Grafana serves
-dashboards on `127.0.0.1:3030`. Bull Board serves queue UI on `127.0.0.1:3040`:
+dashboards on `127.0.0.1:3030`. Bull Board serves queue UI on `127.0.0.1:3040`.
+Design system Storybook serves on `127.0.0.1:3050`:
 
 ```sh
 npm run deploy:prometheus
@@ -193,6 +213,8 @@ npm run deploy:grafana
 npm run tunnel:grafana
 npm run deploy:bull-board
 npm run tunnel:bull-board
+npm run deploy:design-system
+npm run tunnel:design-system
 ```
 
 Keep committed service defaults in each section's `deploy.json`. Pass secrets at
@@ -210,6 +232,7 @@ npm run deploy:avila
 npm run deploy:hello
 npm run deploy:contimiti
 npm run deploy:bull-board
+npm run deploy:design-system
 npm run deploy:postgres -- --env POSTGRES_PASSWORD=change-me
 npm run deploy:prometheus
 npm run deploy:cadvisor

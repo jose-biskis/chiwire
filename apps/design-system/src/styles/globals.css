@@ -1,0 +1,67 @@
+@import "tailwindcss";
+@import "../archetypes/internal/tokens.css";
+@import "../archetypes/valenstonic/tokens.css";
+
+@theme inline {
+  --font-sans: var(--archetype-font-sans);
+  --font-display: var(--archetype-font-display);
+  --font-script: var(--archetype-font-script);
+
+  --color-background: var(--archetype-background);
+  --color-foreground: var(--archetype-foreground);
+  --color-card: var(--archetype-card);
+  --color-card-foreground: var(--archetype-card-foreground);
+  --color-popover: var(--archetype-popover);
+  --color-popover-foreground: var(--archetype-popover-foreground);
+  --color-primary: var(--archetype-primary);
+  --color-primary-foreground: var(--archetype-primary-foreground);
+  --color-secondary: var(--archetype-secondary);
+  --color-secondary-foreground: var(--archetype-secondary-foreground);
+  --color-muted: var(--archetype-muted);
+  --color-muted-foreground: var(--archetype-muted-foreground);
+  --color-accent: var(--archetype-accent);
+  --color-accent-foreground: var(--archetype-accent-foreground);
+  --color-destructive: var(--archetype-destructive);
+  --color-destructive-foreground: var(--archetype-destructive-foreground);
+  --color-border: var(--archetype-border);
+  --color-input: var(--archetype-input);
+  --color-ring: var(--archetype-ring);
+  --color-success: var(--archetype-success);
+  --color-success-foreground: var(--archetype-success-foreground);
+  --color-warning: var(--archetype-warning);
+  --color-warning-foreground: var(--archetype-warning-foreground);
+
+  --radius-sm: var(--archetype-radius-sm);
+  --radius-md: var(--archetype-radius-md);
+  --radius-lg: var(--archetype-radius-lg);
+  --radius-xl: var(--archetype-radius-xl);
+}
+
+@layer base {
+  :root,
+  [data-archetype="internal"] {
+    color-scheme: light;
+  }
+
+  [data-archetype="valenstonic"] {
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-background font-sans text-foreground antialiased;
+  }
+}
+
+@layer utilities {
+  .font-script {
+    font-family: var(--font-script);
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
+}

@@ -23,6 +23,7 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 | AvilaLabs landing page | `@chiwire/avila-labs` | `npm run dev:avila` | 4321 |
 | Contimiti share app | `@chiwire/contimiti` | build then `npm run start:contimiti` | 3000 |
 | Bull Board (queues UI) | `@chiwire/bull-board` | build then `npm run start:bull-board` | 3000 (deploy host 3040) |
+| Design system (Storybook) | `@chiwire/design-system` | `npm run dev:design-system` | 6006 (deploy host 3050) |
 | Valenstonic Academy frontend | `@chiwire/valenstonic-academy-frontend` | build then `npm run start:vtacademy` | 3000 |
 | Valenstonic Academy API | `@chiwire/valenstonic-academy-backend` | build then `npm run start:vtacademy-api` | 3001 |
 | hello-http smoke-test API | `@chiwire/hello-http` | build then `npm run start:hello` | 3000 |
@@ -50,6 +51,7 @@ See `README.md` for full details. Common commands:
 - AvilaLabs dev server: `npm run dev:avila`
 - Contimiti: Redis required; `npm run build --workspace @chiwire/core` then `npm run build --workspace @chiwire/contimiti` then `npm run start:contimiti`
 - Bull Board: `npm run build --workspace @chiwire/core` then `npm run build --workspace @chiwire/bull-board` then `npm run start:bull-board` (or `npm run tunnel:bull-board` after deploy)
+- Design system: `npm run dev:design-system` locally; after deploy `npm run tunnel:design-system` → http://localhost:3050
 - Valenstonic Academy API: set `PG*` env vars, then `npm run build --workspace @chiwire/core` && `npm run build --workspace @chiwire/valenstonic-academy-shared` && `npm run build --workspace @chiwire/valenstonic-academy-backend` && `npm run start:vtacademy-api`
 - Valenstonic Academy frontend: set `API_BASE_URL=http://localhost:3001`, then build shared + frontend and `npm run start:vtacademy`
 - hello-http: `npm run build --workspace @chiwire/hello-http` then `npm run start:hello`
@@ -92,10 +94,13 @@ npm run dev:cachicamo-coding-agent-local
 
 # Radiobemba (HTTP :3000 + SSH :2222; memory persistence by default in dev script)
 npm run dev:radiobemba
+
+# Design system Storybook (dev UI on :6006)
+npm run dev:design-system
 ```
 
-hello-http, Contimiti, Bull Board, MCP servers, and Radiobemba must be built before their start scripts — they run
-`node dist/index.js`.
+hello-http, Contimiti, Bull Board, MCP servers, Radiobemba, and the design-system
+static server must be built before their start scripts — they run `node dist/...`.
 
 ### Lint / test notes
 
