@@ -29,10 +29,10 @@
   --archetype-border: #e4e4e7;
   --archetype-input: #e4e4e7;
   --archetype-ring: #18181b;
-  --archetype-success: #18181b;
-  --archetype-success-foreground: #fafafa;
-  --archetype-warning: #71717a;
-  --archetype-warning-foreground: #fafafa;
+  --archetype-success: #16a34a;
+  --archetype-success-foreground: #f0fdf4;
+  --archetype-warning: #ca8a04;
+  --archetype-warning-foreground: #fefce8;
 
   --archetype-radius-sm: 6px;
   --archetype-radius-md: 8px;

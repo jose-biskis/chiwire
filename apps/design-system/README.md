@@ -7,6 +7,16 @@ Storybook for Chiwire UI archetypes. Stories are grouped by archetype:
 | **Internal** | New / internal tools (default) | Plain shadcn neutral (zinc) |
 | **Valenstonic** | Valen's Tonic Academy | Late-night rose atelier |
 
+### Internal components
+
+Button, Badge, Card, Input, Textarea, Label, Tabs, Alert (+ Colors).  
+See **Examples → Share panel** for a Contimiti-shaped composition.
+
+### Valenstonic components
+
+Same set in rose atelier style.  
+See **Examples → Course panel** for a Valen's Tonic composition.
+
 ## Run locally
 
 ```sh

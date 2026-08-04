@@ -9,7 +9,9 @@ const swatches: Swatch[] = [
   { name: "Muted", token: "--color-muted", className: "bg-muted" },
   { name: "Accent", token: "--color-accent", className: "bg-accent" },
   { name: "Border", token: "--color-border", className: "bg-border" },
-  { name: "Destructive", token: "--color-destructive", className: "bg-destructive" }
+  { name: "Destructive", token: "--color-destructive", className: "bg-destructive" },
+  { name: "Success", token: "--color-success", className: "bg-success" },
+  { name: "Warning", token: "--color-warning", className: "bg-warning" }
 ];
 
 const meta = {
