@@ -83,6 +83,7 @@ async function main(): Promise<void> {
           `statements=${result.statementCount}  ` +
           `create_tables=${result.createdTables}  ` +
           `add_columns=${result.addedColumns}  ` +
+          `drop_columns=${result.droppedColumns}  ` +
           `ms=${result.executionTimeMs}`
       );
       return;
@@ -101,6 +102,10 @@ async function main(): Promise<void> {
         console.log(
           `  + column ${change.schema}.${change.table}.${change.column.name} ${change.column.typeSql}`
         );
+      }
+      console.log(`drop_columns=${plan.tablePlan.dropColumns.length}`);
+      for (const change of plan.tablePlan.dropColumns) {
+        console.log(`  - column ${change.schema}.${change.table}.${change.column}`);
       }
       console.log(`other_statements=${plan.otherStatements.length}`);
       console.log(`conflicts=${plan.tablePlan.conflicts.length}`);

@@ -27,6 +27,7 @@ export type ApplyResult =
       statementCount: number;
       createdTables: number;
       addedColumns: number;
+      droppedColumns: number;
       executionTimeMs: number;
     };
 
@@ -84,8 +85,9 @@ export async function planSchema(
 /**
  * Apply desired-state SQL for a target schema when the file checksum changed.
  *
- * Tables are synced via introspective diff (create missing tables / add columns).
- * Other objects (functions, etc.) are executed as written.
+ * Tables are synced via introspective diff (create missing tables / add columns /
+ * drop columns removed from desired state). Other objects (functions, etc.) are
+ * executed as written.
  *
  * Failed applies block later checksums until the same checksum is retried
  * successfully (no force/repair in v1).
@@ -155,6 +157,7 @@ export async function applySchema(
       statementCount: toRun.length,
       createdTables: tablePlan.createTables.length,
       addedColumns: tablePlan.addColumns.length,
+      droppedColumns: tablePlan.dropColumns.length,
       executionTimeMs: Date.now() - started
     };
   } catch (error) {

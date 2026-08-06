@@ -4,6 +4,11 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
+import {
+  listConfiguredWorkspaceIds,
+  type TrelloWorkspaceRegistry,
+} from "./workspaces.js";
+
 const DEFAULT_TRELLO_API_BASE_URL = "https://api.trello.com/1";
 
 const trelloIdSchema = z.string().min(1, "Trello id is required");
@@ -20,6 +25,9 @@ export type TrelloMcpConfig = {
   apiKey?: string;
   token?: string;
   baseUrl?: string;
+  /** When true, request-scoped apiKey/token headers may be used (local/dev only). */
+  allowClientCredentials?: boolean;
+  registry: TrelloWorkspaceRegistry;
 };
 
 class TrelloApiError extends Error {
@@ -37,22 +45,79 @@ function firstConfiguredValue(...values: Array<string | undefined>): string | un
   return values.find((value) => value !== undefined && value.trim() !== "");
 }
 
-function readTrelloCredentials(config: TrelloMcpConfig): { apiKey: string; token: string; baseUrl: string } {
-  const apiKey = firstConfiguredValue(config.apiKey, process.env.TRELLO_API_KEY);
-  const token = firstConfiguredValue(config.token, process.env.TRELLO_TOKEN);
+function workspaceInputSchema(registry: TrelloWorkspaceRegistry) {
+  const available = listConfiguredWorkspaceIds(registry);
 
-  if (!apiKey || !token) {
+  if (available.length === 0) {
+    return z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "Optional when using local header/env credentials; configure workspaces in Garita or via TRELLO_* env vars.",
+      );
+  }
+
+  const description = `Trello workspace id. Available: ${available.join(", ")}.`;
+
+  // Only auto-default when a single workspace exists — never a global setting.
+  if (registry.soleWorkspaceId) {
+    return z
+      .string()
+      .min(1)
+      .default(registry.soleWorkspaceId)
+      .describe(description);
+  }
+
+  return z.string().min(1, "workspace is required").describe(description);
+}
+
+function readTrelloCredentials(
+  config: TrelloMcpConfig,
+  workspace: string | undefined,
+): { apiKey: string; token: string; baseUrl: string; workspaceId: string | undefined } {
+  const baseUrl =
+    firstConfiguredValue(config.baseUrl, process.env.TRELLO_API_BASE_URL) ??
+    DEFAULT_TRELLO_API_BASE_URL;
+  const registry = config.registry;
+
+  if (config.allowClientCredentials) {
+    const apiKey = firstConfiguredValue(config.apiKey, process.env.TRELLO_API_KEY);
+    const token = firstConfiguredValue(config.token, process.env.TRELLO_TOKEN);
+    if (apiKey && token && registry.workspaces.size === 0) {
+      return { apiKey, token, baseUrl, workspaceId: undefined };
+    }
+  }
+
+  if (registry.workspaces.size === 0) {
     throw new Error(
-      "Send x-trello-api-key and x-trello-token headers or set TRELLO_API_KEY and TRELLO_TOKEN before using Trello MCP tools.",
+      "No Trello workspaces configured. Add them in Garita, or set TRELLO_<WS>_API_KEY and TRELLO_<WS>_TOKEN.",
     );
   }
 
+  const workspaceId = (workspace ?? registry.soleWorkspaceId)?.toLowerCase().replace(/_/g, "-");
+  if (!workspaceId) {
+    throw new Error(
+      `Provide a workspace id. Available: ${listConfiguredWorkspaceIds(registry).join(", ")}.`,
+    );
+  }
+
+  const entry = registry.workspaces.get(workspaceId);
+  if (!entry) {
+    throw new Error(
+      `Unknown workspace "${workspaceId}". Available: ${listConfiguredWorkspaceIds(registry).join(", ")}.`,
+    );
+  }
+
+  if (!entry.apiKey) {
+    throw new Error(`Workspace "${workspaceId}" is missing an API key.`);
+  }
+
   return {
-    apiKey,
-    token,
-    baseUrl:
-      firstConfiguredValue(config.baseUrl, process.env.TRELLO_API_BASE_URL) ??
-      DEFAULT_TRELLO_API_BASE_URL,
+    apiKey: entry.apiKey,
+    token: entry.token,
+    baseUrl,
+    workspaceId,
   };
 }
 
@@ -71,9 +136,9 @@ function trelloUrl(baseUrl: string, path: string, query: Record<string, TrelloQu
 async function trelloRequest(
   config: TrelloMcpConfig,
   path: string,
-  options: TrelloRequestOptions = {},
+  options: TrelloRequestOptions & { workspace?: string | undefined } = {},
 ): Promise<unknown> {
-  const { apiKey, token, baseUrl } = readTrelloCredentials(config);
+  const { apiKey, token, baseUrl } = readTrelloCredentials(config, options.workspace);
   const url = trelloUrl(baseUrl, path, {
     ...options.query,
     key: apiKey,
@@ -153,13 +218,35 @@ function stringList(values: string[] | undefined): string | undefined {
   return values.join(",");
 }
 
-export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {}): void {
+export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig): void {
+  const registry = config.registry;
+  const workspaceSchema = workspaceInputSchema(registry);
+
+  server.registerTool(
+    "trello-list-workspaces",
+    {
+      title: "List Trello workspaces",
+      description:
+        "List workspace ids configured on this MCP server (credentials stay on the server).",
+      inputSchema: z.object({}),
+      annotations: {
+        readOnlyHint: true,
+      },
+    },
+    async () =>
+      okResult("workspaces", {
+        available: listConfiguredWorkspaceIds(registry),
+        source: registry.source,
+      }),
+  );
+
   server.registerTool(
     "trello-list-boards",
     {
       title: "List Trello boards",
-      description: "List Trello boards visible to the configured API token.",
+      description: "List Trello boards visible to the configured workspace token.",
       inputSchema: z.object({
+        workspace: workspaceSchema,
         includeClosed: z.boolean().default(false).describe("Include closed boards when true."),
       }),
       annotations: {
@@ -167,9 +254,10 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
         openWorldHint: true,
       },
     },
-    async ({ includeClosed }) =>
+    async ({ workspace, includeClosed }) =>
       runTrelloTool("boards", () =>
         trelloRequest(config, "members/me/boards", {
+          workspace,
           query: {
             filter: includeClosed ? "all" : "open",
             fields: "id,name,url,closed,dateLastActivity",
@@ -184,6 +272,7 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
       title: "List Trello lists",
       description: "List lists on a Trello board.",
       inputSchema: z.object({
+        workspace: workspaceSchema,
         boardId: trelloIdSchema.describe("The Trello board id."),
         includeClosed: z.boolean().default(false).describe("Include archived lists when true."),
       }),
@@ -192,9 +281,10 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
         openWorldHint: true,
       },
     },
-    async ({ boardId, includeClosed }) =>
+    async ({ workspace, boardId, includeClosed }) =>
       runTrelloTool("lists", () =>
         trelloRequest(config, `boards/${encodeURIComponent(boardId)}/lists`, {
+          workspace,
           query: {
             filter: includeClosed ? "all" : "open",
             fields: "id,name,closed,pos",
@@ -209,6 +299,7 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
       title: "List Trello cards",
       description: "List cards from exactly one Trello board or list.",
       inputSchema: z.object({
+        workspace: workspaceSchema,
         boardId: trelloIdSchema.optional().describe("The Trello board id."),
         listId: trelloIdSchema.optional().describe("The Trello list id."),
         includeClosed: z.boolean().default(false).describe("Include archived cards when true."),
@@ -218,7 +309,7 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
         openWorldHint: true,
       },
     },
-    async ({ boardId, listId, includeClosed }) => {
+    async ({ workspace, boardId, listId, includeClosed }) => {
       if (Boolean(boardId) === Boolean(listId)) {
         return errorResult(new Error("Provide exactly one of boardId or listId."));
       }
@@ -229,6 +320,7 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
 
       return runTrelloTool("cards", () =>
         trelloRequest(config, `${containerPath}/cards`, {
+          workspace,
           query: {
             filter: cardFilter(includeClosed),
             fields: "id,name,desc,due,idList,labels,url,closed,pos,dateLastActivity",
@@ -244,6 +336,7 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
       title: "Get Trello card",
       description: "Fetch details for a Trello card.",
       inputSchema: z.object({
+        workspace: workspaceSchema,
         cardId: trelloIdSchema.describe("The Trello card id."),
         includeComments: z.boolean().default(false).describe("Include card comments when true."),
       }),
@@ -252,9 +345,10 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
         openWorldHint: true,
       },
     },
-    async ({ cardId, includeComments }) =>
+    async ({ workspace, cardId, includeComments }) =>
       runTrelloTool("card", () =>
         trelloRequest(config, `cards/${encodeURIComponent(cardId)}`, {
+          workspace,
           query: {
             fields: "all",
             actions: includeComments ? "commentCard" : undefined,
@@ -269,6 +363,7 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
       title: "Create Trello card",
       description: "Create a Trello card in a list.",
       inputSchema: z.object({
+        workspace: workspaceSchema,
         listId: trelloIdSchema.describe("The Trello list id where the card should be created."),
         name: z.string().min(1, "Card name is required").describe("The new card name."),
         description: z.string().optional().describe("Optional card description."),
@@ -282,10 +377,11 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
         openWorldHint: true,
       },
     },
-    async ({ listId, name, description, due, labelIds, position }) =>
+    async ({ workspace, listId, name, description, due, labelIds, position }) =>
       runTrelloTool("card", () =>
         trelloRequest(config, "cards", {
           method: "POST",
+          workspace,
           query: {
             idList: listId,
             name,
@@ -304,6 +400,7 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
       title: "Update Trello card",
       description: "Update Trello card fields, including moving it to another list.",
       inputSchema: z.object({
+        workspace: workspaceSchema,
         cardId: trelloIdSchema.describe("The Trello card id."),
         listId: trelloIdSchema.optional().describe("Move the card to this Trello list id."),
         name: z.string().min(1).optional().describe("Replace the card name."),
@@ -318,7 +415,7 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
         openWorldHint: true,
       },
     },
-    async ({ cardId, listId, name, description, due, closed, position }) => {
+    async ({ workspace, cardId, listId, name, description, due, closed, position }) => {
       const updates = {
         idList: listId,
         name,
@@ -335,6 +432,7 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
       return runTrelloTool("card", () =>
         trelloRequest(config, `cards/${encodeURIComponent(cardId)}`, {
           method: "PUT",
+          workspace,
           query: updates,
         }),
       );
@@ -347,6 +445,7 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
       title: "Add Trello card comment",
       description: "Add a comment to a Trello card.",
       inputSchema: z.object({
+        workspace: workspaceSchema,
         cardId: trelloIdSchema.describe("The Trello card id."),
         text: z.string().min(1, "Comment text is required").describe("The comment text."),
       }),
@@ -356,10 +455,11 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
         openWorldHint: true,
       },
     },
-    async ({ cardId, text }) =>
+    async ({ workspace, cardId, text }) =>
       runTrelloTool("comment", () =>
         trelloRequest(config, `cards/${encodeURIComponent(cardId)}/actions/comments`, {
           method: "POST",
+          workspace,
           query: {
             text,
           },
@@ -383,19 +483,13 @@ export function registerTrelloMcp(server: McpServer, config: TrelloMcpConfig = {
           text: [
             "# Trello MCP",
             "",
-            "Send `x-trello-api-key` and `x-trello-token` headers with MCP requests, or set `TRELLO_API_KEY` and `TRELLO_TOKEN` in the MCP server environment.",
-            "Optionally send `x-trello-api-base-url`, or set `TRELLO_API_BASE_URL`, to override the Trello API base URL.",
-            "Generate them from https://trello.com/app-key while signed in to Trello.",
+            "Credentials are managed in Garita (Postgres + Redis cache) or via server env for local dev.",
             "",
-            "Available tools:",
+            `Configured workspaces: ${listConfiguredWorkspaceIds(registry).join(", ") || "(none)"}`,
+            `Config source: ${registry.source}`,
             "",
-            "- `trello-list-boards`",
-            "- `trello-list-lists`",
-            "- `trello-list-cards`",
-            "- `trello-get-card`",
-            "- `trello-create-card`",
-            "- `trello-update-card`",
-            "- `trello-add-comment`",
+            "Clients authenticate with `Authorization: Bearer <MCP_AUTH_SECRET>` when configured.",
+            "Pass `workspace` on each Trello tool call. Do not put Trello API keys in Cursor `mcp.json`.",
           ].join("\n"),
         },
       ],

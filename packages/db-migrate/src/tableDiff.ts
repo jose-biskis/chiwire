@@ -9,6 +9,13 @@ export type AddColumnChange = {
   sql: string;
 };
 
+export type DropColumnChange = {
+  schema: string;
+  table: string;
+  column: string;
+  sql: string;
+};
+
 export type TableDiffConflict = {
   schema: string;
   table: string;
@@ -19,6 +26,7 @@ export type TableDiffConflict = {
 export type TableDiffPlan = {
   createTables: DesiredTable[];
   addColumns: AddColumnChange[];
+  dropColumns: DropColumnChange[];
   conflicts: TableDiffConflict[];
   statements: string[];
 };
@@ -49,6 +57,10 @@ export function buildAddColumnSql(
     parts.push(column.extraSql);
   }
   return parts.join(" ");
+}
+
+export function buildDropColumnSql(schema: string, table: string, column: string): string {
+  return `ALTER TABLE ${qualify(schema, table)} DROP COLUMN ${quoteIdent(column)}`;
 }
 
 async function assertTypesCompatible(
@@ -99,8 +111,8 @@ async function assertTypesCompatible(
 
 /**
  * Diff desired CREATE TABLE definitions against live Postgres.
- * Supports: create missing tables, add missing columns.
- * Conflicts (no force): extra live columns, type mismatch, nullability mismatch.
+ * Supports: create missing tables, add missing columns, drop columns absent from desired state.
+ * Conflicts: type mismatch, nullability mismatch.
  */
 export async function planTableDiff(
   db: Knex,
@@ -108,6 +120,7 @@ export async function planTableDiff(
 ): Promise<TableDiffPlan> {
   const createTables: DesiredTable[] = [];
   const addColumns: AddColumnChange[] = [];
+  const dropColumns: DropColumnChange[] = [];
   const conflicts: TableDiffConflict[] = [];
 
   for (const desired of desiredTables) {
@@ -123,13 +136,11 @@ export async function planTableDiff(
 
     for (const liveCol of live.columns) {
       if (!desiredNames.has(liveCol.name)) {
-        conflicts.push({
+        dropColumns.push({
           schema: desired.schema,
           table: desired.name,
           column: liveCol.name,
-          reason:
-            `Column exists in database but not in desired state. ` +
-            `Drops are not allowed in v1 (no force/repair).`
+          sql: buildDropColumnSql(desired.schema, desired.name, liveCol.name)
         });
       }
     }
@@ -175,10 +186,11 @@ export async function planTableDiff(
 
   const statements = [
     ...createTables.map((table) => table.createStatement),
-    ...addColumns.map((change) => change.sql)
+    ...addColumns.map((change) => change.sql),
+    ...dropColumns.map((change) => change.sql)
   ];
 
-  return { createTables, addColumns, conflicts, statements };
+  return { createTables, addColumns, dropColumns, conflicts, statements };
 }
 
 export function formatTableDiffConflicts(conflicts: TableDiffConflict[]): string {

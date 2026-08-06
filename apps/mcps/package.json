@@ -7,10 +7,17 @@
   "scripts": {
     "build": "tsc --build",
     "start": "node dist/index.js",
-    "typecheck": "tsc --build --pretty false"
+    "typecheck": "tsc --build --pretty false",
+    "db:apply": "chiwire-db-migrate apply --schema mcps --dir schemas",
+    "db:plan": "chiwire-db-migrate plan --schema mcps --dir schemas",
+    "db:status": "chiwire-db-migrate status --schema mcps --dir schemas"
   },
   "dependencies": {
+    "@chiwire/core": "*",
+    "@chiwire/db-migrate": "*",
+    "@chiwire/mcps-config": "*",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "knex": "^3.1.0",
     "zod": "^4.4.3"
   }
 }

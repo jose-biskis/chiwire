@@ -1,0 +1,21 @@
+{
+  "name": "@chiwire/garita-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Garita API — internal infra backoffice backend.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --build --pretty false",
+    "db:apply": "chiwire-db-migrate apply --schema mcps --dir ../mcps/schemas",
+    "db:plan": "chiwire-db-migrate plan --schema mcps --dir ../mcps/schemas",
+    "db:status": "chiwire-db-migrate status --schema mcps --dir ../mcps/schemas"
+  },
+  "dependencies": {
+    "@chiwire/core": "*",
+    "@chiwire/db-migrate": "*",
+    "@chiwire/mcps-config": "*",
+    "knex": "^3.1.0"
+  }
+}

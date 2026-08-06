@@ -28,7 +28,10 @@ Acceptable scope forms: workspace name (`@chiwire/contimiti`), path (`apps/conti
 | vtacademy / valenstonic frontend | `apps/valenstonic-academy-frontend` | `packages/valenstonic-academy-shared` |
 | vtacademy-api / valenstonic backend | `apps/valenstonic-academy-backend` | `packages/core`, `packages/valenstonic-academy-shared`, `packages/db-migrate` |
 | hello / hello-http | `apps/hello-http` | — |
-| mcps | `apps/mcps` | — |
+| mcps | `apps/mcps` | `packages/core`, `packages/db-migrate`, `packages/mcps-config` |
+| garita / garita-frontend | `apps/garita-frontend` | `packages/ui` |
+| garita-api / garita-backend | `apps/garita-backend` | `packages/core`, `packages/db-migrate`, `packages/mcps-config` |
+| mcps-config | `packages/mcps-config` | `packages/core`, `packages/db-migrate` |
 | cachicamo | `apps/cachicamo-coding-agent-local` | `packages/ui` |
 | radiobemba | `apps/radiobemba` | `packages/core`, `packages/radiobemba-shared`, `packages/db-migrate` |
 | bemba | `apps/bemba` | `packages/radiobemba-shared` |

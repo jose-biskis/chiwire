@@ -45,9 +45,11 @@ export { getSchemaStatus, type SchemaStatus, type StatusOptions } from "./status
 export { splitSqlStatements } from "./sqlSplit.js";
 export {
   buildAddColumnSql,
+  buildDropColumnSql,
   formatTableDiffConflicts,
   planTableDiff,
   type AddColumnChange,
+  type DropColumnChange,
   type TableDiffConflict,
   type TableDiffPlan
 } from "./tableDiff.js";

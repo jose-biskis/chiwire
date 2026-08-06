@@ -29,6 +29,8 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 | Valenstonic Academy API | `@chiwire/valenstonic-academy-backend` | build then `npm run start:vtacademy-api` | 3001 |
 | hello-http smoke-test API | `@chiwire/hello-http` | build then `npm run start:hello` | 3000 |
 | self-hosted MCP servers | `@chiwire/mcps` | build then `npm run start:mcps` | 3000 |
+| Garita UI (internal) | `@chiwire/garita-frontend` | build then `npm run start:garita` / tunnel `:8060` | 3000 (host 8060) |
+| Garita API (internal) | `@chiwire/garita-backend` | build then `npm run start:garita-api` | 3001 local / host 8061 |
 | Prometheus + node_exporter | `apps/prometheus` | `npm run deploy:prometheus` | 9090 |
 | cAdvisor (containers) | `apps/cadvisor` | `npm run deploy:cadvisor` | 8080 |
 | Grafana dashboards | `apps/grafana` | `npm run deploy:grafana` | 3030 |

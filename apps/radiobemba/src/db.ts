@@ -32,6 +32,7 @@ export async function migrate(db: Knex): Promise<void> {
 
   console.log(
     `radiobemba schema applied (checksum ${result.checksum}, ` +
-      `create_tables=${result.createdTables}, add_columns=${result.addedColumns})`
+      `create_tables=${result.createdTables}, add_columns=${result.addedColumns}, ` +
+      `drop_columns=${result.droppedColumns})`
   );
 }

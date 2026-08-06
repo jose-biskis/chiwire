@@ -1,0 +1,18 @@
+{
+  "image": "chiwire/garita-frontend",
+  "tag": "latest",
+  "container": "garita-frontend",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 3000,
+    "visibility": "internal",
+    "hostPort": 8060,
+    "env": {
+      "API_BASE_URL": "http://garita-backend:3000"
+    },
+    "network": "chiwire"
+  }
+}

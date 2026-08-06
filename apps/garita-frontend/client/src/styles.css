@@ -1,0 +1,69 @@
+@import "@chiwire/ui/styles/theme.css";
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-foreground);
+  background: var(--color-background);
+}
+
+.garita-shell {
+  width: min(960px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2.5rem 0 4rem;
+}
+
+.garita-brand {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  margin: 0 0 0.35rem;
+  color: var(--color-foreground);
+}
+
+.garita-lede {
+  margin: 0 0 2rem;
+  max-width: 36rem;
+  color: var(--color-muted-foreground);
+}
+
+.garita-stack {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.garita-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.garita-field {
+  display: grid;
+  gap: 0.35rem;
+  flex: 1 1 12rem;
+}
+
+.garita-mono {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.garita-muted {
+  color: var(--color-muted-foreground);
+  font-size: 0.9rem;
+}
+
+.garita-error {
+  color: var(--color-destructive);
+  font-size: 0.9rem;
+}

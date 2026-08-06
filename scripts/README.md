@@ -107,7 +107,9 @@ npm run deploy:avila
 ```
 
 The self-hosted MCP servers app uses `apps/mcps/deploy.json` and can be
-deployed the same way:
+deployed the same way. Prefer managing Trello workspaces via Garita; optional
+`MCP_AUTH_SECRET` can still live in `.env.deploy.local` (see `apps/mcps/README.md`
+and `apps/garita-frontend/README.md` / `apps/garita-backend/README.md`):
 
 ```sh
 ./scripts/deploy-app.sh apps/mcps

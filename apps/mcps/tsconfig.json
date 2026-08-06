@@ -7,6 +7,17 @@
       "node"
     ]
   },
+  "references": [
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "../../packages/db-migrate"
+    },
+    {
+      "path": "../../packages/mcps-config"
+    }
+  ],
   "include": [
     "src/**/*.ts"
   ]

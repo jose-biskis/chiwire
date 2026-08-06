@@ -1,0 +1,23 @@
+{
+  "name": "@chiwire/mcps-config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared MCP config store (Postgres + Redis) for mcps and Garita.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build --pretty false"
+  },
+  "dependencies": {
+    "@chiwire/core": "*",
+    "@chiwire/db-migrate": "*",
+    "ioredis": "^5.6.1",
+    "knex": "^3.1.0"
+  }
+}

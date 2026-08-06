@@ -1,19 +1,78 @@
 # Chiwire MCPs
 
-`apps/mcps` is a deployable workspace for self-hosted Model Context Protocol
-servers. It exposes Streamable HTTP MCP endpoints at dynamic `/{server}` paths,
-plus simple `/` and `/health` endpoints for deployment smoke tests.
+Self-hosted Model Context Protocol servers. Trello credentials are managed by
+**Garita** (Postgres + Redis). Cursor only needs the MCP auth bearer secret.
+
+## Architecture
+
+```text
+Garita UI → Garita API → Postgres (mcps.*) → Redis cache
+                                         ↑
+Cursor → MCP_AUTH_SECRET → /trello  ─────┘
+```
+
+Each Trello workspace has its own API key and token. Tools take a
+`workspace` argument (`avilalabs`, `valenstonic`, …).
 
 ## Run locally
 
-From the repository root:
+### With Garita / Postgres / Redis (preferred)
 
 ```sh
+export PGHOST=127.0.0.1 PGUSER=postgres PGPASSWORD=postgres PGDATABASE=chiwire
+export REDIS_HOST=127.0.0.1
+# optional: export MCP_AUTH_SECRET=...
+
+npm run build --workspace @chiwire/core
+npm run build --workspace @chiwire/db-migrate
+npm run build --workspace @chiwire/mcps-config
 npm run build --workspace @chiwire/mcps
 npm run start:mcps
 ```
 
-Then smoke test the service:
+Configure workspaces in Garita, then point Cursor at `http://localhost:3000/trello`.
+
+### Env-only fallback (no Postgres)
+
+```sh
+export TRELLO_AVILALABS_API_KEY=...
+export TRELLO_AVILALABS_TOKEN=...
+export TRELLO_VALENSTONIC_API_KEY=...
+export TRELLO_VALENSTONIC_TOKEN=...
+
+npm run build --workspace @chiwire/mcps-config
+npm run build --workspace @chiwire/mcps
+npm run start:mcps
+```
+
+## Cursor (deployed)
+
+```json
+{
+  "mcpServers": {
+    "ChiwireTrello": {
+      "url": "https://mcps.avilalabs.dev/trello",
+      "headers": {
+        "Authorization": "Bearer ${env:AVILALABS_MCP_SECRET}"
+      }
+    }
+  }
+}
+```
+
+Set `AVILALABS_MCP_SECRET` in your OS env to the value managed in Garita
+(or `MCP_AUTH_SECRET` at deploy). Never put Trello keys in `mcp.json`.
+
+## Deploy
+
+```sh
+npm run deploy:mcps
+```
+
+`deploy.json` forwards `PGPASSWORD`, `REDIS_PASSWORD`, and optional
+`MCP_AUTH_SECRET`. Workspace credentials should live in the database via Garita.
+
+## Smoke test
 
 ```sh
 curl http://localhost:3000/
@@ -23,67 +82,3 @@ curl -X POST http://localhost:3000/trello \
   -H "accept: application/json, text/event-stream" \
   --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
-
-## Trello MCP tools
-
-This workspace includes Trello MCP tools for:
-
-- listing boards, lists, and cards
-- fetching a card
-- creating a card
-- updating or moving a card
-- adding a card comment
-
-The Trello MCP endpoint is `/trello`, so a deployed server can be used as
-`https://mcps.example.dev/trello`.
-
-Send these headers with MCP requests:
-
-```sh
-x-trello-api-key: your-trello-api-key
-x-trello-token: your-trello-token
-```
-
-The server falls back to these environment variables when headers are absent:
-
-```sh
-TRELLO_API_KEY=your-trello-api-key
-TRELLO_TOKEN=your-trello-token
-```
-
-Optionally send `x-trello-api-base-url` or set `TRELLO_API_BASE_URL` to override
-the Trello API base URL.
-
-Generate both from [trello.com/app-key](https://trello.com/app-key) while signed
-in to Trello.
-
-## Add your own MCPs
-
-Edit `src/index.ts` or add modules beside it to register your own MCP
-capabilities:
-
-- `server.registerTool(...)` for actions the model can call.
-- `server.registerResource(...)` for data the model can read.
-- `server.registerPrompt(...)` for reusable prompt templates.
-
-The Trello server includes a `server-info` tool, a `deployment-guide` resource,
-and a `trello-setup` resource so MCP clients can verify the endpoint and Trello
-setup.
-
-## Deploy to your own server
-
-Configure the SSH deployment environment from `scripts/README.md`, then run:
-
-```sh
-npm run deploy:mcps
-```
-
-The committed `deploy.json` binds the container internally on host port `8010`
-by default. Override it when deploying if you want a public port or a domain:
-
-```sh
-./scripts/deploy-app.sh apps/mcps --visibility domain --domain mcps.example.com
-```
-
-Set `MCP_ALLOWED_ORIGIN` in your server environment to restrict browser-based
-MCP clients.

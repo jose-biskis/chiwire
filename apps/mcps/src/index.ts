@@ -7,8 +7,27 @@ import {
   type StreamableHTTPServerTransportOptions,
 } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import type { Knex } from "knex";
 
+import {
+  closeRedis,
+  connectRedis,
+  databaseConfigured,
+  getDb,
+  migrateMcpsSchema,
+  redisConfigured,
+  warmConfigCache,
+} from "@chiwire/mcps-config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { isMcpAuthorized } from "./auth.js";
 import { registerTrelloMcp, type TrelloMcpConfig } from "./trello.js";
+import {
+  listConfiguredWorkspaceIds,
+  loadTrelloWorkspaceRegistry,
+  type TrelloWorkspaceRegistry,
+} from "./workspaces.js";
 
 const DEFAULT_PORT = 3000;
 const JSON_CONTENT_TYPE = "application/json; charset=utf-8";
@@ -17,8 +36,10 @@ type McpEndpoint = {
   name: string;
   path: string;
   description: string;
-  createServer(request: IncomingMessage): McpServer;
+  createServer(request: IncomingMessage, registry: TrelloWorkspaceRegistry): McpServer;
 };
+
+let db: Knex | null = null;
 
 function readPort(): number {
   const configuredPort = process.env.PORT ?? String(DEFAULT_PORT);
@@ -31,12 +52,12 @@ function readPort(): number {
   return port;
 }
 
-function corsHeaders(): Record<string, string> {
+function corsHeaders(allowedOrigin: string | undefined): Record<string, string> {
   return {
     "access-control-allow-headers":
-      "accept, authorization, content-type, mcp-protocol-version, x-trello-api-key, x-trello-token, x-trello-api-base-url",
+      "accept, authorization, content-type, mcp-protocol-version, x-mcp-auth, x-trello-api-key, x-trello-token, x-trello-api-base-url",
     "access-control-allow-methods": "GET, POST, OPTIONS",
-    "access-control-allow-origin": process.env.MCP_ALLOWED_ORIGIN ?? "*",
+    "access-control-allow-origin": allowedOrigin ?? process.env.MCP_ALLOWED_ORIGIN ?? "*",
   };
 }
 
@@ -51,30 +72,47 @@ function readHeader(request: IncomingMessage, name: string): string | undefined 
   return rawValue;
 }
 
-function readTrelloMcpConfig(request: IncomingMessage): TrelloMcpConfig {
-  const config: TrelloMcpConfig = {};
-  const apiKey = readHeader(request, "x-trello-api-key");
-  const token = readHeader(request, "x-trello-token");
+function readTrelloMcpConfig(
+  request: IncomingMessage,
+  registry: TrelloWorkspaceRegistry,
+): TrelloMcpConfig {
+  const authRequired = Boolean(registry.authSecret);
+  const allowClientCredentials = !authRequired;
+
+  const config: TrelloMcpConfig = {
+    registry,
+    allowClientCredentials,
+  };
+
   const baseUrl = readHeader(request, "x-trello-api-base-url");
-
-  if (apiKey !== undefined) {
-    config.apiKey = apiKey;
-  }
-
-  if (token !== undefined) {
-    config.token = token;
-  }
-
   if (baseUrl !== undefined) {
     config.baseUrl = baseUrl;
+  }
+
+  if (allowClientCredentials) {
+    const apiKey = readHeader(request, "x-trello-api-key");
+    const token = readHeader(request, "x-trello-token");
+
+    if (apiKey !== undefined) {
+      config.apiKey = apiKey;
+    }
+
+    if (token !== undefined) {
+      config.token = token;
+    }
   }
 
   return config;
 }
 
-function writeJson(response: ServerResponse, statusCode: number, body: unknown): void {
+function writeJson(
+  response: ServerResponse,
+  statusCode: number,
+  body: unknown,
+  allowedOrigin?: string,
+): void {
   response.writeHead(statusCode, {
-    ...corsHeaders(),
+    ...corsHeaders(allowedOrigin),
     "content-type": JSON_CONTENT_TYPE,
   });
   response.end(`${JSON.stringify(body, null, 2)}\n`);
@@ -83,8 +121,9 @@ function writeJson(response: ServerResponse, statusCode: number, body: unknown):
 function createTrelloMcpServer(trelloConfig: TrelloMcpConfig): McpServer {
   const server = new McpServer({
     name: "chiwire-trello-mcp",
-    version: "0.1.0",
+    version: "0.3.0",
   });
+  const workspaces = listConfiguredWorkspaceIds(trelloConfig.registry);
 
   server.registerTool(
     "server-info",
@@ -101,8 +140,12 @@ function createTrelloMcpServer(trelloConfig: TrelloMcpConfig): McpServer {
           type: "text",
           text: [
             "Chiwire Trello MCP is available at `/trello`.",
-            "It includes tools for listing boards, lists, and cards; creating cards; updating cards; and adding comments.",
-            "Send x-trello-api-key and x-trello-token headers with MCP requests, or set TRELLO_API_KEY and TRELLO_TOKEN in the server environment before using Trello tools.",
+            "Trello credentials stay on the server (Garita → Postgres → Redis cache).",
+            "Callers authenticate with `Authorization: Bearer <MCP_AUTH_SECRET>` when configured.",
+            "Pass `workspace` on Trello tools (e.g. `avilalabs`, `valenstonic`).",
+            workspaces.length > 0
+              ? `Configured workspaces: ${workspaces.join(", ")}.`
+              : "No workspaces configured yet.",
           ].join("\n"),
         },
       ],
@@ -127,11 +170,9 @@ function createTrelloMcpServer(trelloConfig: TrelloMcpConfig): McpServer {
           text: [
             "# Chiwire MCPs",
             "",
-            "This workspace exposes MCP servers over Streamable HTTP at dynamic `/{server}` paths.",
-            "The Trello MCP server is available at `/trello`.",
-            "Use `PORT` to choose the listen port and `MCP_ALLOWED_ORIGIN` to restrict browser clients.",
-            "Trello tools accept `x-trello-api-key` and `x-trello-token` request headers, then fall back to `TRELLO_API_KEY` and `TRELLO_TOKEN` environment variables.",
-            "Deploy with `npm run deploy:mcps` after configuring your SSH deployment environment.",
+            "Manage Trello workspaces and MCP auth via Garita (internal).",
+            "Config is stored in Postgres schema `mcps` and cached in Redis.",
+            "Deploy with `npm run deploy:mcps` after Postgres/Redis are available.",
           ].join("\n"),
         },
       ],
@@ -145,8 +186,9 @@ const mcpEndpoints: Record<string, McpEndpoint> = {
   trello: {
     name: "trello",
     path: "/trello",
-    description: "Trello boards, lists, cards, and comments.",
-    createServer: (request) => createTrelloMcpServer(readTrelloMcpConfig(request)),
+    description: "Trello boards, lists, cards, and comments (multi-workspace).",
+    createServer: (request, registry) =>
+      createTrelloMcpServer(readTrelloMcpConfig(request, registry)),
   },
 };
 
@@ -173,12 +215,13 @@ async function handleMcpRequest(
   request: IncomingMessage,
   response: ServerResponse,
   endpoint: McpEndpoint,
+  registry: TrelloWorkspaceRegistry,
 ): Promise<void> {
-  Object.entries(corsHeaders()).forEach(([header, value]) => response.setHeader(header, value));
+  Object.entries(corsHeaders(registry.allowedOrigin)).forEach(([header, value]) =>
+    response.setHeader(header, value),
+  );
 
-  const server = endpoint.createServer(request);
-  // The SDK documents `undefined` as stateless mode, but its published option
-  // type is narrower when `exactOptionalPropertyTypes` is enabled.
+  const server = endpoint.createServer(request, registry);
   const statelessOptions = {
     sessionIdGenerator: undefined,
   } as unknown as StreamableHTTPServerTransportOptions;
@@ -195,72 +238,140 @@ async function handleMcpRequest(
   } catch (error) {
     console.error("Error handling MCP request", error);
     if (!response.headersSent) {
-      writeJson(response, 500, {
-        jsonrpc: "2.0",
-        error: {
-          code: -32603,
-          message: "Internal server error",
+      writeJson(
+        response,
+        500,
+        {
+          jsonrpc: "2.0",
+          error: {
+            code: -32603,
+            message: "Internal server error",
+          },
+          id: null,
         },
-        id: null,
-      });
+        registry.allowedOrigin,
+      );
     }
   }
 }
 
-const port = readPort();
+async function bootstrap(): Promise<void> {
+  const schemasRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../schemas");
 
-const server = createServer((request, response) => {
-  const method = request.method ?? "GET";
-  const url = new URL(request.url ?? "/", "http://localhost");
-
-  if (method === "OPTIONS") {
-    response.writeHead(204, corsHeaders());
-    response.end();
-    return;
-  }
-
-  if (method === "GET" && url.pathname === "/") {
-    writeJson(response, 200, {
-      name: "chiwire-mcps",
-      description: "Self-hosted Model Context Protocol servers.",
-      endpoints: {
-        health: "/health",
-        mcps: listMcpEndpoints(),
-      },
-    });
-    return;
-  }
-
-  if (method === "GET" && url.pathname === "/health") {
-    writeJson(response, 200, { ok: true });
-    return;
-  }
-
-  const endpoint = readMcpEndpoint(url.pathname);
-
-  if (endpoint !== undefined && (method === "GET" || method === "POST")) {
-    void handleMcpRequest(request, response, endpoint);
-    return;
-  }
-
-  writeJson(response, 404, { error: "Not found" });
-});
-
-server.listen(port, "0.0.0.0", () => {
-  console.log(`chiwire-mcps listening on port ${port}`);
-});
-
-function shutdown(signal: NodeJS.Signals): void {
-  console.log(`received ${signal}; closing server`);
-  server.close((error) => {
-    if (error) {
-      console.error(error);
-      process.exitCode = 1;
+  if (databaseConfigured()) {
+    db = getDb();
+    await migrateMcpsSchema(db, schemasRoot);
+    if (redisConfigured()) {
+      try {
+        await connectRedis();
+        await warmConfigCache(db);
+        console.log("mcps config cache warmed from Postgres into Redis");
+      } catch (error) {
+        console.warn("mcps Redis warm failed; will fall back to Postgres/env", error);
+      }
     }
+  } else {
+    console.log("mcps database not configured; using environment credentials only");
+  }
 
-    process.exit();
+  const port = readPort();
+  const initialRegistry = await loadTrelloWorkspaceRegistry(db);
+
+  const server = createServer((request, response) => {
+    void (async () => {
+      const method = request.method ?? "GET";
+      const url = new URL(request.url ?? "/", "http://localhost");
+      const registry = await loadTrelloWorkspaceRegistry(db);
+
+      if (method === "OPTIONS") {
+        response.writeHead(204, corsHeaders(registry.allowedOrigin));
+        response.end();
+        return;
+      }
+
+      if (method === "GET" && url.pathname === "/") {
+        writeJson(
+          response,
+          200,
+          {
+            name: "chiwire-mcps",
+            description: "Self-hosted Model Context Protocol servers.",
+            authRequired: Boolean(registry.authSecret),
+            configSource: registry.source,
+            workspaces: listConfiguredWorkspaceIds(registry),
+            endpoints: {
+              health: "/health",
+              mcps: listMcpEndpoints(),
+            },
+          },
+          registry.allowedOrigin,
+        );
+        return;
+      }
+
+      if (method === "GET" && url.pathname === "/health") {
+        writeJson(response, 200, { ok: true }, registry.allowedOrigin);
+        return;
+      }
+
+      const endpoint = readMcpEndpoint(url.pathname);
+
+      if (endpoint !== undefined && (method === "GET" || method === "POST")) {
+        if (!isMcpAuthorized(request, registry.authSecret)) {
+          writeJson(
+            response,
+            401,
+            {
+              error: "Unauthorized",
+              message:
+                "Send Authorization: Bearer <MCP_AUTH_SECRET> or x-mcp-auth: <MCP_AUTH_SECRET>.",
+            },
+            registry.allowedOrigin,
+          );
+          return;
+        }
+
+        await handleMcpRequest(request, response, endpoint, registry);
+        return;
+      }
+
+      writeJson(response, 404, { error: "Not found" }, registry.allowedOrigin);
+    })();
   });
+
+  server.listen(port, "0.0.0.0", () => {
+    const workspaces = listConfiguredWorkspaceIds(initialRegistry);
+    console.log(`chiwire-mcps listening on port ${port}`);
+    console.log(
+      `mcp auth: ${initialRegistry.authSecret ? "required" : "disabled (local)"}`,
+    );
+    console.log(`config source: ${initialRegistry.source}`);
+    console.log(
+      `trello workspaces: ${workspaces.length > 0 ? workspaces.join(", ") : "(none configured)"}`,
+    );
+  });
+
+  function shutdown(signal: NodeJS.Signals): void {
+    console.log(`received ${signal}; closing server`);
+    server.close((error) => {
+      void (async () => {
+        if (error) {
+          console.error(error);
+          process.exitCode = 1;
+        }
+
+        await closeRedis().catch(() => undefined);
+        if (db) {
+          await db.destroy().catch(() => undefined);
+        }
+
+        process.exit();
+      })();
+    });
+  }
+
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
 
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+await bootstrap();
