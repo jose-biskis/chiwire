@@ -37,6 +37,7 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 | Cachicamo Coding Agent Local (Electron) | `@chiwire/cachicamo-coding-agent-local` | `npm run dev:cachicamo-coding-agent-local` | desktop app |
 | Radiobemba tunnel server | `@chiwire/radiobemba` | `npm run dev:radiobemba` (HTTP :3000 + SSH :2222) | 3000 / 2222 |
 | Bemba tunnel CLI | `@chiwire/bemba` | build then `npm run bemba -- http <port>` | n/a |
+| Vane media catalog (internal) | `@chiwire/vane` | build then `npm run start:vane` | 3000 |
 
 Shared code lives under `packages/` (`@chiwire/core` has ids, TTL, Knex/pg, and
 BullMQ helpers; `@chiwire/ui` has base contract + archetype React primitives
@@ -106,9 +107,12 @@ npm run dev:radiobemba
 
 # Design system Storybook (dev UI on :6006)
 npm run dev:design-system
+
+# Vane Instagram media catalog (internal; reads MEDIAS.TXT)
+npm run dev:vane
 ```
 
-hello-http, Contimiti, Bull Board, MCP servers, Radiobemba, and the design-system
+hello-http, Contimiti, Bull Board, MCP servers, Radiobemba, Vane, and the design-system
 static server must be built before their start scripts — they run `node dist/...`.
 
 ### Lint / test notes

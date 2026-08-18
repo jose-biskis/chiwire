@@ -1,0 +1,358 @@
+@import "@chiwire/ui/styles/theme.css";
+
+:root {
+  --vane-font: "IBM Plex Sans", var(--font-sans);
+  --vane-mono: "IBM Plex Mono", var(--font-mono);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--vane-font);
+  color: var(--color-foreground);
+  background: var(--color-background);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+  z-index: 30;
+}
+
+.vane-app {
+  display: grid;
+  grid-template-columns: 22rem minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.vane-rail {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
+  padding: 1.5rem 1.25rem 2.5rem;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-card);
+}
+
+.vane-brand {
+  margin: 0;
+  font-family: var(--vane-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.vane-lede {
+  margin: 0.45rem 0 1.4rem;
+  color: var(--color-muted-foreground);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.vane-stack {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.vane-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.vane-label {
+  font-family: var(--vane-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
+.vane-select,
+.vane-filter-value {
+  height: 2.25rem;
+  width: 100%;
+  border: 1px solid var(--color-input);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-foreground);
+  font-family: var(--vane-font);
+  font-size: 0.875rem;
+  padding: 0 0.7rem;
+}
+
+.vane-filter-row {
+  display: grid;
+  grid-template-columns: 1fr 5.6rem 1fr auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.vane-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.vane-chip {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-foreground);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+  font-family: var(--vane-mono);
+}
+
+.vane-chip[data-on="true"] {
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  border-color: transparent;
+}
+
+.vane-main {
+  padding: 1.25rem 1.5rem 3rem;
+}
+
+.vane-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: 1.1rem;
+}
+
+.vane-count {
+  font-family: var(--vane-mono);
+  font-size: 0.78rem;
+  color: var(--color-muted-foreground);
+  letter-spacing: 0.04em;
+}
+
+.vane-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 0.7rem;
+}
+
+.vane-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #111;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  animation: vane-rise 420ms ease both;
+}
+
+.vane-card:nth-child(2) {
+  animation-delay: 40ms;
+}
+.vane-card:nth-child(3) {
+  animation-delay: 80ms;
+}
+.vane-card:nth-child(4) {
+  animation-delay: 120ms;
+}
+
+.vane-frame {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  background: #0a0a0a;
+}
+
+.vane-frame img,
+.vane-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vane-frame video {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.vane-card[data-playing="true"] video {
+  opacity: 1;
+}
+
+.vane-missing {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--color-muted-foreground);
+  font-family: var(--vane-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.vane-card-meta {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 1.6rem 0.55rem 0.5rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.82));
+  color: #f4f4f5;
+}
+
+.vane-card-kicker {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-family: var(--vane-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.vane-caption {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.vane-pager {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1.4rem;
+}
+
+.vane-error {
+  color: var(--color-destructive);
+  font-size: 0.9rem;
+}
+
+.vane-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 24rem;
+  background: rgba(8, 8, 8, 0.92);
+}
+
+.vane-stage {
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  min-height: 0;
+}
+
+.vane-stage img,
+.vane-stage video {
+  max-width: 100%;
+  max-height: calc(100vh - 3rem);
+  object-fit: contain;
+  background: #000;
+}
+
+.vane-inspect {
+  overflow: auto;
+  padding: 1.25rem 1.15rem 2rem;
+  background: var(--color-card);
+  border-left: 1px solid var(--color-border);
+}
+
+.vane-inspect h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.vane-kv {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.vane-kv dt {
+  color: var(--color-muted-foreground);
+  font-family: var(--vane-mono);
+  font-size: 0.68rem;
+}
+
+.vane-kv dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.vane-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: rgba(24, 24, 24, 0.8);
+  color: #fff;
+  cursor: pointer;
+}
+
+.vane-nav[data-side="prev"] {
+  left: 1rem;
+}
+
+.vane-nav[data-side="next"] {
+  right: calc(24rem + 1rem);
+}
+
+@keyframes vane-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .vane-app {
+    grid-template-columns: 1fr;
+  }
+
+  .vane-rail {
+    position: relative;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .vane-lightbox {
+    grid-template-columns: 1fr;
+  }
+
+  .vane-nav[data-side="next"] {
+    right: 1rem;
+  }
+}
