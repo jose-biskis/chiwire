@@ -158,7 +158,7 @@ export const AGENT_TOOLS: Tool[] = [
     function: {
       name: "spawn_subagent",
       description:
-        "Delegate a focused subtask to a subagent. explore=read-only, shell=commands+read, general=full edit tools (no nested subagents).",
+        "Start a Multitask worker. explore=read-only, shell=commands+read, general=full edit tools (no nested subagents). Returns immediately unless wait=true. Parallel (default) starts now; series queues behind the current worker. Use await_subagents to collect results.",
       parameters: {
         type: "object",
         required: ["type", "task"],
@@ -170,12 +170,42 @@ export const AGENT_TOOLS: Tool[] = [
           task: {
             type: "string",
             description: "Clear instructions for the subagent."
+          },
+          wait: {
+            type: "boolean",
+            description:
+              "If true, block until the worker finishes and return its summary. Default false (background)."
+          },
+          mode: {
+            type: "string",
+            description:
+              "parallel | series. Default is the Multitask setting (parallel). series = one worker at a time."
+          }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "await_subagents",
+      description:
+        "Wait for background Multitask workers to finish and return their summaries. Omit ids to wait for all running workers.",
+      parameters: {
+        type: "object",
+        properties: {
+          ids: {
+            type: "array",
+            items: { type: "string" },
+            description: "Worker ids returned by spawn_subagent. Omit to await all running workers."
           }
         }
       }
     }
   }
 ];
+
+export const COORDINATOR_TOOL_NAMES = new Set(["spawn_subagent", "await_subagents"]);
 
 const READ_TOOL_NAMES = new Set([
   "list_dir",
@@ -202,7 +232,11 @@ export function toolsForSubagent(type: "explore" | "shell" | "general"): Tool[] 
   if (type === "shell") {
     return AGENT_TOOLS.filter((t) => SHELL_TOOL_NAMES.has(toolName(t)));
   }
-  return AGENT_TOOLS.filter((t) => toolName(t) !== "spawn_subagent");
+  return AGENT_TOOLS.filter((t) => !COORDINATOR_TOOL_NAMES.has(toolName(t)));
+}
+
+export function toolNamesForSubagent(type: "explore" | "shell" | "general"): string[] {
+  return toolsForSubagent(type).map(toolName).sort();
 }
 
 export function localToolNames(): Set<string> {

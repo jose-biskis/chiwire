@@ -1,21 +1,75 @@
 import { randomBytes } from "node:crypto";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { app } from "electron";
-import { DEFAULT_SETTINGS, type AgentSettings, type McpServerConfig } from "../shared/types.js";
+import {
+  asSubagentRunMode,
+  DEFAULT_SETTINGS,
+  type AgentSettings,
+  type McpServerConfig,
+  type OllamaMode
+} from "../shared/types.js";
 
-function settingsPath(): string {
-  return join(app.getPath("userData"), "cachicamo-coding-agent-local-settings.json");
+/** Stable folder name — scoped package name / productName would otherwise split userData. */
+export const APP_USER_DIR = "cachicamo-coding-agent-local";
+const SETTINGS_FILE = "cachicamo-coding-agent-local-settings.json";
+
+export function ensureAppIdentity(): void {
+  app.setName(APP_USER_DIR);
+  if (process.platform === "win32") {
+    app.setAppUserModelId(`com.chiwire.${APP_USER_DIR}`);
+  }
 }
 
 function newApiToken(): string {
   return randomBytes(24).toString("hex");
 }
 
+function asOllamaMode(value: unknown): OllamaMode {
+  return value === "cloud" ? "cloud" : "local";
+}
+
+export function settingsPath(): string {
+  return join(app.getPath("userData"), SETTINGS_FILE);
+}
+
+function legacySettingsPaths(): string[] {
+  const home = homedir();
+  const file = SETTINGS_FILE;
+  return [
+    join(home, ".config", "@chiwire", "cachicamo-coding-agent-local", file),
+    join(home, ".config", "Electron", file),
+    join(home, ".config", "Cachicamo Coding Agent Local", file),
+    join(home, ".config", "cachicamo-coding-agent-local", file)
+  ];
+}
+
+function migrateLegacySettings(dest: string): void {
+  if (existsSync(dest)) return;
+  const destDir = dirname(dest);
+  for (const candidate of legacySettingsPaths()) {
+    if (candidate === dest || !existsSync(candidate)) continue;
+    try {
+      mkdirSync(destDir, { recursive: true });
+      writeFileSync(dest, readFileSync(candidate, "utf8"), "utf8");
+      console.log(`[cachicamo] Migrated settings from ${candidate}`);
+      return;
+    } catch (error) {
+      console.warn(`[cachicamo] Could not migrate settings from ${candidate}:`, error);
+    }
+  }
+}
+
 function normalizeSettings(raw: Partial<AgentSettings>): AgentSettings {
   const merged: AgentSettings = {
     ...DEFAULT_SETTINGS,
     ...raw,
+    mode: asOllamaMode(raw.mode),
+    localHost: typeof raw.localHost === "string" ? raw.localHost : DEFAULT_SETTINGS.localHost,
+    cloudHost: typeof raw.cloudHost === "string" ? raw.cloudHost : DEFAULT_SETTINGS.cloudHost,
+    apiKey: typeof raw.apiKey === "string" ? raw.apiKey : DEFAULT_SETTINGS.apiKey,
+    model: typeof raw.model === "string" && raw.model.trim() ? raw.model : DEFAULT_SETTINGS.model,
     mcpServers: Array.isArray(raw.mcpServers)
       ? raw.mcpServers.map(
           (server): McpServerConfig => ({
@@ -29,7 +83,8 @@ function normalizeSettings(raw: Partial<AgentSettings>): AgentSettings {
         )
       : [],
     uiArchetype: raw.uiArchetype === "valenstonic" ? "valenstonic" : "internal",
-    uiColorMode: raw.uiColorMode === "light" ? "light" : "dark"
+    uiColorMode: raw.uiColorMode === "light" ? "light" : "dark",
+    subagentRunMode: asSubagentRunMode(raw.subagentRunMode)
   };
 
   if (!merged.apiToken.trim()) {
@@ -39,8 +94,17 @@ function normalizeSettings(raw: Partial<AgentSettings>): AgentSettings {
   return merged;
 }
 
+function writeAtomic(path: string, contents: string): void {
+  mkdirSync(dirname(path), { recursive: true });
+  const tmp = `${path}.${process.pid}.tmp`;
+  writeFileSync(tmp, contents, "utf8");
+  renameSync(tmp, path);
+}
+
 export function loadSettings(): AgentSettings {
   const path = settingsPath();
+  migrateLegacySettings(path);
+
   if (!existsSync(path)) {
     const fresh = normalizeSettings({});
     saveSettings(fresh);
@@ -54,16 +118,23 @@ export function loadSettings(): AgentSettings {
       saveSettings(normalized);
     }
     return normalized;
-  } catch {
-    const fresh = normalizeSettings({});
-    saveSettings(fresh);
-    return fresh;
+  } catch (error) {
+    console.error(`[cachicamo] Failed to read settings at ${path}; keeping file and using defaults.`, error);
+    return normalizeSettings({});
   }
 }
 
-export function saveSettings(settings: AgentSettings): void {
+export function saveSettings(settings: AgentSettings): AgentSettings {
   const path = settingsPath();
-  mkdirSync(dirname(path), { recursive: true });
   const normalized = normalizeSettings(settings);
-  writeFileSync(path, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+  writeAtomic(path, `${JSON.stringify(normalized, null, 2)}\n`);
+  return normalized;
+}
+
+export function apiListenChanged(previous: AgentSettings, next: AgentSettings): boolean {
+  return (
+    previous.apiEnabled !== next.apiEnabled ||
+    previous.apiPort !== next.apiPort ||
+    previous.apiToken !== next.apiToken
+  );
 }

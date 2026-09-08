@@ -3,16 +3,33 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startApiServer, type ApiServerHandle } from "./api/server.js";
-import { runAgent } from "./agent/loop.js";
+import { createSubagentRunner, runAgent } from "./agent/loop.js";
+import { WorkerCoordinator } from "./agent/multitask.js";
 import { listModels } from "./agent/ollamaClient.js";
 import { listRules } from "./agent/rules.js";
 import { listSkills } from "./agent/skills.js";
-import { loadSettings, saveSettings } from "./settings.js";
+import { listDebugFixtures, runAllDebugFixtures, runDebugFixture } from "./debug/fixtures.js";
+import {
+  apiListenChanged,
+  ensureAppIdentity,
+  loadSettings,
+  saveSettings,
+  settingsPath
+} from "./settings.js";
 import type { AgentSettings, AgentStreamEvent } from "../shared/types.js";
+
+ensureAppIdentity();
 
 let mainWindow: BrowserWindow | null = null;
 let activeAbort: AbortController | null = null;
+let agentRunId = 0;
 let apiHandle: ApiServerHandle | null = null;
+
+const coordinator = new WorkerCoordinator({
+  emit: (event) => {
+    mainWindow?.webContents.send("agent:event", event);
+  }
+});
 
 const isDev = !app.isPackaged;
 
@@ -101,19 +118,39 @@ async function restartApiServer(): Promise<void> {
     }
     apiHandle = null;
   }
-  apiHandle = await startApiServer(loadSettings, { onEvent: emitAgentEvent });
+  apiHandle = await startApiServer(loadSettings, { onEvent: emitAgentEvent, coordinator });
+}
+
+let settingsLock: Promise<void> = Promise.resolve();
+
+function withSettingsLock<T>(fn: () => Promise<T>): Promise<T> {
+  const run = settingsLock.then(fn, fn);
+  settingsLock = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
 }
 
 function registerIpc(): void {
   ipcMain.handle("settings:get", () => loadSettings());
 
-  ipcMain.handle("settings:set", async (_event, next: AgentSettings) => {
-    saveSettings(next);
-    const saved = loadSettings();
-    applyNativeTheme(saved);
-    await restartApiServer();
-    return saved;
-  });
+  ipcMain.handle("settings:set", (_event, next: AgentSettings) =>
+    withSettingsLock(async () => {
+      const previous = loadSettings();
+      const saved = saveSettings(next);
+      coordinator.setRunMode(saved.subagentRunMode);
+      applyNativeTheme(saved);
+      if (apiListenChanged(previous, saved)) {
+        try {
+          await restartApiServer();
+        } catch (error) {
+          console.warn("[cachicamo] API restart after settings save failed:", error);
+        }
+      }
+      return saved;
+    })
+  );
 
   ipcMain.handle("workspace:pick", async () => {
     const result = await dialog.showOpenDialog({
@@ -164,6 +201,7 @@ function registerIpc(): void {
       if (activeAbort) {
         activeAbort.abort();
       }
+      const runId = ++agentRunId;
       activeAbort = new AbortController();
       const settings = loadSettings();
       await runAgent({
@@ -171,9 +209,17 @@ function registerIpc(): void {
         history: payload.history,
         userMessage: payload.userMessage,
         signal: activeAbort.signal,
-        onEvent: emitAgentEvent
+        onEvent: (event) => {
+          if (runId !== agentRunId && (event.type === "done" || event.type === "error")) {
+            return;
+          }
+          emitAgentEvent(event);
+        },
+        coordinator
       });
-      activeAbort = null;
+      if (runId === agentRunId) {
+        activeAbort = null;
+      }
     }
   );
 
@@ -181,6 +227,30 @@ function registerIpc(): void {
     activeAbort?.abort();
     activeAbort = null;
   });
+
+  ipcMain.handle("workers:list", () => coordinator.list());
+
+  ipcMain.handle("workers:cancel", (_event, id: string) => coordinator.cancel(id));
+
+  ipcMain.handle("workers:cancelAll", () => {
+    coordinator.cancelAll();
+  });
+
+  ipcMain.handle("workers:resume", async (_event, id: string, task: string) => {
+    const settings = loadSettings();
+    const result = await coordinator.resume({
+      id,
+      task,
+      run: createSubagentRunner({ settings, depth: 0 })
+    });
+    return { id: result.id, message: result.message };
+  });
+
+  ipcMain.handle("debug:listFixtures", () => listDebugFixtures());
+
+  ipcMain.handle("debug:runFixture", (_event, id: string) => runDebugFixture(id));
+
+  ipcMain.handle("debug:runAll", () => runAllDebugFixtures());
 
   ipcMain.handle("window:minimize", () => {
     mainWindow?.minimize();
@@ -203,7 +273,11 @@ function registerIpc(): void {
 }
 
 app.whenReady().then(async () => {
-  applyNativeTheme(loadSettings());
+  ensureAppIdentity();
+  const startup = loadSettings();
+  coordinator.setRunMode(startup.subagentRunMode);
+  applyNativeTheme(startup);
+  console.log(`[cachicamo] Settings file: ${settingsPath()}`);
   // Kill native File/Edit/View/Help — replaced by the in-app title bar.
   Menu.setApplicationMenu(null);
   registerIpc();

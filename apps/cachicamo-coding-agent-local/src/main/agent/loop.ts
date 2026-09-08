@@ -6,12 +6,19 @@ import type {
   SubagentType,
   ToolCallEvent
 } from "../../shared/types.js";
+import { asSubagentRunMode } from "../../shared/types.js";
 import { callMcpTool, openMcpSession, type McpSession } from "./mcp.js";
+import {
+  workerDigestText,
+  type WorkerCoordinator,
+  type WorkerRunFn
+} from "./multitask.js";
 import { createOllamaClient } from "./ollamaClient.js";
 import { loadRulesText } from "./rules.js";
 import { loadSkill, skillsCatalogText } from "./skills.js";
 import {
   AGENT_TOOLS,
+  COORDINATOR_TOOL_NAMES,
   executeTool,
   localToolNames,
   toolsForSubagent
@@ -27,7 +34,10 @@ Core rules:
 - If a command fails, diagnose from the output before retrying.
 - Never exfiltrate secrets. Do not commit unless asked.
 - When a listed skill matches the task, call load_skill before improvising.
-- Use spawn_subagent for parallelizable or specialized subtasks (explore/shell/general).
+- Use spawn_subagent for specialized subtasks (explore/shell/general). It starts a background worker and returns immediately unless wait=true.
+- Workers run in parallel by default (several at once). Pass mode="series" or honor the user's series setting to queue them one after another.
+- After spawning one or more workers, keep coordinating or call await_subagents to collect their summaries.
+- The user can keep chatting while workers run. Finished worker results may appear at the start of a later turn.
 - MCP tools are prefixed mcp__<server>__<tool>.`;
 
 export type RunAgentInput = {
@@ -42,6 +52,7 @@ export type RunAgentInput = {
   parentId?: string;
   systemSuffix?: string;
   mcpSession?: McpSession | null;
+  coordinator?: WorkerCoordinator;
 };
 
 function parseArgs(raw: string | Record<string, unknown> | undefined): Record<string, unknown> {
@@ -107,6 +118,14 @@ function buildSystemPrompt(settings: AgentSettings, suffix?: string): string {
 
   if (settings.skillsEnabled) {
     parts.push(`# Available skills\n${skillsCatalogText(settings.workspacePath)}`);
+  }
+
+  if (settings.maxSubagentDepth > 0) {
+    parts.push(
+      settings.subagentRunMode === "series"
+        ? "# Multitask\nWorkers run in series: only one at a time. Later spawn_subagent calls wait in queue."
+        : "# Multitask\nWorkers run in parallel: several can run at once. Pass mode=series when a later worker depends on an earlier result."
+    );
   }
 
   if (suffix?.trim()) {
@@ -175,32 +194,52 @@ async function streamChatTurn(params: {
   return message;
 }
 
-async function runSubagent(params: {
+function asBool(value: unknown): boolean {
+  return value === true || value === "true";
+}
+
+function asStringArray(value: unknown): string[] | undefined {
+  if (value == null) return undefined;
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string");
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === "string");
+      }
+    } catch {
+      return value.trim() ? [value.trim()] : undefined;
+    }
+  }
+  return undefined;
+}
+
+/** Run a child agent loop. Lifecycle events are owned by WorkerCoordinator. */
+export async function executeSubagentWork(params: {
+  id: string;
   settings: AgentSettings;
   type: SubagentType;
   task: string;
   depth: number;
   onEvent: (event: AgentStreamEvent) => void;
   signal?: AbortSignal;
-  mcpSession: McpSession | null;
 }): Promise<string> {
-  const id = randomUUID();
-  const { settings, type, task, depth, onEvent, mcpSession } = params;
-
-  onEvent({
-    type: "subagent_start",
-    id,
-    name: `${type}-agent`,
-    agentType: type,
-    task
-  });
+  const { id, settings, type, task, depth, onEvent } = params;
 
   let summary = "";
+  let mcpSession: McpSession | null = null;
+  let ownsMcpSession = false;
+
+  if (type === "general" && settings.mcpServers.some((server) => server.enabled)) {
+    mcpSession = await openMcpSession(settings.mcpServers);
+    ownsMcpSession = true;
+  }
+
   const childTools = toolsForSubagent(type);
   const tools =
-    type === "general" && mcpSession
-      ? [...childTools, ...mcpSession.ollamaTools]
-      : childTools;
+    type === "general" && mcpSession ? [...childTools, ...mcpSession.ollamaTools] : childTools;
 
   const childInput: RunAgentInput = {
     settings: {
@@ -237,11 +276,30 @@ async function runSubagent(params: {
     childInput.signal = params.signal;
   }
 
-  await runAgent(childInput);
+  try {
+    await runAgent(childInput);
+    return summary.trim() || "(subagent finished with no text)";
+  } finally {
+    if (ownsMcpSession && mcpSession) {
+      await mcpSession.close();
+    }
+  }
+}
 
-  const trimmed = summary.trim() || "(subagent finished with no text)";
-  onEvent({ type: "subagent_end", id, summary: trimmed });
-  return trimmed;
+export function createSubagentRunner(params: {
+  settings: AgentSettings;
+  depth: number;
+}): WorkerRunFn {
+  return ({ id, type, task, signal, onEvent }) =>
+    executeSubagentWork({
+      id,
+      settings: params.settings,
+      type,
+      task,
+      depth: params.depth,
+      onEvent,
+      signal
+    });
 }
 
 export async function runAgent(input: RunAgentInput): Promise<void> {
@@ -256,7 +314,8 @@ export async function runAgent(input: RunAgentInput): Promise<void> {
     allowSubagents = depth === 0 && settings.maxSubagentDepth > 0,
     parentId,
     systemSuffix,
-    mcpSession: mcpSessionInput
+    mcpSession: mcpSessionInput,
+    coordinator
   } = input;
 
   if (!settings.workspacePath) {
@@ -281,8 +340,10 @@ export async function runAgent(input: RunAgentInput): Promise<void> {
   }
 
   const builtinTools = (toolsOverride ?? AGENT_TOOLS).filter((tool) => {
+    const name = tool.function.name;
+    if (!name) return false;
     if (allowSubagents) return true;
-    return tool.function.name !== "spawn_subagent";
+    return !COORDINATOR_TOOL_NAMES.has(name);
   });
 
   const tools: Tool[] =
@@ -293,9 +354,21 @@ export async function runAgent(input: RunAgentInput): Promise<void> {
   const knownLocal = localToolNames();
   const messages: Message[] = [
     { role: "system", content: buildSystemPrompt(settings, systemSuffix) },
-    ...history.map((m) => ({ role: m.role, content: m.content })),
-    { role: "user", content: userMessage }
+    ...history.map((m) => ({ role: m.role, content: m.content }))
   ];
+
+  if (depth === 0 && coordinator) {
+    const finished = coordinator.unconsumedFinished();
+    if (finished.length > 0) {
+      messages.push({
+        role: "system",
+        content: `Finished background workers since your last turn:\n\n${workerDigestText(finished)}\n\nSynthesize these results for the user when relevant. Do not repeat the same work.`
+      });
+      coordinator.markConsumed(finished.map((worker) => worker.id));
+    }
+  }
+
+  messages.push({ role: "user", content: userMessage });
 
   const skillHelpers = {
     listSkillsText: () => skillsCatalogText(settings.workspacePath),
@@ -356,21 +429,25 @@ export async function runAgent(input: RunAgentInput): Promise<void> {
             if (!allowSubagents || depth >= settings.maxSubagentDepth) {
               throw new Error("Subagents are not allowed at this depth.");
             }
+            if (!coordinator) {
+              throw new Error("Multitask coordinator is not available.");
+            }
             const type = asSubagentType(args.type);
             const task = typeof args.task === "string" ? args.task : "";
             if (!task.trim()) throw new Error("spawn_subagent requires task");
-            const subParams: Parameters<typeof runSubagent>[0] = {
-              settings,
+            const spawned = await coordinator.spawn({
               type,
               task,
-              depth,
-              onEvent,
-              mcpSession
-            };
-            if (signal) {
-              subParams.signal = signal;
+              wait: asBool(args.wait),
+              mode: args.mode == null ? settings.subagentRunMode : asSubagentRunMode(args.mode),
+              run: createSubagentRunner({ settings, depth })
+            });
+            result = spawned.message;
+          } else if (name === "await_subagents") {
+            if (!allowSubagents || !coordinator) {
+              throw new Error("await_subagents is only available on the coordinator turn.");
             }
-            result = await runSubagent(subParams);
+            result = await coordinator.awaitWorkers(asStringArray(args.ids));
           } else if (name.startsWith("mcp__")) {
             if (!mcpSession) throw new Error("No MCP session available");
             result = await callMcpTool(mcpSession, name, args);

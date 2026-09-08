@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AgentSettings, AgentStreamEvent } from "../../shared/types.js";
 import { runAgent } from "../agent/loop.js";
+import type { WorkerCoordinator } from "../agent/multitask.js";
 import { listRules } from "../agent/rules.js";
 import { listSkills } from "../agent/skills.js";
 
@@ -50,7 +51,7 @@ function checkAuth(req: IncomingMessage, token: string): boolean {
 
 export async function startApiServer(
   getSettings: () => AgentSettings,
-  options?: { onEvent?: (event: AgentStreamEvent) => void }
+  options?: { onEvent?: (event: AgentStreamEvent) => void; coordinator?: WorkerCoordinator }
 ): Promise<ApiServerHandle | null> {
   const settings = getSettings();
   if (!settings.apiEnabled) {
@@ -167,13 +168,17 @@ export async function startApiServer(
       }
 
       try {
-        await runAgent({
+        const runInput: Parameters<typeof runAgent>[0] = {
           settings: runSettings,
           history: body.history ?? [],
           userMessage: message,
           signal: activeAbort.signal,
           onEvent
-        });
+        };
+        if (options?.coordinator) {
+          runInput.coordinator = options.coordinator;
+        }
+        await runAgent(runInput);
         activeAbort = null;
         if (wantStream) {
           res.end();

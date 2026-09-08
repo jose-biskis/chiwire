@@ -23,6 +23,8 @@ type TitleBarProps = {
   uiColorMode: UiColorMode;
   onUiArchetype: (archetype: UiArchetype) => void;
   onUiColorMode: (mode: UiColorMode) => void;
+  debugMode: boolean;
+  onToggleDebug: () => void;
 };
 
 function MenuItems({
@@ -67,7 +69,9 @@ export function TitleBar({
   uiArchetype,
   uiColorMode,
   onUiArchetype,
-  onUiColorMode
+  onUiColorMode,
+  debugMode,
+  onToggleDebug
 }: TitleBarProps) {
   const [openMenu, setOpenMenu] = useState<MenuKey>(null);
   const [platform, setPlatform] = useState("linux");
@@ -140,7 +144,13 @@ export function TitleBar({
   };
 
   const viewTop: MenuItem[] = [
-    { type: "item", label: "Toggle Primary Side Bar", shortcut: "Ctrl+B", action: onToggleSidebar }
+    { type: "item", label: "Toggle Primary Side Bar", shortcut: "Ctrl+B", action: onToggleSidebar },
+    {
+      type: "item",
+      label: "Debug Mode",
+      checked: debugMode,
+      action: onToggleDebug
+    }
   ];
 
   const viewZoom: MenuItem[] = [
