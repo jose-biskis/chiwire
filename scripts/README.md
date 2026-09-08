@@ -91,6 +91,7 @@ The settings file supports these core fields:
 | `runtime.advertiseAddressEnv` | Set this container env var to the resolved bind address. |
 | `runtime.env` | Non-secret environment defaults passed to the container. |
 | `runtime.envFrom` | Host environment variable names to forward into the container when set. |
+| `runtime.envRequired` | Names that must be present after `env` / `envFrom` / `--env` (deploy fails if missing). |
 | `proxy.domain` | Root domain or subdomain required for `visibility: "domain"`. |
 | `proxy.type` | `caddy` or `nginx` for domain deployments. Defaults to `caddy`. |
 
@@ -139,8 +140,10 @@ or connecting over SSH:
 Keep secrets such as SSH credentials and app passwords in
 `.env.deploy.local`; `deploy.json` should only contain non-secret defaults.
 Apps can list secret names in `runtime.envFrom` so deploy picks them up from
-your shell/direnv automatically. You can still override with CLI
-`--env KEY=VALUE`, for example `--env POSTGRES_PASSWORD=...`.
+your shell/direnv automatically. `.envrc` exports every `KEY=value` in
+`.env.deploy.local` (plus derived `SSH_*` / `POSTGRES_PASSWORD`). After editing
+the file, wait for direnv to reload or run `direnv allow`. You can still
+override with CLI `--env KEY=VALUE`, for example `--env POSTGRES_PASSWORD=...`.
 
 Grafana reads `GF_SECURITY_ADMIN_PASSWORD` from the environment when set in
 `.env.deploy.local`.

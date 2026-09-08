@@ -562,7 +562,14 @@ test("builds a Reja deploy command with a public HTTP proxy port", () => {
       hostPort: 3128,
       bindAddress: "203.0.113.10",
       setPortEnv: false,
+      volumes: [
+        "chiwire-reja-data:/var/lib/reja",
+      ],
       network: "chiwire",
+      envRequired: [
+        "REJA_USERNAME",
+        "REJA_PASSWORD",
+      ],
       envFrom: [
         "REJA_USERNAME",
         "REJA_PASSWORD",
@@ -588,12 +595,51 @@ test("builds a Reja deploy command with a public HTTP proxy port", () => {
     const command = formatCommand(plan.commands[0]);
     assert.match(command, /--dockerfile apps\/reja\/Dockerfile/);
     assert.match(command, /--port 203\.0\.113\.10:3128:3128/);
+    assert.match(command, /--volume chiwire-reja-data:\/var\/lib\/reja/);
     assert.doesNotMatch(command, /\/udp/);
     assert.match(command, /--network chiwire/);
     assert.match(command, /--env REJA_USERNAME=jose/);
     assert.match(command, /--env REJA_PASSWORD=secret/);
     assert.match(command, /--env REJA_ALLOWED_CIDRS=203\.0\.113\.10\/32/);
     assert.doesNotMatch(command, /--env PORT=3128/);
+  }, "apps/reja");
+});
+
+test("rejects a Reja deploy when required proxy credentials are missing", () => {
+  withFixture({
+    image: "chiwire/reja",
+    container: "reja",
+    build: {
+      context: ".",
+      dockerfile: "Dockerfile",
+    },
+    runtime: {
+      containerPort: 3128,
+      visibility: "public",
+      hostPort: 3128,
+      setPortEnv: false,
+      envRequired: [
+        "REJA_USERNAME",
+        "REJA_PASSWORD",
+      ],
+      envFrom: [
+        "REJA_USERNAME",
+        "REJA_PASSWORD",
+      ],
+    },
+  }, ({ repoRoot }) => {
+    const loaded = loadDeploySettings({
+      appPath: "apps/reja",
+      cwd: repoRoot,
+    });
+    assert.throws(
+      () => buildDeployPlan({
+        ...loaded,
+        repoRoot,
+        processEnv: {},
+      }),
+      /REJA_USERNAME is required/,
+    );
   }, "apps/reja");
 });
 

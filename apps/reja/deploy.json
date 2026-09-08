@@ -13,6 +13,13 @@
     "bindAddress": "auto",
     "bindAddressFrom": "REJA_BIND_ADDRESS",
     "setPortEnv": false,
+    "volumes": [
+      "chiwire-reja-data:/var/lib/reja"
+    ],
+    "envRequired": [
+      "REJA_USERNAME",
+      "REJA_PASSWORD"
+    ],
     "envFrom": [
       "REJA_USERNAME",
       "REJA_PASSWORD",

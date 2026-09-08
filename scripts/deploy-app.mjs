@@ -516,6 +516,12 @@ export function buildDeployPlan({
   ) {
     envEntries.push(`${advertiseAddressEnv}=${bindAddress}`);
   }
+  const envRequired = normalizeStringArray(runtime.envRequired, "runtime.envRequired");
+  for (const name of envRequired) {
+    if (!hasKeyValueEntry(envEntries, name)) {
+      fail(`${name} is required (set it in .env.deploy.local or pass --env ${name}=...)`);
+    }
+  }
 
   const buildArgs = normalizeKeyValueEntries(build.args, "build.args");
   const volumes = normalizeStringArray(runtime.volumes, "runtime.volumes");

@@ -47,6 +47,7 @@
     "deploy:paso": "./scripts/deploy-app.sh apps/paso",
     "paso:cert": "./scripts/paso-cert.sh",
     "deploy:reja": "./scripts/deploy-app.sh apps/reja",
+    "reja:allow": "./scripts/reja-allow.sh",
     "deploy:radiobemba": "./scripts/deploy-app.sh apps/radiobemba",
     "dev:contimiti": "npm run build --workspace @chiwire/core && npm run build --workspace @chiwire/contimiti && npm run start --workspace @chiwire/contimiti",
     "dev:bull-board": "npm run build --workspace @chiwire/core && npm run build --workspace @chiwire/bull-board && npm run start --workspace @chiwire/bull-board",
