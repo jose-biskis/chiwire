@@ -1,0 +1,27 @@
+{
+  "productName": "Cachicamo Coding Agent Local",
+  "version": "0.1.0",
+  "publishedAt": "2026-09-08T01:45:02.012Z",
+  "artifacts": [
+    {
+      "filename": "Cachicamo Coding Agent Local-0.1.0-setup.exe",
+      "label": "Windows installer",
+      "platform": "win",
+      "kind": "nsis",
+      "version": "0.1.0",
+      "size": 105166740,
+      "sha256": "2e267951b044fa346edcbe781465edd6618f677f684f58dff51b9067cc4540ca",
+      "url": "/downloads/Cachicamo%20Coding%20Agent%20Local-0.1.0-setup.exe"
+    },
+    {
+      "filename": "Cachicamo Coding Agent Local-0.1.0-portable.exe",
+      "label": "Windows portable",
+      "platform": "win",
+      "kind": "portable",
+      "version": "0.1.0",
+      "size": 104882857,
+      "sha256": "f7ecfd9e067a5b2a1b8f69b941ad655998197ec641a6363329515c62ccd11836",
+      "url": "/downloads/Cachicamo%20Coding%20Agent%20Local-0.1.0-portable.exe"
+    }
+  ]
+}

@@ -22,7 +22,8 @@ single baseline for TypeScript configuration and developer scripts.
 │   ├── redis/         # Redis for cache + BullMQ
 │   ├── radiobemba/    # Self-hosted HTTP tunnel control plane + proxy
 │   ├── bemba/         # CLI for Radiobemba tunnels
-│   └── cachicamo-coding-agent-local/ # Electron coding agent (Ollama local/cloud)
+│   ├── cachicamo-coding-agent-local/ # Electron coding agent (Ollama local/cloud)
+│   └── cachicamo-coding-agent-website/ # Installer download site (cachicamo.avilalabs.dev)
 ├── packages/          # Shared libraries, utilities, and project modules
 │   ├── core/          # Ids, TTL, Knex/pg, BullMQ helpers
 │   └── radiobemba-shared/ # Radiobemba wire protocol + slug helpers
@@ -228,7 +229,8 @@ npm run deploy:redis -- --env REDIS_PASSWORD=change-me
 Prometheus + node_exporter collect host hardware metrics on
 `127.0.0.1:9090`. cAdvisor adds per-container CPU/memory. Grafana serves
 dashboards on `127.0.0.1:3030`. Bull Board serves queue UI on `127.0.0.1:3040`.
-Design system Storybook serves on `127.0.0.1:3050`:
+Design system Storybook serves on `127.0.0.1:3050`. Cachicamo installer depot
+is a domain deploy on `cachicamo.avilalabs.dev` (`127.0.0.1:3060` upstream):
 
 ```sh
 npm run deploy:prometheus
@@ -239,6 +241,7 @@ npm run deploy:bull-board
 npm run tunnel:bull-board
 npm run deploy:design-system
 npm run tunnel:design-system
+npm run deploy:cachicamo-coding-agent-website
 ```
 
 Keep committed service defaults in each section's `deploy.json`. Pass secrets at
@@ -258,6 +261,7 @@ npm run deploy:hello
 npm run deploy:contimiti
 npm run deploy:bull-board
 npm run deploy:design-system
+npm run deploy:cachicamo-coding-agent-website
 npm run deploy:postgres -- --env POSTGRES_PASSWORD=change-me
 npm run deploy:prometheus
 npm run deploy:cadvisor
@@ -317,6 +321,25 @@ npm run dev:cachicamo-coding-agent-local
 
 See [`apps/cachicamo-coding-agent-local/README.md`](apps/cachicamo-coding-agent-local/README.md)
 for setup details.
+
+## Cachicamo installer depot
+
+`apps/cachicamo-coding-agent-website` is the public download page for published
+Cachicamo installers at [cachicamo.avilalabs.dev](https://cachicamo.avilalabs.dev).
+
+```sh
+# create installers
+npm run build:cachicamo-coding-agent-local:linux   # Linux / WSL
+npm run build:cachicamo-coding-agent-local:win     # native Windows
+
+# copy artifacts into the site, then deploy
+npm run publish:cachicamo-coding-agent-website
+npm run deploy:cachicamo-coding-agent-website
+```
+
+Local preview: `npm run dev:cachicamo-coding-agent-website` →
+[http://localhost:5174](http://localhost:5174). See
+[`apps/cachicamo-coding-agent-website/README.md`](apps/cachicamo-coding-agent-website/README.md).
 
 ## TypeScript
 

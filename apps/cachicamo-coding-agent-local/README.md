@@ -47,12 +47,39 @@ Other useful targets:
 
 ```sh
 npm run build:unpack   # unpacked dir only (quick smoke test)
-npm run build:linux    # Linux packages (when on Linux)
+npm run build:linux    # Linux AppImage + .deb (when on Linux)
 ```
 
-**WSL note:** cross-building `--win` from Linux/WSL often fails or needs Wine.
-Clone/open the repo under Windows (`C:\...`) and run the commands there, or use a
-`windows-latest` CI job.
+From the repo root:
+
+```sh
+npm run build:cachicamo-coding-agent-local:linux
+npm run build:cachicamo-coding-agent-local:win
+```
+
+Publish those artifacts to the download site, then deploy it
+([cachicamo.avilalabs.dev](https://cachicamo.avilalabs.dev)):
+
+```sh
+npm run publish:cachicamo-coding-agent-website
+npm run deploy:cachicamo-coding-agent-website
+```
+
+See [`../cachicamo-coding-agent-website/README.md`](../cachicamo-coding-agent-website/README.md).
+
+**WSL note:** `build:win` from Linux/WSL needs [Wine](https://wiki.winehq.org/).
+Without it electron-builder fails with `spawn wine ENOENT`. Either:
+
+```sh
+# Wine in this WSL distro, then retry build:win
+sudo dpkg --add-architecture i386
+sudo apt update
+sudo apt install -y wine64 wine32
+```
+
+or open the repo under Windows (`C:\...`) and run
+`npm run build:cachicamo-coding-agent-local:win` in PowerShell / cmd. A
+`windows-latest` CI job also works. From WSL, `build:linux` does not need Wine.
 
 ## Workspace layout
 

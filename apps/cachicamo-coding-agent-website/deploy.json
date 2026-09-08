@@ -1,0 +1,19 @@
+{
+  "image": "chiwire/cachicamo-coding-agent-website",
+  "tag": "latest",
+  "container": "cachicamo-coding-agent-website",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 80,
+    "visibility": "domain",
+    "hostPort": 3060,
+    "setPortEnv": false
+  },
+  "proxy": {
+    "type": "caddy",
+    "domain": "cachicamo.avilalabs.dev"
+  }
+}

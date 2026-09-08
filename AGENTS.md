@@ -35,6 +35,7 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 | cAdvisor (containers) | `apps/cadvisor` | `npm run deploy:cadvisor` | 8080 |
 | Grafana dashboards | `apps/grafana` | `npm run deploy:grafana` | 3030 |
 | Cachicamo Coding Agent Local (Electron) | `@chiwire/cachicamo-coding-agent-local` | `npm run dev:cachicamo-coding-agent-local` | desktop app |
+| Cachicamo installer depot | `@chiwire/cachicamo-coding-agent-website` | `npm run dev:cachicamo-coding-agent-website` | 5174 (cachicamo.avilalabs.dev) |
 | Radiobemba tunnel server | `@chiwire/radiobemba` | `npm run dev:radiobemba` (HTTP :3000 + SSH :2222) | 3000 / 2222 |
 | Bemba tunnel CLI | `@chiwire/bemba` | build then `npm run bemba -- http <port>` | n/a |
 | Vane media catalog (internal) | `@chiwire/vane` | build then `npm run start:vane` | 3000 |
@@ -103,6 +104,9 @@ npm run dev:me
 # Cachicamo Coding Agent Local (Electron desktop; needs Ollama local or cloud API key)
 # Supports rules/skills/MCP/subagents + localhost API for n8n on :3847
 npm run dev:cachicamo-coding-agent-local
+
+# Cachicamo installer depot (cachicamo.avilalabs.dev)
+npm run dev:cachicamo-coding-agent-website
 
 # Radiobemba (HTTP :3000 + SSH :2222; memory persistence by default in dev script)
 npm run dev:radiobemba

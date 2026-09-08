@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import { buildDeployPlan, formatCommand, loadDeploySettings } from "./deploy-app.mjs";
@@ -586,6 +587,29 @@ test("CLI --env overrides runtime.envFrom values", () => {
     assert.match(command, /--env GF_SECURITY_ADMIN_PASSWORD=from-cli/);
     assert.doesNotMatch(command, /--env GF_SECURITY_ADMIN_PASSWORD=from-env/);
   }, "apps/grafana");
+});
+
+test("cachicamo installer website is a domain nginx deploy", () => {
+  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const loaded = loadDeploySettings({
+    appPath: "apps/cachicamo-coding-agent-website",
+    cwd: repoRoot,
+  });
+  const plan = buildDeployPlan({
+    ...loaded,
+    repoRoot,
+  });
+
+  assert.equal(plan.portBinding, "127.0.0.1:3060:80");
+  assert.equal(plan.commands.length, 2);
+  const command = formatCommand(plan.commands[0]);
+  assert.match(command, /--port 127\.0\.0\.1:3060:80/);
+  assert.doesNotMatch(command, /--env PORT=80/);
+  assert.match(command, /--dockerfile apps\/cachicamo-coding-agent-website\/Dockerfile/);
+  const proxyCommand = formatCommand(plan.commands[1]);
+  assert.match(proxyCommand, /configure-reverse-proxy-ssh\.sh/);
+  assert.match(proxyCommand, /--domain cachicamo\.avilalabs\.dev/);
+  assert.match(proxyCommand, /--upstream 127\.0\.0\.1:3060/);
 });
 
 test("rejects unknown visibility values", () => {

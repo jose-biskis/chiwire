@@ -37,4 +37,19 @@ nsis:
   allowToChangeInstallationDirectory: true
 portable:
   artifactName: ${productName}-${version}-portable.${ext}
+linux:
+  icon: resources/icon.png
+  executableName: CachicamoCodingAgentLocal
+  category: Development
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+appImage:
+  artifactName: ${productName}-${version}-linux.${ext}
+deb:
+  artifactName: ${productName}-${version}-linux.${ext}
 npmRebuild: false

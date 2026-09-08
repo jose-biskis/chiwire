@@ -33,3 +33,7 @@ pnpm-debug.log*
 # Local app data (e.g. Contimiti shares)
 apps/*/data/
 paso-ca.crt
+
+# Published Cachicamo installer binaries (manifest.json stays committed)
+apps/cachicamo-coding-agent-website/public/downloads/*
+!apps/cachicamo-coding-agent-website/public/downloads/manifest.json

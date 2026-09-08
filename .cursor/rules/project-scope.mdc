@@ -33,6 +33,7 @@ Acceptable scope forms: workspace name (`@chiwire/contimiti`), path (`apps/conti
 | garita-api / garita-backend | `apps/garita-backend` | `packages/core`, `packages/db-migrate`, `packages/mcps-config` |
 | mcps-config | `packages/mcps-config` | `packages/core`, `packages/db-migrate` |
 | cachicamo | `apps/cachicamo-coding-agent-local` | `packages/ui` |
+| cachicamo-website / cachicamo-coding-agent-website | `apps/cachicamo-coding-agent-website` | `packages/ui` |
 | radiobemba | `apps/radiobemba` | `packages/core`, `packages/radiobemba-shared`, `packages/db-migrate` |
 | bemba | `apps/bemba` | `packages/radiobemba-shared` |
 | vane | `apps/vane` | `packages/ui` |
