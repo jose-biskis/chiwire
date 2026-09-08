@@ -32,3 +32,4 @@ pnpm-debug.log*
 
 # Local app data (e.g. Contimiti shares)
 apps/*/data/
+paso-ca.crt

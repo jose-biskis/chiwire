@@ -26,6 +26,7 @@ Options:
   --visibility MODE        Override runtime.visibility: internal, public, domain
   --host-port PORT         Override runtime.hostPort
   --container-port PORT    Override runtime.containerPort
+  --bind-address ADDR      Override runtime.bindAddress (IPv4 or auto)
   --env KEY=VALUE          Add or override a container environment variable; repeatable
   --domain DOMAIN          Domain/subdomain for visibility=domain
   --proxy caddy|nginx      Reverse proxy type for visibility=domain
@@ -178,6 +179,18 @@ function hasKeyValueEntry(entries, key) {
   return entries.some((entry) => entry.startsWith(`${key}=`));
 }
 
+function bindExtraPort(spec, bindAddress, visibility) {
+  if (
+    visibility === "public" &&
+    bindAddress &&
+    bindAddress !== "auto" &&
+    !/^[0-9]{1,3}(\.[0-9]{1,3}){3}:/.test(spec)
+  ) {
+    return `${bindAddress}:${spec}`;
+  }
+  return spec;
+}
+
 function keyValueEntryName(entry) {
   return entry.slice(0, entry.indexOf("="));
 }
@@ -248,6 +261,9 @@ function parseArgs(argv) {
         break;
       case "--container-port":
         options.containerPort = readValue(arg);
+        break;
+      case "--bind-address":
+        options.bindAddress = readValue(arg);
         break;
       case "--env":
         options.envEntries.push(readValue(arg));
@@ -344,6 +360,68 @@ export function loadDeploySettings({
   };
 }
 
+function isIpv4Address(value) {
+  return /^[0-9]{1,3}(\.[0-9]{1,3}){3}$/.test(value);
+}
+
+function detectRemoteDefaultIpv4({ repoRoot, cliOptions = {}, processEnv = process.env }) {
+  const sshArgs = [];
+  appendSshOptions(sshArgs, cliOptions);
+  const result = spawnSync("bash", [
+    path.join(repoRoot, "scripts/connect-deploy-ssh.sh"),
+    ...sshArgs,
+    "--",
+    "ip -4 -o route get 1.1.1.1 | awk '{for (i = 1; i <= NF; i++) if ($i == \"src\") { print $(i + 1); exit }}'",
+  ], {
+    encoding: "utf8",
+    env: processEnv,
+  });
+
+  if (result.status !== 0) {
+    const detail = (result.stderr || result.stdout || "").trim();
+    fail(`could not detect remote bind address${detail ? `: ${detail}` : ""}`);
+  }
+
+  const ip = result.stdout.trim().split(/\s+/)[0] ?? "";
+  if (!isIpv4Address(ip)) {
+    fail(`could not detect remote bind address (got ${ip || "empty"})`);
+  }
+  return ip;
+}
+
+function resolveBindAddress({
+  visibility,
+  runtime,
+  cliOptions,
+  processEnv,
+  repoRoot,
+}) {
+  const bindAddressFrom = optionalString(runtime.bindAddressFrom, "runtime.bindAddressFrom");
+  const fromEnv = bindAddressFrom
+    ? optionalString(processEnv?.[bindAddressFrom], bindAddressFrom)
+    : undefined;
+  const configured = optionalString(cliOptions.bindAddress, "--bind-address") ??
+    fromEnv ??
+    optionalString(runtime.bindAddress, "runtime.bindAddress");
+
+  if (configured === "auto") {
+    if (cliOptions.dryRun) {
+      return "auto";
+    }
+    return detectRemoteDefaultIpv4({ repoRoot, cliOptions, processEnv });
+  }
+
+  if (configured !== undefined && !isIpv4Address(configured)) {
+    fail('runtime.bindAddress must be an IPv4 address or "auto"');
+  }
+
+  if (visibility === "public") {
+    return configured;
+  }
+
+  return configured ?? "127.0.0.1";
+}
+
 function appendSshOptions(args, options) {
   if (options.host) {
     args.push("--host", options.host);
@@ -393,11 +471,19 @@ export function buildDeployPlan({
     cliOptions.hostPort ?? runtime.hostPort ?? containerPort,
     "runtime.hostPort",
   );
-  const bindAddress = optionalString(runtime.bindAddress, "runtime.bindAddress") ??
-    "127.0.0.1";
+  const bindAddress = resolveBindAddress({
+    visibility,
+    runtime,
+    cliOptions,
+    processEnv,
+    repoRoot,
+  });
   const portBinding = visibility === "public"
-    ? `${hostPort}:${containerPort}`
+    ? (bindAddress ? `${bindAddress}:${hostPort}:${containerPort}` : `${hostPort}:${containerPort}`)
     : `${bindAddress}:${hostPort}:${containerPort}`;
+  if (runtime.publishUdp !== undefined && typeof runtime.publishUdp !== "boolean") {
+    fail("runtime.publishUdp must be a boolean");
+  }
 
   const envFromNames = normalizeStringArray(runtime.envFrom, "runtime.envFrom");
   const envFromEntries = envFromNames.flatMap((name) => {
@@ -417,6 +503,18 @@ export function buildDeployPlan({
   );
   if (runtime.setPortEnv !== false && !hasKeyValueEntry(envEntries, "PORT")) {
     envEntries.unshift(`PORT=${containerPort}`);
+  }
+  const advertiseAddressEnv = optionalString(
+    runtime.advertiseAddressEnv,
+    "runtime.advertiseAddressEnv",
+  );
+  if (
+    advertiseAddressEnv &&
+    bindAddress &&
+    bindAddress !== "auto" &&
+    !hasKeyValueEntry(envEntries, advertiseAddressEnv)
+  ) {
+    envEntries.push(`${advertiseAddressEnv}=${bindAddress}`);
   }
 
   const buildArgs = normalizeKeyValueEntries(build.args, "build.args");
@@ -440,6 +538,14 @@ export function buildDeployPlan({
     "--port",
     portBinding,
   ];
+  if (runtime.publishUdp === true) {
+    deployArgs.push("--port", `${portBinding}/udp`);
+  }
+  const extraPorts = normalizeStringArray(runtime.extraPorts, "runtime.extraPorts")
+    .map((spec) => bindExtraPort(spec, bindAddress, visibility));
+  for (const extraPort of extraPorts) {
+    deployArgs.push("--port", extraPort);
+  }
 
   for (const envEntry of envEntries) {
     deployArgs.push("--env", envEntry);

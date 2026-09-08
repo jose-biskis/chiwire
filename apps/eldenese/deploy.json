@@ -1,0 +1,28 @@
+{
+  "image": "chiwire/eldenese",
+  "tag": "latest",
+  "container": "eldenese",
+  "build": {
+    "context": ".",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 53,
+    "visibility": "public",
+    "hostPort": 53,
+    "bindAddress": "auto",
+    "bindAddressFrom": "ELDENESE_BIND_ADDRESS",
+    "publishUdp": true,
+    "setPortEnv": false,
+    "volumes": [
+      "chiwire-eldenese-data:/var/lib/eldenese"
+    ],
+    "env": {
+      "ELDENESE_UPSTREAMS": "1.1.1.1,1.0.0.1"
+    },
+    "envFrom": [
+      "ELDENESE_ALLOWED_CIDRS"
+    ],
+    "network": "chiwire"
+  }
+}

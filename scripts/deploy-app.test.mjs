@@ -432,6 +432,121 @@ test("builds a Grafana deploy command on the chiwire network", () => {
   }, "apps/grafana");
 });
 
+test("builds an Eldenese deploy command with public DNS ports", () => {
+  withFixture({
+    image: "chiwire/eldenese",
+    container: "eldenese",
+    build: {
+      context: ".",
+      dockerfile: "Dockerfile",
+    },
+    runtime: {
+      containerPort: 53,
+      visibility: "public",
+      hostPort: 53,
+      bindAddress: "203.0.113.10",
+      publishUdp: true,
+      setPortEnv: false,
+      volumes: [
+        "chiwire-eldenese-data:/var/lib/eldenese",
+      ],
+      network: "chiwire",
+      env: {
+        ELDENESE_UPSTREAMS: "1.1.1.1,1.0.0.1",
+      },
+      envFrom: [
+        "ELDENESE_ALLOWED_CIDRS",
+      ],
+    },
+  }, ({ repoRoot }) => {
+    const loaded = loadDeploySettings({
+      appPath: "apps/eldenese",
+      cwd: repoRoot,
+    });
+    const plan = buildDeployPlan({
+      ...loaded,
+      repoRoot,
+      processEnv: {
+        ELDENESE_ALLOWED_CIDRS: "203.0.113.10/32",
+      },
+    });
+
+    assert.equal(plan.portBinding, "203.0.113.10:53:53");
+    const command = formatCommand(plan.commands[0]);
+    assert.match(command, /--dockerfile apps\/eldenese\/Dockerfile/);
+    assert.match(command, /--port 203\.0\.113\.10:53:53/);
+    assert.match(command, /--port 203\.0\.113\.10:53:53\/udp/);
+    assert.match(command, /--volume chiwire-eldenese-data:\/var\/lib\/eldenese/);
+    assert.doesNotMatch(command, /--run-arg/);
+    assert.match(command, /--network chiwire/);
+    assert.match(command, /--env ELDENESE_UPSTREAMS=1\.1\.1\.1,1\.0\.0\.1/);
+    assert.match(command, /--env ELDENESE_ALLOWED_CIDRS=203\.0\.113\.10\/32/);
+    assert.doesNotMatch(command, /--env PORT=53/);
+  }, "apps/eldenese");
+});
+
+test("builds a Paso deploy command with IKEv2 UDP ports", () => {
+  withFixture({
+    image: "chiwire/paso",
+    container: "paso",
+    build: {
+      context: ".",
+      dockerfile: "Dockerfile",
+    },
+    runtime: {
+      containerPort: 500,
+      visibility: "public",
+      hostPort: 500,
+      bindAddress: "203.0.113.10",
+      advertiseAddressEnv: "VPN_PUBLIC_IP",
+      publishUdp: true,
+      setPortEnv: false,
+      extraPorts: [
+        "4500:4500/udp",
+      ],
+      volumes: [
+        "chiwire-paso-data:/var/lib/paso",
+      ],
+      runArgs: [
+        "--cap-add",
+        "NET_ADMIN",
+      ],
+      network: "chiwire",
+      envFrom: [
+        "VPN_USERNAME",
+        "VPN_PASSWORD",
+      ],
+    },
+  }, ({ repoRoot }) => {
+    const loaded = loadDeploySettings({
+      appPath: "apps/paso",
+      cwd: repoRoot,
+    });
+    const plan = buildDeployPlan({
+      ...loaded,
+      repoRoot,
+      processEnv: {
+        VPN_USERNAME: "jose",
+        VPN_PASSWORD: "secret",
+      },
+    });
+
+    assert.equal(plan.portBinding, "203.0.113.10:500:500");
+    const command = formatCommand(plan.commands[0]);
+    assert.match(command, /--dockerfile apps\/paso\/Dockerfile/);
+    assert.match(command, /--port 203\.0\.113\.10:500:500/);
+    assert.match(command, /--port 203\.0\.113\.10:500:500\/udp/);
+    assert.match(command, /--port 203\.0\.113\.10:4500:4500\/udp/);
+    assert.match(command, /--volume chiwire-paso-data:\/var\/lib\/paso/);
+    assert.match(command, /--run-arg --cap-add/);
+    assert.match(command, /--run-arg NET_ADMIN/);
+    assert.match(command, /--env VPN_PUBLIC_IP=203\.0\.113\.10/);
+    assert.match(command, /--env VPN_USERNAME=jose/);
+    assert.match(command, /--env VPN_PASSWORD=secret/);
+    assert.doesNotMatch(command, /--env PORT=500/);
+  }, "apps/paso");
+});
+
 test("CLI --env overrides runtime.envFrom values", () => {
   withFixture({
     image: "chiwire/grafana",

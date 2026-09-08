@@ -85,6 +85,10 @@ The settings file supports these core fields:
 | `runtime.containerPort` | Port the app listens on inside the container. |
 | `runtime.visibility` | `internal`, `public`, or `domain`. Defaults to `internal`. |
 | `runtime.hostPort` | Host port to bind. Defaults to `runtime.containerPort`. |
+| `runtime.bindAddress` | Host IP to publish on. `auto` detects the remote default IPv4. |
+| `runtime.publishUdp` | Also publish the same host port as UDP. |
+| `runtime.extraPorts` | Extra Docker `-p` specs, for example `4500:4500/udp`. |
+| `runtime.advertiseAddressEnv` | Set this container env var to the resolved bind address. |
 | `runtime.env` | Non-secret environment defaults passed to the container. |
 | `runtime.envFrom` | Host environment variable names to forward into the container when set. |
 | `proxy.domain` | Root domain or subdomain required for `visibility: "domain"`. |
@@ -95,7 +99,7 @@ Visibility controls how the Docker port is published:
 | Visibility | Docker binding | Use case |
 | --- | --- | --- |
 | `internal` | `127.0.0.1:hostPort:containerPort` | App is reachable only on the deploy host or by another host-level service. |
-| `public` | `hostPort:containerPort` | App is reachable directly from the internet on the host port. |
+| `public` | `hostPort:containerPort` (or `bindAddress:hostPort:containerPort`) | App is reachable directly from the internet on the host port. |
 | `domain` | `127.0.0.1:hostPort:containerPort` plus reverse proxy | App is served from a root domain or subdomain through Caddy or nginx. |
 
 AvilaLabs has the same kind of settings in `apps/avila-labs/deploy.json` and
@@ -151,6 +155,16 @@ npm run deploy:prometheus
 npm run deploy:cadvisor
 npm run deploy:grafana
 npm run deploy:redis
+npm run deploy:eldenese
+npm run deploy:paso
+```
+
+After Eldenese is running, update its DNS allowlist without rebuilding:
+
+```sh
+npm run eldenese:allow -- list
+npm run eldenese:allow -- add 203.0.113.10
+npm run paso:cert
 ```
 
 `apps/postgres` exposes PgBouncer from the container on port `6432` and maps it

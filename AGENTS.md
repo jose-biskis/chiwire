@@ -38,6 +38,8 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 | Radiobemba tunnel server | `@chiwire/radiobemba` | `npm run dev:radiobemba` (HTTP :3000 + SSH :2222) | 3000 / 2222 |
 | Bemba tunnel CLI | `@chiwire/bemba` | build then `npm run bemba -- http <port>` | n/a |
 | Vane media catalog (internal) | `@chiwire/vane` | build then `npm run start:vane` | 3000 |
+| Eldenese DNS forwarder | `apps/eldenese` | `npm run deploy:eldenese` | 53 |
+| Paso IKEv2 VPN | `apps/paso` | `npm run deploy:paso` | 500 / 4500 |
 
 Shared code lives under `packages/` (`@chiwire/core` has ids, TTL, Knex/pg, and
 BullMQ helpers; `@chiwire/ui` has base contract + archetype React primitives
