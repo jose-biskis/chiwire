@@ -23,6 +23,7 @@ import {
   localToolNames,
   toolsForSubagent
 } from "./tools.js";
+import { resolveWslExecTarget } from "./wsl.js";
 
 const BASE_SYSTEM_PROMPT = `You are Cachicamo Coding Agent Local, a careful coding assistant running inside a desktop app.
 
@@ -125,6 +126,14 @@ function buildSystemPrompt(settings: AgentSettings, suffix?: string): string {
       settings.subagentRunMode === "series"
         ? "# Multitask\nWorkers run in series: only one at a time. Later spawn_subagent calls wait in queue."
         : "# Multitask\nWorkers run in parallel: several can run at once. Pass mode=series when a later worker depends on an earlier result."
+    );
+  }
+
+  const wsl = resolveWslExecTarget(settings);
+  if (wsl) {
+    const distro = wsl.distro ?? "default";
+    parts.push(
+      `# WSL\nrun_command executes in WSL distro "${distro}" with cwd ${wsl.linuxCwd}. Use Linux paths and Unix tools in commands. File tools still use the Windows workspace path.`
     );
   }
 
@@ -455,7 +464,10 @@ export async function runAgent(input: RunAgentInput): Promise<void> {
             if (!settings.skillsEnabled && (name === "list_skills" || name === "load_skill")) {
               throw new Error("Skills are disabled in settings.");
             }
-            result = await executeTool(settings.workspacePath, name, args, skillHelpers);
+            result = await executeTool(settings.workspacePath, name, args, {
+              ...skillHelpers,
+              wsl: resolveWslExecTarget(settings)
+            });
           } else {
             throw new Error(`Unknown tool: ${name}`);
           }

@@ -17,6 +17,11 @@ import {
   settingsPath
 } from "./settings.js";
 import type { AgentSettings, AgentStreamEvent } from "../shared/types.js";
+import {
+  applyWorkspaceWslHints,
+  firstExistingWslUnc,
+  probeWsl
+} from "./agent/wsl.js";
 
 ensureAppIdentity();
 
@@ -159,11 +164,26 @@ function registerIpc(): void {
     if (result.canceled || !result.filePaths[0]) {
       return null;
     }
-    const settings = loadSettings();
-    settings.workspacePath = result.filePaths[0];
-    saveSettings(settings);
-    return settings.workspacePath;
+    const saved = saveSettings(applyWorkspaceWslHints(loadSettings(), result.filePaths[0]));
+    return saved.workspacePath;
   });
+
+  ipcMain.handle("workspace:pickWsl", async () => {
+    const settings = loadSettings();
+    const status = await probeWsl(settings);
+    const distro = settings.wslDistro.trim() || status.defaultDistro;
+    const result = await dialog.showOpenDialog({
+      properties: ["openDirectory"],
+      defaultPath: firstExistingWslUnc(distro)
+    });
+    if (result.canceled || !result.filePaths[0]) {
+      return null;
+    }
+    const saved = saveSettings(applyWorkspaceWslHints(loadSettings(), result.filePaths[0]));
+    return saved.workspacePath;
+  });
+
+  ipcMain.handle("wsl:status", () => probeWsl(loadSettings()));
 
   ipcMain.handle("models:list", async () => {
     const settings = loadSettings();

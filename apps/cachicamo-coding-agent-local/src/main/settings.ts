@@ -84,7 +84,9 @@ function normalizeSettings(raw: Partial<AgentSettings>): AgentSettings {
       : [],
     uiArchetype: raw.uiArchetype === "valenstonic" ? "valenstonic" : "internal",
     uiColorMode: raw.uiColorMode === "light" ? "light" : "dark",
-    subagentRunMode: asSubagentRunMode(raw.subagentRunMode)
+    subagentRunMode: asSubagentRunMode(raw.subagentRunMode),
+    wslEnabled: Boolean(raw.wslEnabled),
+    wslDistro: typeof raw.wslDistro === "string" ? raw.wslDistro : DEFAULT_SETTINGS.wslDistro
   };
 
   if (!merged.apiToken.trim()) {

@@ -6,6 +6,16 @@ import { WorkerCoordinator, type WorkerRunFn } from "../agent/multitask.js";
 import { executeTool, toolNamesForSubagent } from "../agent/tools.js";
 import { loadRulesText, listRules } from "../agent/rules.js";
 import { loadSkill, skillsCatalogText } from "../agent/skills.js";
+import {
+  applyWorkspaceWslHints,
+  decodeWslText,
+  inferDistroFromWindowsPath,
+  parseWslDistroList,
+  resolveWslExecTarget,
+  windowsPathToWslPath,
+  wslCommandArgs
+} from "../agent/wsl.js";
+import { DEFAULT_SETTINGS } from "../../shared/types.js";
 
 export type DebugFixture = DebugFixtureInfo & {
   expected: string;
@@ -317,6 +327,66 @@ export const DEBUG_FIXTURES: DebugFixture[] = [
       } finally {
         cleanupWorkspace(root);
       }
+    }
+  },
+  {
+    id: "wsl-path-map",
+    title: "WSL path mapping",
+    description: "Windows drive and \\\\wsl$ UNC paths convert to Linux paths; distro is inferred.",
+    feature: "WSL",
+    expected:
+      "unc=/home/jose/proj localhost=/tmp drive=/mnt/c/Users/jose distro=Ubuntu none=true",
+    run: async () => {
+      const unc = windowsPathToWslPath("\\\\wsl$\\Ubuntu\\home\\jose\\proj");
+      const localhost = windowsPathToWslPath("\\\\wsl.localhost\\Ubuntu-24.04\\tmp");
+      const drive = windowsPathToWslPath("C:\\Users\\jose");
+      const distro = inferDistroFromWindowsPath("\\\\wsl$\\Ubuntu\\home\\jose\\proj");
+      const none = inferDistroFromWindowsPath("C:\\Users\\jose") === null;
+      return `unc=${unc} localhost=${localhost} drive=${drive} distro=${distro} none=${String(none)}`;
+    }
+  },
+  {
+    id: "wsl-command-args",
+    title: "WSL command argv",
+    description: "Enabled WSL settings produce wsl.exe args with distro and quoted cwd.",
+    feature: "WSL",
+    expected: `["-d","Ubuntu","--","bash","-lc","cd '/home/jose/proj' && git status"]`,
+    run: async () => {
+      const target = resolveWslExecTarget(
+        {
+          wslEnabled: true,
+          wslDistro: "Ubuntu",
+          workspacePath: "\\\\wsl$\\Ubuntu\\home\\jose\\proj"
+        },
+        "win32"
+      );
+      if (!target) return "target=null";
+      return JSON.stringify(wslCommandArgs(target, "git status"));
+    }
+  },
+  {
+    id: "wsl-distro-list",
+    title: "WSL distro list decode",
+    description: "UTF-16 LE wsl.exe output is decoded and docker-desktop entries are dropped.",
+    feature: "WSL",
+    expected: "Ubuntu,Debian",
+    run: async () => {
+      const encoded = Buffer.from("\uFEFFUbuntu\r\nDebian\r\ndocker-desktop\r\n", "utf16le");
+      return parseWslDistroList(decodeWslText(encoded)).join(",");
+    }
+  },
+  {
+    id: "wsl-open-hints",
+    title: "WSL folder pick enables bridging",
+    description: "Opening a \\\\wsl$ path turns WSL on and sets the folder's distro.",
+    feature: "WSL",
+    expected: "enabled=true distro=Ubuntu-24.04",
+    run: async () => {
+      const next = applyWorkspaceWslHints(
+        { ...DEFAULT_SETTINGS, wslEnabled: false, wslDistro: "" },
+        "\\\\wsl.localhost\\Ubuntu-24.04\\home\\jose"
+      );
+      return `enabled=${String(next.wslEnabled)} distro=${next.wslDistro}`;
     }
   }
 ];

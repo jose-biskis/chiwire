@@ -11,6 +11,7 @@ import {
   Plus,
   Settings2,
   Square,
+  Terminal,
   Trash2
 } from "lucide-react";
 import type {
@@ -24,7 +25,8 @@ import type {
   ToolCallEvent,
   WorkerStatus,
   UiArchetype,
-  UiColorMode
+  UiColorMode,
+  WslStatus
 } from "../../shared/types";
 import { TitleBar } from "@/components/TitleBar";
 import { Markdown } from "@/components/Markdown";
@@ -91,6 +93,7 @@ export default function App() {
   const [debugMode, setDebugMode] = useState(false);
   const [workers, setWorkers] = useState<SubagentWorkerSnapshot[]>([]);
   const [mcpDraft, setMcpDraft] = useState({ name: "trello", url: "http://localhost:3000/trello" });
+  const [wslStatus, setWslStatus] = useState<WslStatus | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<AgentSettings | null>(null);
   const persistChain = useRef(Promise.resolve());
@@ -103,6 +106,7 @@ export default function App() {
       setSettings(loaded);
     });
     void window.cachicamoAgent.listWorkers().then(setWorkers);
+    void window.cachicamoAgent.getWslStatus().then(setWslStatus);
   }, []);
 
   useEffect(() => {
@@ -268,16 +272,18 @@ export default function App() {
   async function refreshMeta(): Promise<void> {
     setModelsError(null);
     try {
-      const [modelList, ruleList, skillList, status] = await Promise.all([
+      const [modelList, ruleList, skillList, status, wsl] = await Promise.all([
         window.cachicamoAgent.listModels(),
         window.cachicamoAgent.listRules(),
         window.cachicamoAgent.listSkills(),
-        window.cachicamoAgent.getApiStatus()
+        window.cachicamoAgent.getApiStatus(),
+        window.cachicamoAgent.getWslStatus()
       ]);
       setModels(modelList);
       setRules(ruleList);
       setSkills(skillList);
       setApiStatus(status);
+      setWslStatus(wsl);
     } catch (error) {
       setModels([]);
       setModelsError(error instanceof Error ? error.message : String(error));
@@ -294,14 +300,25 @@ export default function App() {
     settings?.apiKey,
     settings?.workspacePath,
     settings?.apiEnabled,
-    settings?.apiPort
+    settings?.apiPort,
+    settings?.wslEnabled,
+    settings?.wslDistro
   ]);
 
-  async function onPickWorkspace(): Promise<void> {
-    const path = await window.cachicamoAgent.pickWorkspace();
-    if (!path || !settingsRef.current) return;
-    applySettingsPatch({ workspacePath: path });
+  async function applyOpenedWorkspace(path: string | null): Promise<void> {
+    if (!path) return;
+    const loaded = await window.cachicamoAgent.getSettings();
+    settingsRef.current = loaded;
+    setSettings(loaded);
     void refreshMeta();
+  }
+
+  async function onPickWorkspace(): Promise<void> {
+    await applyOpenedWorkspace(await window.cachicamoAgent.pickWorkspace());
+  }
+
+  async function onPickWslWorkspace(): Promise<void> {
+    await applyOpenedWorkspace(await window.cachicamoAgent.pickWslWorkspace());
   }
 
   async function addMcpServer(): Promise<void> {
@@ -422,6 +439,7 @@ export default function App() {
     <div className="flex h-full flex-col bg-card text-foreground shadow-[inset_0_0_0_1px_var(--color-border)]">
       <TitleBar
         onOpenFolder={() => void onPickWorkspace()}
+        onOpenWslFolder={() => void onPickWslWorkspace()}
         onToggleSidebar={() => setSidebarVisible((value) => !value)}
         uiArchetype={settings.uiArchetype}
         uiColorMode={settings.uiColorMode}
@@ -502,7 +520,78 @@ export default function App() {
                     <FolderOpen className="size-3.5" />
                     <span className="truncate text-[12px]">{shortPath(settings.workspacePath)}</span>
                   </Button>
+                  {wslStatus?.supported ? (
+                    <Button
+                      variant="ghost"
+                      className="mt-1 h-7 w-full justify-start px-2 text-muted-foreground"
+                      onClick={() => void onPickWslWorkspace()}
+                    >
+                      <Terminal className="size-3.5" />
+                      <span className="truncate text-[12px]">Open WSL folder</span>
+                    </Button>
+                  ) : null}
                 </section>
+
+                {wslStatus?.supported ? (
+                  <section className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px]">WSL commands</span>
+                      <Switch
+                        checked={settings.wslEnabled}
+                        onCheckedChange={(checked) => persist({ wslEnabled: checked })}
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {settings.wslEnabled
+                        ? "run_command uses wsl.exe bash in the selected distro."
+                        : "Off: commands use host bash (Git Bash if installed)."}
+                    </p>
+                    {settings.wslEnabled ? (
+                      <>
+                        <FieldLabel>Distro</FieldLabel>
+                        <select
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          value={settings.wslDistro}
+                          onChange={(e) => persist({ wslDistro: e.target.value })}
+                        >
+                          <option value="">
+                            {wslStatus.defaultDistro
+                              ? `Default (${wslStatus.defaultDistro})`
+                              : "Default distro"}
+                          </option>
+                          {wslStatus.distros.map((name) => (
+                            <option key={name} value={name}>
+                              {name}
+                            </option>
+                          ))}
+                          {settings.wslDistro && !wslStatus.distros.includes(settings.wslDistro) ? (
+                            <option value={settings.wslDistro}>{settings.wslDistro}</option>
+                          ) : null}
+                        </select>
+                        {wslStatus.linuxWorkspace ? (
+                          <p className="truncate font-mono text-[10px] text-muted-foreground">
+                            {wslStatus.linuxWorkspace}
+                          </p>
+                        ) : null}
+                      </>
+                    ) : null}
+                    {wslStatus.error ? (
+                      <p className="text-[11px] text-destructive">{wslStatus.error}</p>
+                    ) : wslStatus.available ? (
+                      <p className="text-[11px] text-muted-foreground">
+                        {wslStatus.distros.length} distro
+                        {wslStatus.distros.length === 1 ? "" : "s"} found
+                      </p>
+                    ) : null}
+                  </section>
+                ) : wslStatus?.insideWsl ? (
+                  <section>
+                    <p className="text-[11px] text-muted-foreground">
+                      Already running inside WSL. Commands use bash here. WSL bridging is for the
+                      Windows build.
+                    </p>
+                  </section>
+                ) : null}
 
                 <section>
                   <div className="mb-1 flex items-center justify-between">
@@ -926,6 +1015,11 @@ export default function App() {
           <div className="flex h-full items-center bg-primary px-2.5 text-primary-foreground">
             {cloud ? "Cloud" : "Local"}
           </div>
+          {settings.wslEnabled && wslStatus?.supported ? (
+            <div className="px-2">WSL{settings.wslDistro ? ` · ${settings.wslDistro}` : ""}</div>
+          ) : wslStatus?.insideWsl ? (
+            <div className="px-2">WSL</div>
+          ) : null}
           <div className="px-2">{settings.model}</div>
           <div className="px-2">{shortPath(settings.workspacePath)}</div>
         </div>

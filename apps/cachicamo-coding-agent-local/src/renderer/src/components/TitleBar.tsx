@@ -18,6 +18,7 @@ type MenuItem =
 
 type TitleBarProps = {
   onOpenFolder: () => void;
+  onOpenWslFolder?: () => void;
   onToggleSidebar: () => void;
   uiArchetype: UiArchetype;
   uiColorMode: UiColorMode;
@@ -65,6 +66,7 @@ function MenuItems({
 
 export function TitleBar({
   onOpenFolder,
+  onOpenWslFolder,
   onToggleSidebar,
   uiArchetype,
   uiColorMode,
@@ -95,6 +97,9 @@ export function TitleBar({
   const menus: Record<Exclude<MenuKey, null>, MenuItem[]> = {
     file: [
       { type: "item", label: "Open Folder…", shortcut: "Ctrl+O", action: onOpenFolder },
+      ...(platform === "win32" && onOpenWslFolder
+        ? [{ type: "item" as const, label: "Open WSL Folder…", action: onOpenWslFolder }]
+        : []),
       { type: "separator" },
       {
         type: "item",

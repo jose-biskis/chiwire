@@ -10,6 +10,7 @@ import {
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import type { Tool } from "ollama";
+import { runCommandInWsl, type WslExecTarget } from "./wsl.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -117,7 +118,8 @@ export const AGENT_TOOLS: Tool[] = [
         properties: {
           command: {
             type: "string",
-            description: "Command string executed via `bash -lc`."
+            description:
+              "Command string executed via `bash -lc`, or `wsl.exe` bash when WSL is enabled on Windows."
           },
           timeout_ms: {
             type: "number",
@@ -284,14 +286,17 @@ function walkFiles(dir: string, root: string, out: string[], depth = 0): void {
   }
 }
 
+export type ExecuteToolHelpers = {
+  listSkillsText?: () => string;
+  loadSkillText?: (skillName: string) => string;
+  wsl?: WslExecTarget | null;
+};
+
 export async function executeTool(
   workspace: string,
   name: string,
   args: Record<string, unknown>,
-  helpers?: {
-    listSkillsText?: () => string;
-    loadSkillText?: (skillName: string) => string;
-  }
+  helpers?: ExecuteToolHelpers
 ): Promise<string> {
   switch (name) {
     case "list_skills": {
@@ -392,22 +397,26 @@ export async function executeTool(
       const timeout =
         typeof args.timeout_ms === "number" && args.timeout_ms > 0 ? args.timeout_ms : 60_000;
       try {
-        const { stdout, stderr } = await execFileAsync("bash", ["-lc", command], {
-          cwd: workspace,
-          timeout,
-          maxBuffer: MAX_CMD_OUTPUT,
-          env: process.env
-        });
+        const { stdout, stderr } = helpers?.wsl
+          ? await runCommandInWsl(helpers.wsl, command, { timeout, maxBuffer: MAX_CMD_OUTPUT })
+          : await execFileAsync("bash", ["-lc", command], {
+              cwd: workspace,
+              timeout,
+              maxBuffer: MAX_CMD_OUTPUT,
+              env: process.env
+            });
         const out = [stdout, stderr].filter(Boolean).join("\n").trim();
         return out || "(no output)";
       } catch (error) {
         const err = error as {
-          stdout?: string;
-          stderr?: string;
+          stdout?: string | Buffer;
+          stderr?: string | Buffer;
           message?: string;
           code?: number | string;
         };
-        const out = [err.stdout, err.stderr, err.message].filter(Boolean).join("\n").trim();
+        const stdout = Buffer.isBuffer(err.stdout) ? err.stdout.toString("utf8") : err.stdout;
+        const stderr = Buffer.isBuffer(err.stderr) ? err.stderr.toString("utf8") : err.stderr;
+        const out = [stdout, stderr, err.message].filter(Boolean).join("\n").trim();
         return `Command failed (code ${String(err.code ?? "?")}):\n${out}`;
       }
     }

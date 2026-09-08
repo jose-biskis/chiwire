@@ -96,6 +96,10 @@ export async function startApiServer(
         model: current.model,
         mode: current.mode,
         workspacePath: current.workspacePath,
+        wsl: {
+          enabled: current.wslEnabled,
+          distro: current.wslDistro || null
+        },
         rules: listRules(current.workspacePath),
         skills: listSkills(current.workspacePath),
         mcpServers: current.mcpServers.filter((s) => s.enabled).map((s) => ({

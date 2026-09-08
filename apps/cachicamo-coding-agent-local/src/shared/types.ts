@@ -79,6 +79,21 @@ export type AgentSettings = {
   /** UI appearance — View menu; persisted across launches */
   uiArchetype: UiArchetype;
   uiColorMode: UiColorMode;
+  /** Windows only: run_command goes through wsl.exe */
+  wslEnabled: boolean;
+  /** Empty = default WSL distro (or inferred from \\\\wsl$\\Distro\\...) */
+  wslDistro: string;
+};
+
+export type WslStatus = {
+  platform: string;
+  supported: boolean;
+  available: boolean;
+  insideWsl: boolean;
+  distros: string[];
+  defaultDistro: string | null;
+  linuxWorkspace: string | null;
+  error?: string;
 };
 
 export type ChatRole = "user" | "assistant" | "system" | "tool";
@@ -146,13 +161,17 @@ export const DEFAULT_SETTINGS: AgentSettings = {
   apiPort: 3847,
   apiToken: "",
   uiArchetype: "internal",
-  uiColorMode: "dark"
+  uiColorMode: "dark",
+  wslEnabled: false,
+  wslDistro: ""
 };
 
 export type CachicamoAgentApi = {
   getSettings: () => Promise<AgentSettings>;
   setSettings: (settings: AgentSettings) => Promise<AgentSettings>;
   pickWorkspace: () => Promise<string | null>;
+  pickWslWorkspace: () => Promise<string | null>;
+  getWslStatus: () => Promise<WslStatus>;
   listModels: () => Promise<ModelInfo[]>;
   listRules: () => Promise<RuleInfo[]>;
   listSkills: () => Promise<SkillInfo[]>;

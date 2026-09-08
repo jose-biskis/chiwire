@@ -78,7 +78,23 @@ Copy starters from `templates/` in this app.
 | Skills | Catalog in prompt; agent calls `list_skills` / `load_skill` |
 | MCP | Streamable HTTP MCP clients; tools appear as `mcp__<server>__<tool>` |
 | Subagents | `spawn_subagent` with `explore` (read-only), `shell`, or `general` |
+| WSL (Windows) | `run_command` via `wsl.exe`; File → Open WSL Folder; auto-on for UNC WSL paths |
 | External API | `127.0.0.1:<port>` for n8n HTTP Request nodes |
+
+## WSL (Windows build)
+
+When Cachicamo runs as a **Windows** app, Agent settings can send `run_command` through
+WSL instead of host bash:
+
+1. Open a folder under `\\wsl$\<distro>\...` (File → **Open WSL Folder…**), or toggle
+   **WSL commands** and pick a distro.
+2. Opening a `\\wsl$\` or `\\wsl.localhost\` path turns WSL on and sets that distro.
+3. File tools still use the Windows workspace path. Commands run as
+   `wsl.exe -d <distro> -- bash -lc` with cwd mapped (`C:\foo` → `/mnt/c/foo`,
+   `\\wsl$\Ubuntu\home\you` → `/home/you`).
+
+If you are already running the Linux/WSLg build inside WSL, commands already use bash
+there — the bridge is for the Windows executable.
 
 ## External API (n8n)
 
