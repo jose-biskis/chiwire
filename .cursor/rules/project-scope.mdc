@@ -41,7 +41,7 @@ Acceptable scope forms: workspace name (`@chiwire/contimiti`), path (`apps/conti
 | radiobemba-shared | `packages/radiobemba-shared` | — |
 | valenstonic-shared | `packages/valenstonic-academy-shared` | — |
 | db-migrate | `packages/db-migrate` | `packages/core` |
-| prometheus / grafana / cadvisor / postgres / redis / eldenese / paso | `apps/<name>` | deploy scripts under `scripts/` as needed |
+| prometheus / grafana / cadvisor / postgres / redis / eldenese / paso / reja | `apps/<name>` | deploy scripts under `scripts/` as needed |
 
 ## After scope is set
 

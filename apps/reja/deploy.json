@@ -1,0 +1,23 @@
+{
+  "image": "chiwire/reja",
+  "tag": "latest",
+  "container": "reja",
+  "build": {
+    "context": ".",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 3128,
+    "visibility": "public",
+    "hostPort": 3128,
+    "bindAddress": "auto",
+    "bindAddressFrom": "REJA_BIND_ADDRESS",
+    "setPortEnv": false,
+    "envFrom": [
+      "REJA_USERNAME",
+      "REJA_PASSWORD",
+      "REJA_ALLOWED_CIDRS"
+    ],
+    "network": "chiwire"
+  }
+}
