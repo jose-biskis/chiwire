@@ -49,6 +49,26 @@ function asBoolean(value: unknown): boolean {
   return value === true || value === "true";
 }
 
+export function unwrapList(payload: unknown, label: string): unknown[] {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (typeof payload === "object" && payload !== null) {
+    const row = payload as Record<string, unknown>;
+    for (const key of ["data", "positions", "rows"] as const) {
+      const nested = row[key];
+      if (Array.isArray(nested)) {
+        return nested;
+      }
+    }
+  }
+  const preview =
+    typeof payload === "string"
+      ? payload.slice(0, 180)
+      : JSON.stringify(payload)?.slice(0, 180) ?? String(payload);
+  throw new Error(`Unexpected ${label}: ${preview}`);
+}
+
 export function explainBinanceError(
   code: number,
   message: string,
@@ -350,25 +370,37 @@ export class BinanceFutures {
   }
 
   async positions(): Promise<PositionRow[]> {
-    const payload = await this.signedGet("/fapi/v2/positionRisk");
-    if (!Array.isArray(payload)) {
-      throw new Error("Unexpected positionRisk payload");
-    }
-
-    return payload
+    const payload = await this.positionRisk();
+    return unwrapList(payload, "positionRisk payload")
       .map((entry) => {
         const row = asRecord(entry);
+        const isolatedWallet = asNumber(row.isolatedWallet);
+        const isolatedMargin = asNumber(row.isolatedMargin);
         return {
           symbol: asString(row.symbol),
           positionAmt: asNumber(row.positionAmt),
           notional: Math.abs(asNumber(row.notional)),
           leverage: asNumber(row.leverage, 1),
-          isolated: asString(row.marginType).toLowerCase() === "isolated",
+          isolated:
+            asString(row.marginType).toLowerCase() === "isolated" ||
+            isolatedWallet > 0 ||
+            isolatedMargin > 0,
           entryPrice: asNumber(row.entryPrice),
           markPrice: asNumber(row.markPrice)
         };
       })
       .filter((row) => row.symbol !== "" && row.positionAmt !== 0);
+  }
+
+  private async positionRisk(): Promise<unknown> {
+    try {
+      return await this.signedGet("/fapi/v3/positionRisk");
+    } catch (error) {
+      if (!(error instanceof BinanceError)) {
+        throw error;
+      }
+      return await this.signedGet("/fapi/v2/positionRisk");
+    }
   }
 
   async openOrders(symbol?: string): Promise<OpenOrderRow[]> {
@@ -380,11 +412,9 @@ export class BinanceFutures {
   private async openClassicOrders(symbol?: string): Promise<OpenOrderRow[]> {
     const params = symbol ? { symbol } : {};
     const payload = await this.signedGet("/fapi/v1/openOrders", params);
-    if (!Array.isArray(payload)) {
-      throw new Error("Unexpected openOrders payload");
-    }
+    const rows = unwrapList(payload, "openOrders payload");
 
-    return payload.map((entry) => {
+    return rows.map((entry) => {
       const row = asRecord(entry);
       return {
         symbol: asString(row.symbol),
@@ -643,16 +673,12 @@ export class BinanceFutures {
       body: JSON.stringify(job)
     });
     const payload = (await response.json()) as GateResult & { error?: string };
-    if (!payload.body && !response.ok) {
+    if (typeof payload.body !== "string") {
       throw new Error(
         payload.error || `Harbor is not connected (${response.status}).`
       );
     }
-    return this.parseHttp(
-      payload.status || response.status,
-      payload.ok || response.ok,
-      payload.body ?? ""
-    );
+    return this.parseHttp(payload.status, payload.ok, payload.body);
   }
 
   private request(
