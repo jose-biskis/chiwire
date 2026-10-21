@@ -36,6 +36,7 @@ Acceptable scope forms: workspace name (`@chiwire/contimiti`), path (`apps/conti
 | cachicamo-website / cachicamo-coding-agent-website | `apps/cachicamo-coding-agent-website` | `packages/ui` |
 | radiobemba | `apps/radiobemba` | `packages/core`, `packages/radiobemba-shared`, `packages/db-migrate` |
 | bemba | `apps/bemba` | `packages/radiobemba-shared` |
+| velero | `apps/velero` | — |
 | vane | `apps/vane` | `packages/ui` |
 | core | `packages/core` | — |
 | radiobemba-shared | `packages/radiobemba-shared` | — |

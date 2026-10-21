@@ -38,6 +38,7 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 | Cachicamo installer depot | `@chiwire/cachicamo-coding-agent-website` | `npm run dev:cachicamo-coding-agent-website` | 5174 (cachicamo.avilalabs.dev) |
 | Radiobemba tunnel server | `@chiwire/radiobemba` | `npm run dev:radiobemba` (HTTP :3000 + SSH :2222) | 3000 / 2222 |
 | Bemba tunnel CLI | `@chiwire/bemba` | build then `npm run bemba -- http <port>` | n/a |
+| Velero futures co-trader | `@chiwire/velero` | build then `npm run velero -- quote RLCUSDT` / `watch` | n/a |
 | Vane media catalog (internal) | `@chiwire/vane` | build then `npm run start:vane` | 3000 |
 | Eldenese DNS forwarder | `apps/eldenese` | `npm run deploy:eldenese` | 53 |
 | Paso IKEv2 VPN | `apps/paso` | `npm run deploy:paso` | 500 / 4500 |
@@ -72,6 +73,7 @@ See `README.md` for full details. Common commands:
 - Verify hello-http: `curl http://localhost:3000/` and `curl http://localhost:3000/health`
 - Verify MCP servers: `curl http://localhost:3000/`, `curl http://localhost:3000/health`, and `curl -X POST http://localhost:3000/trello -H "content-type: application/json" -H "accept: application/json, text/event-stream" --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'`
 - Radiobemba: `npm run dev:radiobemba` (SSH reverse tunnels on :2222); CLI `npm run build --workspace @chiwire/bemba` then `npm run bemba -- http <port>`; verify `curl http://localhost:3000/health`
+- Velero: `npm run build --workspace @chiwire/velero` then `npm run velero -- quote RLCUSDT --notional 10` (Binance futures testnet by default; keys in `apps/velero/.env`). Observer: `npm run velero -- watch RLCUSDT --notional 10 --dry-run` (run in tmux)
 
 ### Running dev servers
 
@@ -117,9 +119,12 @@ npm run dev:design-system
 
 # Vane Instagram media catalog (internal; reads MEDIAS.TXT)
 npm run dev:vane
+
+# Velero futures observer (after building; needs Binance keys / proxy)
+npm run velero -- watch RLCUSDT --notional 10 --dry-run
 ```
 
-hello-http, Contimiti, Bull Board, MCP servers, Radiobemba, Vane, and the design-system
+hello-http, Contimiti, Bull Board, MCP servers, Radiobemba, Vane, Velero, and the design-system
 static server must be built before their start scripts — they run `node dist/...`.
 
 ### Lint / test notes

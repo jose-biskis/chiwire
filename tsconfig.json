@@ -19,6 +19,7 @@
     { "path": "./apps/cachicamo-coding-agent-local" },
     { "path": "./apps/radiobemba" },
     { "path": "./apps/bemba" },
+    { "path": "./apps/velero" },
     { "path": "./apps/vane" }
   ]
 }

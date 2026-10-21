@@ -22,6 +22,7 @@ single baseline for TypeScript configuration and developer scripts.
 │   ├── redis/         # Redis for cache + BullMQ
 │   ├── radiobemba/    # Self-hosted HTTP tunnel control plane + proxy
 │   ├── bemba/         # CLI for Radiobemba tunnels
+│   ├── velero/        # Binance USDT-M futures co-trader CLI
 │   ├── cachicamo-coding-agent-local/ # Electron coding agent (Ollama local/cloud)
 │   └── cachicamo-coding-agent-website/ # Installer download site (cachicamo.avilalabs.dev)
 ├── packages/          # Shared libraries, utilities, and project modules

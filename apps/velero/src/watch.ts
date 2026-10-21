@@ -1,0 +1,141 @@
+import process from "node:process";
+import type { WatchCommand } from "./cli.js";
+import { baseUrlFor, maskKey, readEnv, venueLabel } from "./config.js";
+import { printWatchLine } from "./format.js";
+import { sail } from "./trade.js";
+
+export function cooldownRemainingMs(now: number, until: number): number {
+  return Math.max(0, until - now);
+}
+
+export function sleep(
+  ms: number,
+  signal: AbortSignal
+): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal.aborted || ms <= 0) {
+      resolve();
+      return;
+    }
+
+    const timer = setTimeout(resolve, ms);
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      resolve();
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+export async function runWatch(command: WatchCommand): Promise<void> {
+  const env = readEnv();
+  const armed = !command.dryRun && Boolean(env.apiKey && env.apiSecret);
+  const watching: WatchCommand = armed
+    ? command
+    : {
+        ...command,
+        dryRun: true
+      };
+
+  if (command.live && !command.dryRun && armed && !command.confirm) {
+    throw new Error(
+      "LIVE watch that can send orders needs --confirm (once, at launch)."
+    );
+  }
+
+  const abort = new AbortController();
+  const onStop = (): void => {
+    abort.abort();
+  };
+  process.on("SIGINT", onStop);
+  process.on("SIGTERM", onStop);
+
+  const mode = watching.dryRun ? "eyes only" : "armed";
+  console.log(
+    `velero  watch  ${venueLabel(watching.live)}  ${baseUrlFor(watching.live)}  ${watching.symbol}  poll ${watching.pollSeconds}s  cooldown ${watching.cooldownSeconds}s  ${mode}`
+  );
+  if (!env.apiKey || !env.apiSecret) {
+    console.log(
+      "No API keys loaded; risk gates are off and no order will be sent."
+    );
+  } else {
+    console.log(`API key ${maskKey(env.apiKey)} will be signed against that host.`);
+    if (!watching.live) {
+      console.log(
+        "Testnet only accepts futures TESTNET keys. A live Binance key → -2015. Real book: VELERO_LIVE=true and --live --confirm."
+      );
+    }
+    if (env.liveAllowed && !watching.live) {
+      console.log(
+        "VELERO_LIVE is true, but this process is still testnet until you pass --live."
+      );
+    }
+    if (watching.dryRun) {
+      console.log("Dry-run: will not send. Drop --dry-run to let the boat leave.");
+    }
+  }
+  console.log("Closed 5m/15m candles only. Ctrl-C drops anchor.");
+  console.log("");
+
+  let cooldownUntil = 0;
+
+  try {
+    while (!abort.signal.aborted) {
+      const now = Date.now();
+      const remaining = cooldownRemainingMs(now, cooldownUntil);
+      if (remaining > 0) {
+        printWatchLine({
+          symbol: watching.symbol,
+          status: "wait",
+          detail: `cooldown ${Math.ceil(remaining / 1000)}s`
+        });
+      } else {
+        try {
+          const result = await sail(watching, { verbose: false });
+          if (abort.signal.aborted) {
+            break;
+          }
+
+          if (result.status === "skipped") {
+            printWatchLine({
+              symbol: watching.symbol,
+              status: result.bias === "FLAT" ? "flat" : "hold",
+              detail: result.reason
+            });
+          } else if (result.status === "dry-run") {
+            printWatchLine({
+              symbol: watching.symbol,
+              status: "would",
+              detail: `${result.side} — ${result.reason}`
+            });
+            cooldownUntil = Date.now() + watching.cooldownSeconds * 1000;
+          } else {
+            printWatchLine({
+              symbol: watching.symbol,
+              status: "sail",
+              detail: `${result.side} — ${result.reason}`
+            });
+            cooldownUntil = Date.now() + watching.cooldownSeconds * 1000;
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          printWatchLine({
+            symbol: watching.symbol,
+            status: "error",
+            detail: message
+          });
+        }
+      }
+
+      await sleep(watching.pollSeconds * 1000, abort.signal);
+    }
+  } finally {
+    process.off("SIGINT", onStop);
+    process.off("SIGTERM", onStop);
+    printWatchLine({
+      symbol: watching.symbol,
+      status: "stop",
+      detail: "anchor down"
+    });
+  }
+}
