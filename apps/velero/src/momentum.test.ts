@@ -4,6 +4,7 @@ import {
   closedCandleBias,
   lastClosedBar,
   readMomentum,
+  reversalGuard,
   sma,
   withoutForming
 } from "./momentum.js";
@@ -87,6 +88,82 @@ test("aligned 15m/5m LONG waits on a closed 1m doji", () => {
   );
   assert.equal(read.bias, "FLAT");
   assert.equal(read.candle1m, "FLAT");
+});
+
+function twoGreenThenForming(): Kline[] {
+  return [
+    body(1.48, 1.49, 0),
+    body(1.49, 1.5, 60_000),
+    body(1.5, 1.5, 120_000)
+  ];
+}
+
+function bodyTape(start: number, step: number, count: number): Kline[] {
+  const bars: Kline[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const close = start + step * i;
+    const open = close - step / 2;
+    bars.push(body(open, close, i * 60_000));
+  }
+  return bars;
+}
+
+test("reversalGuard wants two closed 1m in the trade direction", () => {
+  const one = reversalGuard({
+    side: "LONG",
+    mark: 1.5,
+    last: 1.5,
+    klines1m: closedThenForming(1.49, 1.5),
+    klines5m: bodyTape(1.4, 0.01, 20)
+  });
+  assert.equal(one.ok, false);
+
+  const two = reversalGuard({
+    side: "LONG",
+    mark: 1.5,
+    last: 1.5,
+    klines1m: twoGreenThenForming(),
+    klines5m: bodyTape(1.4, 0.01, 20)
+  });
+  assert.equal(two.ok, true);
+});
+
+test("reversalGuard sits when chasing through the 1m high", () => {
+  const guard = reversalGuard({
+    side: "LONG",
+    mark: 1.52,
+    last: 1.52,
+    klines1m: twoGreenThenForming(),
+    klines5m: bodyTape(1.4, 0.01, 20)
+  });
+  assert.equal(guard.ok, false);
+  if (guard.ok) {
+    return;
+  }
+  assert.match(guard.reason, /Chasing/);
+});
+
+test("reversalGuard sits on a 1m rejection wick", () => {
+  const star: Kline = {
+    openTime: 60_000,
+    open: 1.49,
+    close: 1.5,
+    high: 1.56,
+    low: 1.49,
+    volume: 1
+  };
+  const guard = reversalGuard({
+    side: "LONG",
+    mark: 1.5,
+    last: 1.5,
+    klines1m: [body(1.48, 1.49, 0), star, body(1.5, 1.5, 120_000)],
+    klines5m: bodyTape(1.4, 0.01, 20)
+  });
+  assert.equal(guard.ok, false);
+  if (guard.ok) {
+    return;
+  }
+  assert.match(guard.reason, /rejection wick/);
 });
 
 test("aligned 15m/5m LONG sails when the closed 1m is green", () => {

@@ -223,6 +223,126 @@ export function lastClosedBar(klines: Kline[]): Kline | undefined {
   return klines.length > 1 ? klines[klines.length - 2] : undefined;
 }
 
+export function priorClosedBar(klines: Kline[]): Kline | undefined {
+  return klines.length > 2 ? klines[klines.length - 3] : undefined;
+}
+
+function barRange(bar: Kline): number {
+  return Math.max(0, bar.high - bar.low);
+}
+
+function upperWick(bar: Kline): number {
+  return Math.max(0, bar.high - Math.max(bar.open, bar.close));
+}
+
+function lowerWick(bar: Kline): number {
+  return Math.max(0, Math.min(bar.open, bar.close) - bar.low);
+}
+
+function bodySize(bar: Kline): number {
+  return Math.abs(bar.close - bar.open);
+}
+
+function rejectionWick(bar: Kline, side: Side): boolean {
+  const body = bodySize(bar);
+  if (body === 0) {
+    return false;
+  }
+  if (side === "LONG") {
+    const wick = upperWick(bar);
+    return wick > body * 1.5 && wick >= lowerWick(bar);
+  }
+  const wick = lowerWick(bar);
+  return wick > body * 1.5 && wick >= upperWick(bar);
+}
+
+export type ReversalGuard =
+  | { ok: true }
+  | { ok: false; reason: string };
+
+export function reversalGuard(input: {
+  side: Side;
+  mark: number;
+  last: number;
+  klines1m: Kline[];
+  klines5m: Kline[];
+}): ReversalGuard {
+  const { side, mark, last } = input;
+  const closed1m = lastClosedBar(input.klines1m);
+  const prior1m = priorClosedBar(input.klines1m);
+  const closed5m = lastClosedBar(input.klines5m);
+
+  if (!closed1m || !prior1m) {
+    return {
+      ok: false,
+      reason: "Need two closed 1m candles before sailing. Sitting."
+    };
+  }
+
+  const priorBias = closedCandleBias(prior1m);
+  if (priorBias !== side) {
+    return {
+      ok: false,
+      reason: `Only one closed 1m ${side}; prior 1m is ${priorBias}. Waiting so we don't buy the reversal close.`
+    };
+  }
+
+  if (closed5m && closedCandleBias(closed5m) !== side) {
+    return {
+      ok: false,
+      reason: `5m closed ${closedCandleBias(closed5m)} against ${side}. Reversal risk.`
+    };
+  }
+
+  if (rejectionWick(closed1m, side)) {
+    return {
+      ok: false,
+      reason: `Closed 1m is a rejection wick against ${side}. Sitting.`
+    };
+  }
+  if (closed5m && rejectionWick(closed5m, side)) {
+    return {
+      ok: false,
+      reason: `Closed 5m is a rejection wick against ${side}. Sitting.`
+    };
+  }
+
+  const closed1mSeries = withoutForming(input.klines1m);
+  const closed5mSeries = withoutForming(input.klines5m);
+  const atr1m = atr(closed1mSeries, ATR_PERIOD);
+  const atr5m = atr(closed5mSeries, ATR_PERIOD);
+  const range1 = barRange(closed1m);
+  if (atr1m !== null && range1 > atr1m * 1.8) {
+    return {
+      ok: false,
+      reason: `Closed 1m is exhausted (${range1.toFixed(6)} vs ATR ${atr1m.toFixed(6)}). Not buying the climax close.`
+    };
+  }
+  if (closed5m && atr5m !== null && barRange(closed5m) > atr5m * 1.6) {
+    return {
+      ok: false,
+      reason: "Closed 5m is exhausted vs ATR. Not buying the climax close."
+    };
+  }
+
+  const priceHigh = Math.max(mark, last);
+  const priceLow = Math.min(mark, last);
+  if (side === "LONG" && priceHigh > closed1m.high) {
+    return {
+      ok: false,
+      reason: "Chasing through the closed 1m high. Sitting."
+    };
+  }
+  if (side === "SHORT" && priceLow < closed1m.low) {
+    return {
+      ok: false,
+      reason: "Chasing through the closed 1m low. Sitting."
+    };
+  }
+
+  return { ok: true };
+}
+
 export function closedCandleBias(bar: Kline | undefined): Bias {
   if (!bar) {
     return "FLAT";

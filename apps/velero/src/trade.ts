@@ -10,7 +10,13 @@ import {
 } from "./config.js";
 import { suggestPercents, type FeeSuggestion } from "./fees.js";
 import { printFeeCard, printPositions, printQuote } from "./format.js";
-import { opposite, orderSide, readMomentum, withoutForming } from "./momentum.js";
+import {
+  opposite,
+  orderSide,
+  readMomentum,
+  reversalGuard,
+  withoutForming
+} from "./momentum.js";
 import { protectivePrices, quantityFromNotional } from "./precision.js";
 import { evaluateRisk } from "./risk.js";
 import { planTend, suggestSmartPercents, type SmartProfitResult } from "./smart.js";
@@ -139,12 +145,28 @@ async function preparePair(
   const [raw15m, raw5m, raw1m] = await Promise.all([
     client.klines(command.symbol, "15m", 80),
     client.klines(command.symbol, "5m", 40),
-    client.klines(command.symbol, "1m", command.smartProfit ? 40 : 5)
+    client.klines(command.symbol, "1m", 40)
   ]);
   const klines15m =
     command.command === "watch" ? withoutForming(raw15m) : raw15m;
   const klines5m = command.command === "watch" ? withoutForming(raw5m) : raw5m;
-  const momentum = readMomentum(klines15m, klines5m, raw1m);
+  let momentum = readMomentum(klines15m, klines5m, raw1m);
+  if (momentum.bias !== "FLAT") {
+    const guard = reversalGuard({
+      side: momentum.bias,
+      mark,
+      last,
+      klines1m: raw1m,
+      klines5m: raw5m
+    });
+    if (!guard.ok) {
+      momentum = {
+        ...momentum,
+        bias: "FLAT",
+        reason: guard.reason
+      };
+    }
+  }
   const taker = await resolveTakerFee(
     client,
     command.symbol,

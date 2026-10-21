@@ -89,7 +89,7 @@ export async function runWatch(command: WatchCommand): Promise<void> {
     }
   }
   console.log(
-    `Closed 15m/5m plus last closed 1m body. Cooldown is per pair. Max open is shared. Ctrl-C drops anchor.`
+    `Closed 15m/5m plus two closed 1m in direction; no climax/rejection/chase. Cooldown is per pair. Max open is shared. Ctrl-C drops anchor.`
   );
   console.log("");
 
