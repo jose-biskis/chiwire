@@ -1,8 +1,8 @@
 # Velero frontend
 
 Ship's desk for the Velero watcher. Same stdout as the CLI, plus start/stop
-and named profiles. The trader is still `@chiwire/velero`; this UI talks to
-`@chiwire/velero-backend`.
+and named profiles. The trader is `@chiwire/velero-shared` via
+`@chiwire/velero-cli`; this UI talks to `@chiwire/velero-backend`.
 
 ## Local
 
@@ -26,7 +26,7 @@ Or the built static server (port 3000, proxies `/api` to 3001):
 npm run start:velero-desk
 ```
 
-Keys stay in `apps/velero/.env`. Starting a **live** profile from Full ahead
+Keys stay in `apps/velero-cli/.env`. Starting a **live** profile from Full ahead
 sends `--live --confirm` to the CLI.
 
 ## Deploy

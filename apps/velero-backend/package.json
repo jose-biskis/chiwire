@@ -11,6 +11,7 @@
     "test": "tsc --build && node --test dist/profile.test.js"
   },
   "dependencies": {
-    "@chiwire/velero": "*"
+    "@chiwire/velero-cli": "*",
+    "@chiwire/velero-shared": "*"
   }
 }

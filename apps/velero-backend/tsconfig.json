@@ -6,5 +6,8 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../velero" }]
+  "references": [
+    { "path": "../../packages/velero-shared" },
+    { "path": "../velero-cli" }
+  ]
 }

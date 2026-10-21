@@ -38,7 +38,7 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 | Cachicamo installer depot | `@chiwire/cachicamo-coding-agent-website` | `npm run dev:cachicamo-coding-agent-website` | 5174 (cachicamo.avilalabs.dev) |
 | Radiobemba tunnel server | `@chiwire/radiobemba` | `npm run dev:radiobemba` (HTTP :3000 + SSH :2222) | 3000 / 2222 |
 | Bemba tunnel CLI | `@chiwire/bemba` | build then `npm run bemba -- http <port>` | n/a |
-| Velero futures co-trader CLI | `@chiwire/velero` | build then `npm run velero -- quote RLCUSDT` / `watch` | n/a |
+| Velero futures co-trader CLI | `@chiwire/velero-cli` | build then `npm run velero -- quote RLCUSDT` / `watch` | n/a |
 | Velero desk API | `@chiwire/velero-backend` | build then `npm run start:velero-api` | 3001 (deploy host 8071) |
 | Velero desk UI | `@chiwire/velero-frontend` | `npm run dev:velero-desk` or build then `npm run start:velero-desk` | 5175 dev / 3000 (deploy host 8070) |
 | Vane media catalog (internal) | `@chiwire/vane` | build then `npm run start:vane` | 3000 |
@@ -49,7 +49,8 @@ Chiwire is an npm workspaces monorepo with independent apps and shared packages:
 Shared code lives under `packages/` (`@chiwire/core` has ids, TTL, Knex/pg, and
 BullMQ helpers; `@chiwire/ui` has base contract + archetype React primitives
 (`internal`, `valenstonic`, each with optional `exclusive/`);
-`@chiwire/radiobemba-shared` has the tunnel wire protocol). Contimiti purge jobs use BullMQ against Redis; Postgres helpers
+`@chiwire/radiobemba-shared` has the tunnel wire protocol;
+`@chiwire/velero-shared` has the Velero co-trader). Contimiti purge jobs use BullMQ against Redis; Postgres helpers
 are available for later persistence.
 
 There is no `docker-compose`, Makefile, or `.devcontainer`. Local development only requires Node.js and npm.
@@ -75,8 +76,8 @@ See `README.md` for full details. Common commands:
 - Verify hello-http: `curl http://localhost:3000/` and `curl http://localhost:3000/health`
 - Verify MCP servers: `curl http://localhost:3000/`, `curl http://localhost:3000/health`, and `curl -X POST http://localhost:3000/trello -H "content-type: application/json" -H "accept: application/json, text/event-stream" --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'`
 - Radiobemba: `npm run dev:radiobemba` (SSH reverse tunnels on :2222); CLI `npm run build --workspace @chiwire/bemba` then `npm run bemba -- http <port>`; verify `curl http://localhost:3000/health`
-- Velero CLI: `npm run build --workspace @chiwire/velero` then `npm run velero -- quote RLCUSDT --notional 10` (keys in `apps/velero/.env`). Observer: `npm run velero -- watch RLCUSDT --notional 10 --dry-run` (run in tmux)
-- Velero desk: build CLI + API then `npm run start:velero-api` (`:3001`); UI `npm run dev:velero-desk` → http://localhost:5175. Deploy `npm run deploy:velero-api` and `npm run deploy:velero-desk`; tunnel `npm run tunnel:velero-desk` → http://localhost:8070
+- Velero CLI: `npm run build --workspace @chiwire/velero-shared` && `npm run build --workspace @chiwire/velero-cli` then `npm run velero -- quote RLCUSDT --notional 10` (keys in `apps/velero-cli/.env`). Observer: `npm run velero -- watch RLCUSDT --notional 10 --dry-run` (run in tmux)
+- Velero desk: build shared + CLI + API then `npm run start:velero-api` (`:3001`); UI `npm run dev:velero-desk` → http://localhost:5175. Deploy `npm run deploy:velero-api` and `npm run deploy:velero-desk`; tunnel `npm run tunnel:velero-desk` → http://localhost:8070
 
 ### Running dev servers
 

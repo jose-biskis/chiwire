@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { parseArgs } from "@chiwire/velero/cli";
+import { parseArgs } from "@chiwire/velero-shared/cli";
 import { randomUUID } from "node:crypto";
 
 export type WatchProfile = {

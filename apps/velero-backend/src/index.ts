@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { loadVeleroEnv } from "@chiwire/velero/env";
+import { loadVeleroEnv } from "@chiwire/velero-shared/env";
 import {
   normalizeDraft,
   ProfileStore,
@@ -61,7 +61,8 @@ async function readJson(request: IncomingMessage): Promise<Record<string, unknow
   return parsed as Record<string, unknown>;
 }
 
-loadVeleroEnv();
+const backendRoot = path.dirname(fileURLToPath(import.meta.url));
+loadVeleroEnv([path.resolve(backendRoot, "../../velero-cli/.env")]);
 const store = new ProfileStore(profilesPath());
 const runner = new WatchRunner();
 const port = readPort();

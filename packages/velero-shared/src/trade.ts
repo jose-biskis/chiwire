@@ -25,7 +25,7 @@ import type { PositionRow, Side } from "./types.js";
 function requireKeys(env: VeleroEnv): { apiKey: string; apiSecret: string } {
   if (!env.apiKey || !env.apiSecret) {
     throw new Error(
-      "BINANCE_API_KEY and BINANCE_API_SECRET are required for this command. Copy apps/velero/.env.example to apps/velero/.env — never paste keys in chat."
+      "BINANCE_API_KEY and BINANCE_API_SECRET are required for this command. Copy apps/velero-cli/.env.example to apps/velero-cli/.env — never paste keys in chat."
     );
   }
   return { apiKey: env.apiKey, apiSecret: env.apiSecret };
@@ -127,7 +127,7 @@ async function preparePair(
 
   if (command.live && isArmed(command) && !env.liveAllowed) {
     throw new Error(
-      "Refusing LIVE. Set VELERO_LIVE=true in apps/velero/.env if you really mean the real book."
+      "Refusing LIVE. Set VELERO_LIVE=true in apps/velero-cli/.env if you really mean the real book."
     );
   }
 
@@ -524,7 +524,7 @@ export async function tendPair(command: WatchCommand): Promise<TendResult> {
   }
   if (command.live && !command.dryRun && !env.liveAllowed) {
     throw new Error(
-      "Refusing LIVE. Set VELERO_LIVE=true in apps/velero/.env if you really mean the real book."
+      "Refusing LIVE. Set VELERO_LIVE=true in apps/velero-cli/.env if you really mean the real book."
     );
   }
 

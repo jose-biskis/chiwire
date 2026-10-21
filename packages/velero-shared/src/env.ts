@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
 
 function parseLine(line: string): { key: string; value: string } | null {
   const trimmed = line.trim();
@@ -43,8 +42,8 @@ export function loadDotEnvFile(filePath: string): void {
   }
 }
 
-export function loadVeleroEnv(): void {
-  const appRoot = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
-  loadDotEnvFile(path.join(appRoot, ".env"));
-  loadDotEnvFile(path.join(process.cwd(), ".env"));
+export function loadVeleroEnv(explicitFiles: string[] = []): void {
+  for (const file of [...explicitFiles, path.join(process.cwd(), ".env")]) {
+    loadDotEnvFile(file);
+  }
 }

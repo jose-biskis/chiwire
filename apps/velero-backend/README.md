@@ -1,16 +1,18 @@
 # Velero backend
 
-HTTP desk for the Velero CLI watcher. The CLI (`@chiwire/velero`) stays the
-trader; this process starts/stops it, stores named profiles, and streams the
-same stdout the terminal would show.
+HTTP desk for the Velero CLI watcher. `@chiwire/velero-shared` is the trader;
+`@chiwire/velero-cli` is the argv/stdout transport. This process starts/stops
+that CLI, stores named profiles, and streams the same stdout the terminal
+would show.
 
-Keys still live in `apps/velero/.env` (or `envFrom` on deploy). Never paste
+Keys still live in `apps/velero-cli/.env` (or `envFrom` on deploy). Never paste
 them in the UI.
 
 ## Local
 
 ```sh
-npm run build --workspace @chiwire/velero
+npm run build --workspace @chiwire/velero-shared
+npm run build --workspace @chiwire/velero-cli
 npm run build --workspace @chiwire/velero-backend
 PORT=3001 npm run start --workspace @chiwire/velero-backend
 ```

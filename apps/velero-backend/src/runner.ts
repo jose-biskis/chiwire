@@ -28,7 +28,7 @@ function veleroBin(): string {
     return fromEnv;
   }
   const here = path.dirname(fileURLToPath(import.meta.url));
-  return path.resolve(here, "../../velero/dist/index.js");
+  return path.resolve(here, "../../velero-cli/dist/index.js");
 }
 
 function veleroCwd(): string {
@@ -36,7 +36,7 @@ function veleroCwd(): string {
   if (fromEnv) {
     return fromEnv;
   }
-  return path.dirname(veleroBin());
+  return path.resolve(path.dirname(veleroBin()), "..");
 }
 
 export class WatchRunner {

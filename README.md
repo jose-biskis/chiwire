@@ -22,14 +22,15 @@ single baseline for TypeScript configuration and developer scripts.
 │   ├── redis/         # Redis for cache + BullMQ
 │   ├── radiobemba/    # Self-hosted HTTP tunnel control plane + proxy
 │   ├── bemba/         # CLI for Radiobemba tunnels
-│   ├── velero/        # Binance USDT-M futures co-trader CLI
+│   ├── velero-cli/      # Velero CLI (argv/stdout transport)
 │   ├── velero-backend/  # Desk API (start/stop watch, profiles, log SSE)
 │   ├── velero-frontend/ # Desk UI (CLI tape + named profiles)
 │   ├── cachicamo-coding-agent-local/ # Electron coding agent (Ollama local/cloud)
 │   └── cachicamo-coding-agent-website/ # Installer download site (cachicamo.avilalabs.dev)
 ├── packages/          # Shared libraries, utilities, and project modules
 │   ├── core/          # Ids, TTL, Knex/pg, BullMQ helpers
-│   └── radiobemba-shared/ # Radiobemba wire protocol + slug helpers
+│   ├── radiobemba-shared/ # Radiobemba wire protocol + slug helpers
+│   └── velero-shared/ # Velero co-trader (watch, trade, Binance)
 ├── scripts/           # Reusable local development and deployment scripts
 ├── package.json       # Root workspace metadata and scripts
 ├── tsconfig.base.json # Shared TypeScript compiler options

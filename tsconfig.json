@@ -19,7 +19,8 @@
     { "path": "./apps/cachicamo-coding-agent-local" },
     { "path": "./apps/radiobemba" },
     { "path": "./apps/bemba" },
-    { "path": "./apps/velero" },
+    { "path": "./packages/velero-shared" },
+    { "path": "./apps/velero-cli" },
     { "path": "./apps/velero-backend" },
     { "path": "./apps/velero-frontend" },
     { "path": "./apps/vane" }

@@ -184,7 +184,7 @@ Examples:
   velero watch --gold-digger --smart-profit --smart-cap 12 --notional 10
   velero fees --notional 10 --taker-fee 0.1
 
-Keys: BINANCE_API_KEY / BINANCE_API_SECRET (apps/velero/.env).
+Keys: BINANCE_API_KEY / BINANCE_API_SECRET (apps/velero-cli/.env).
 Proxy: VELERO_PROXY if Binance geo-blocks this IP (Reja: http://127.0.0.1:3128).
 Default venue is Binance futures *testnet*. Live is opt-in, twice.
 `);

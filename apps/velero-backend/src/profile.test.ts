@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseArgs } from "@chiwire/velero/cli";
+import { parseArgs } from "@chiwire/velero-shared/cli";
 import { favoriteProfileDraft, profileToArgv } from "./profile.js";
 
 test("favorite profile argv is a valid live smart-profit gold-digger watch", () => {

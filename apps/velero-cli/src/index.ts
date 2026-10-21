@@ -1,12 +1,21 @@
 #!/usr/bin/env node
+import path from "node:path";
 import process from "node:process";
-import { parseArgs, printHelp } from "./cli.js";
-import { loadVeleroEnv } from "./env.js";
-import { runFees, runQuote, runStatus, runTrade } from "./trade.js";
-import { runWatch } from "./watch.js";
+import { fileURLToPath } from "node:url";
+import {
+  loadVeleroEnv,
+  parseArgs,
+  printHelp,
+  runFees,
+  runQuote,
+  runStatus,
+  runTrade,
+  runWatch
+} from "@chiwire/velero-shared";
 
 async function main(): Promise<void> {
-  loadVeleroEnv();
+  const cliRoot = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
+  loadVeleroEnv([path.join(cliRoot, ".env")]);
   const command = parseArgs(process.argv);
 
   if (command.command === "help") {

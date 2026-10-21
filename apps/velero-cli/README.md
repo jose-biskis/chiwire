@@ -1,7 +1,11 @@
-# Velero
+# Velero CLI
 
-Binance USDT-M futures co-trader CLI. The *vela* is the candle; Velero is the
-boat. It sizes a ticket from a nominal USDT value, suggests stop/target from
+Argv/stdout transport for the Binance USDT-M futures co-trader. The *vela*
+is the candle; Velero is the boat. Trading logic lives in
+`@chiwire/velero-shared`. This package parses flags, prints the tape, and
+exits.
+
+It sizes a ticket from a nominal USDT value, suggests stop/target from
 **taker fees**, reads 15m trend + 5m impulse + the last **closed 1m** body,
 and refuses to open a second ticket on a pair that is already working.
 
@@ -11,7 +15,7 @@ is **testnet**.
 ## Setup
 
 ```sh
-cp apps/velero/.env.example apps/velero/.env
+cp apps/velero-cli/.env.example apps/velero-cli/.env
 ```
 
 Put the API key in `.env` (gitignored). Enable **futures trading only** — no
@@ -23,7 +27,8 @@ Binance geo-blocks many IPs. If you see `restricted location`, set
 before quoting or trading.
 
 ```sh
-npm run build --workspace @chiwire/velero
+npm run build --workspace @chiwire/velero-shared
+npm run build --workspace @chiwire/velero-cli
 npm run velero -- help
 ```
 
@@ -94,9 +99,9 @@ Live orders need `VELERO_LIVE=true`, `--live`, and `--confirm`.
 
 Run the observer in tmux; Ctrl-C drops anchor.
 
-A deployable **desk** (same CLI under the hood, start/stop, named profiles)
-lives in `@chiwire/velero-backend` + `@chiwire/velero-frontend`. See those
-READMEs. Local UI: `npm run start:velero-api` then `npm run dev:velero-desk`.
+A deployable **desk** (same CLI child, start/stop, named profiles) lives in
+`@chiwire/velero-backend` + `@chiwire/velero-frontend`. See those READMEs.
+Local UI: `npm run start:velero-api` then `npm run dev:velero-desk`.
 
 If Binance returns `restricted location`, set `VELERO_PROXY` (Reja on
 `http://127.0.0.1:3128`) or join Paso before you quote.
