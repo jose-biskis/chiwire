@@ -51,8 +51,9 @@ export async function runWatch(command: WatchCommand): Promise<void> {
   process.on("SIGTERM", onStop);
 
   const mode = watching.dryRun ? "eyes only" : "armed";
+  const fleet = watching.symbols.join(" ");
   console.log(
-    `velero  watch  ${venueLabel(watching.live)}  ${baseUrlFor(watching.live)}  ${watching.symbol}  poll ${watching.pollSeconds}s  cooldown ${watching.cooldownSeconds}s  ${mode}`
+    `velero  watch  ${venueLabel(watching.live)}  ${baseUrlFor(watching.live)}  ${fleet}  poll ${watching.pollSeconds}s  cooldown ${watching.cooldownSeconds}s  ${mode}`
   );
   if (!env.apiKey || !env.apiSecret) {
     console.log(
@@ -74,53 +75,75 @@ export async function runWatch(command: WatchCommand): Promise<void> {
       console.log("Dry-run: will not send. Drop --dry-run to let the boat leave.");
     }
   }
-  console.log("Closed 5m/15m candles only. Ctrl-C drops anchor.");
+  console.log(
+    `Closed 5m/15m candles only. Cooldown is per pair. Max open is shared. Ctrl-C drops anchor.`
+  );
   console.log("");
 
-  let cooldownUntil = 0;
+  const cooldownUntil = new Map<string, number>();
 
   try {
     while (!abort.signal.aborted) {
-      const now = Date.now();
-      const remaining = cooldownRemainingMs(now, cooldownUntil);
-      if (remaining > 0) {
-        printWatchLine({
-          symbol: watching.symbol,
-          status: "wait",
-          detail: `cooldown ${Math.ceil(remaining / 1000)}s`
-        });
-      } else {
+      for (const symbol of watching.symbols) {
+        if (abort.signal.aborted) {
+          break;
+        }
+
+        const remaining = cooldownRemainingMs(
+          Date.now(),
+          cooldownUntil.get(symbol) ?? 0
+        );
+        if (remaining > 0) {
+          printWatchLine({
+            symbol,
+            status: "wait",
+            detail: `cooldown ${Math.ceil(remaining / 1000)}s`
+          });
+          continue;
+        }
+
+        const tick: WatchCommand = {
+          ...watching,
+          symbol
+        };
+
         try {
-          const result = await sail(watching, { verbose: false });
+          const result = await sail(tick, { verbose: false });
           if (abort.signal.aborted) {
             break;
           }
 
           if (result.status === "skipped") {
             printWatchLine({
-              symbol: watching.symbol,
+              symbol,
               status: result.bias === "FLAT" ? "flat" : "hold",
               detail: result.reason
             });
           } else if (result.status === "dry-run") {
             printWatchLine({
-              symbol: watching.symbol,
+              symbol,
               status: "would",
               detail: `${result.side} — ${result.reason}`
             });
-            cooldownUntil = Date.now() + watching.cooldownSeconds * 1000;
+            cooldownUntil.set(
+              symbol,
+              Date.now() + watching.cooldownSeconds * 1000
+            );
           } else {
             printWatchLine({
-              symbol: watching.symbol,
+              symbol,
               status: "sail",
               detail: `${result.side} — ${result.reason}`
             });
-            cooldownUntil = Date.now() + watching.cooldownSeconds * 1000;
+            cooldownUntil.set(
+              symbol,
+              Date.now() + watching.cooldownSeconds * 1000
+            );
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           printWatchLine({
-            symbol: watching.symbol,
+            symbol,
             status: "error",
             detail: message
           });
@@ -133,9 +156,9 @@ export async function runWatch(command: WatchCommand): Promise<void> {
     process.off("SIGINT", onStop);
     process.off("SIGTERM", onStop);
     printWatchLine({
-      symbol: watching.symbol,
+      symbol: "watch",
       status: "stop",
-      detail: "anchor down"
+      detail: `anchor down  ${fleet}`
     });
   }
 }

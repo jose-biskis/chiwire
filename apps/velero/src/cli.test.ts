@@ -75,10 +75,49 @@ test("watch parses poll and cooldown and stays dry-run until armed", () => {
     return;
   }
   assert.equal(command.symbol, "RLCUSDT");
+  assert.deepEqual(command.symbols, ["RLCUSDT"]);
   assert.equal(command.pollSeconds, 15);
   assert.equal(command.cooldownSeconds, 120);
   assert.equal(command.dryRun, true);
   assert.equal(command.live, false);
+});
+
+test("watch accepts several pairs as args or a comma list", () => {
+  const spaced = parseArgs([
+    "node",
+    "velero",
+    "watch",
+    "RLCUSDT",
+    "ETHUSDT",
+    "BTCUSDT",
+    "--notional",
+    "10"
+  ]);
+  assert.equal(spaced.command, "watch");
+  if (spaced.command !== "watch") {
+    return;
+  }
+  assert.deepEqual(spaced.symbols, ["RLCUSDT", "ETHUSDT", "BTCUSDT"]);
+
+  const commas = parseArgs([
+    "node",
+    "velero",
+    "watch",
+    "rlc/usdt,eth-usdt",
+    "--dry-run"
+  ]);
+  assert.equal(commas.command, "watch");
+  if (commas.command !== "watch") {
+    return;
+  }
+  assert.deepEqual(commas.symbols, ["RLCUSDT", "ETHUSDT"]);
+});
+
+test("quote refuses a fleet", () => {
+  assert.throws(
+    () => parseArgs(["node", "velero", "quote", "RLCUSDT", "ETHUSDT"]),
+    /watch RLCUSDT ETHUSDT/
+  );
 });
 
 test("fees command is pair-less", () => {

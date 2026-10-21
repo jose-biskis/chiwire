@@ -36,9 +36,10 @@ npm run velero -- fees --notional 10 --taker-fee 0.1
 # Read RLCUSDT: momentum + suggested TP/SL. No order.
 npm run velero -- quote RLCUSDT --notional 10 --leverage 10
 
-# Observer: poll closed candles, skip FLAT / already-open, cooldown after a sail
+# Observer: one process, one or many pairs (spaces or commas)
 npm run velero -- watch RLCUSDT --notional 10 --max-open 3 --dry-run
-npm run velero -- watch RLCUSDT --notional 10 --poll 30 --cooldown 300
+npm run velero -- watch RLCUSDT ETHUSDT BTCUSDT --notional 10 --max-open 3
+npm run velero -- watch RLCUSDT,ETHUSDT --notional 10 --poll 30 --cooldown 300
 
 # Print the order without sending it
 npm run velero -- trade RLCUSDT --notional 10 --leverage 10 --max-open 3 --dry-run
@@ -66,7 +67,8 @@ its cut.
 - No entry if open positions are at `--max-open` / `VELERO_MAX_OPEN`
 - Notional capped by `VELERO_MAX_NOTIONAL` (default 25 USDT)
 - `watch` uses **closed** 5m/15m candles, not the forming bar
-- After a sail or dry-run fire, `watch` sits `--cooldown` seconds (default 300)
+- After a sail or dry-run fire, `watch` sits `--cooldown` seconds **per pair** (default 300)
+- Several pairs share `--max-open`; a pair that already has a ticket is skipped
 
 Live orders need `VELERO_LIVE=true`, `--live`, and `--confirm`.
 `watch --live` needs `--confirm` once at launch if it is allowed to send.

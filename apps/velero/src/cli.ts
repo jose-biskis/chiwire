@@ -49,6 +49,7 @@ export type WatchCommand = PairFlags & {
   confirm: boolean;
   pollSeconds: number;
   cooldownSeconds: number;
+  symbols: string[];
 };
 
 export type CliCommand =
@@ -97,6 +98,33 @@ export function normalizeSymbol(raw: string): string {
   return compact;
 }
 
+export function collectSymbols(tokens: string[]): string[] {
+  const symbols: string[] = [];
+  const seen = new Set<string>();
+
+  for (const token of tokens) {
+    const parts = token.split(",").map((part) => part.trim()).filter(Boolean);
+    for (const part of parts) {
+      const symbol = normalizeSymbol(part);
+      if (seen.has(symbol)) {
+        continue;
+      }
+      seen.add(symbol);
+      symbols.push(symbol);
+    }
+  }
+
+  if (symbols.length === 0) {
+    throw new Error("Usage: velero quote|trade|watch <PAIR> [PAIR...]");
+  }
+
+  if (symbols.length > 20) {
+    throw new Error("Watch cap is 20 pairs. Split the fleet.");
+  }
+
+  return symbols;
+}
+
 export function printHelp(): void {
   console.log(`velero — Binance USDT-M futures co-trader
 
@@ -106,7 +134,7 @@ already has a ticket open, and we do not pretend taker fees are free.
 Usage:
   velero quote <PAIR> [options]
   velero trade <PAIR> [options]
-  velero watch <PAIR> [options]
+  velero watch <PAIR> [PAIR...] [options]
   velero fees [--notional 10] [--taker-fee 0.1]
   velero status [--live]
   velero help
@@ -127,7 +155,8 @@ Options:
 Examples:
   velero quote RLCUSDT --notional 10
   velero trade RLCUSDT --notional 10 --leverage 10 --max-open 3 --dry-run
-  velero watch RLCUSDT --notional 10 --max-open 3 --dry-run
+  velero watch RLCUSDT ETHUSDT --notional 10 --max-open 3 --dry-run
+  velero watch RLCUSDT,ETHUSDT,BTCUSDT --notional 10
   velero fees --notional 10 --taker-fee 0.1
 
 Keys: BINANCE_API_KEY / BINANCE_API_SECRET (apps/velero/.env).
@@ -138,6 +167,7 @@ Default venue is Binance futures *testnet*. Live is opt-in, twice.
 
 type PairBuilder = {
   symbol: string;
+  symbols: string[];
   notional: number;
   leverage: number;
   maxOpen: number;
@@ -151,14 +181,27 @@ type PairBuilder = {
   cooldownSeconds: number;
 };
 
-function parsePairFlags(args: string[], start: number): PairBuilder {
-  const pair = args[1];
-  if (!pair || pair.startsWith("-")) {
-    throw new Error("Usage: velero quote|trade|watch <PAIR>");
+function parsePairFlags(args: string[]): PairBuilder {
+  let index = 1;
+  const pairTokens: string[] = [];
+  while (index < args.length) {
+    const token = args[index]!;
+    if (token.startsWith("-")) {
+      break;
+    }
+    pairTokens.push(token);
+    index += 1;
+  }
+
+  const symbols = collectSymbols(pairTokens);
+  const first = symbols[0];
+  if (!first) {
+    throw new Error("Usage: velero quote|trade|watch <PAIR> [PAIR...]");
   }
 
   const builder: PairBuilder = {
-    symbol: normalizeSymbol(pair),
+    symbol: first,
+    symbols,
     notional: DEFAULT_NOTIONAL,
     leverage: DEFAULT_LEVERAGE,
     maxOpen: DEFAULT_MAX_OPEN,
@@ -171,8 +214,6 @@ function parsePairFlags(args: string[], start: number): PairBuilder {
     pollSeconds: DEFAULT_POLL_SECONDS,
     cooldownSeconds: DEFAULT_COOLDOWN_SECONDS
   };
-
-  let index = start;
   while (index < args.length) {
     const arg = args[index]!;
 
@@ -324,7 +365,13 @@ export function parseArgs(argv: string[]): CliCommand {
   }
 
   if (command === "quote" || command === "trade" || command === "watch") {
-    const parsed = parsePairFlags(args, 2);
+    const parsed = parsePairFlags(args);
+    if (command !== "watch" && parsed.symbols.length > 1) {
+      throw new Error(
+        `${command} takes one pair. Use: velero watch ${parsed.symbols.join(" ")}`
+      );
+    }
+
     if (command === "quote") {
       return {
         command: "quote",
@@ -343,6 +390,7 @@ export function parseArgs(argv: string[]): CliCommand {
       return {
         command: "watch",
         symbol: parsed.symbol,
+        symbols: parsed.symbols,
         notional: parsed.notional,
         leverage: parsed.leverage,
         maxOpen: parsed.maxOpen,
