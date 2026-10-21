@@ -46,12 +46,14 @@ export type TradeCommand = PairFlags & {
   command: "trade";
   dryRun: boolean;
   confirm: boolean;
+  isolated: boolean;
 };
 
 export type WatchCommand = PairFlags & {
   command: "watch";
   dryRun: boolean;
   confirm: boolean;
+  isolated: boolean;
   pollSeconds: number;
   cooldownSeconds: number;
   symbols: string[];
@@ -151,7 +153,7 @@ Usage:
 
 Options:
   --notional <usdt>    Nominal (notional) size. Default ${DEFAULT_NOTIONAL}
-  --leverage <n>       Isolated leverage, capped at 10. Default ${DEFAULT_LEVERAGE}
+  --leverage <n>       Leverage, capped at 10. Default ${DEFAULT_LEVERAGE}
   --max-open <n>       Max concurrent positions. Default ${DEFAULT_MAX_OPEN}
   --tp <percent>       Take-profit as % of notional (0.5 = 0.5%)
   --sl <percent>       Stop-loss as % of notional
@@ -162,6 +164,7 @@ Options:
   --gold-top <n>       How many suggestions to print. Default ${DEFAULT_GOLD_TOP}
   --gold-scan <n>      Volume leaders to analyse. Default ${DEFAULT_GOLD_SCAN}
   --gold-every <sec>   Rescan interval. Default ${DEFAULT_GOLD_EVERY_SECONDS}
+  --isolated           Isolated margin. Default is cross
   --dry-run            Print the order, do not send it
   --live               Use real futures (needs VELERO_LIVE=true)
   --confirm            Required with --live before an order is sent
@@ -193,6 +196,7 @@ type PairBuilder = {
   live: boolean;
   dryRun: boolean;
   confirm: boolean;
+  isolated: boolean;
   pollSeconds: number;
   cooldownSeconds: number;
   goldDigger: boolean;
@@ -228,6 +232,7 @@ function parsePairFlags(args: string[]): PairBuilder {
     live: false,
     dryRun: false,
     confirm: false,
+    isolated: false,
     pollSeconds: DEFAULT_POLL_SECONDS,
     cooldownSeconds: DEFAULT_COOLDOWN_SECONDS,
     goldDigger: false,
@@ -300,6 +305,12 @@ function parsePairFlags(args: string[]): PairBuilder {
 
     if (arg === "--confirm") {
       builder.confirm = true;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--isolated") {
+      builder.isolated = true;
       index += 1;
       continue;
     }
@@ -476,6 +487,7 @@ export function parseArgs(argv: string[]): CliCommand {
         live: parsed.live,
         dryRun: parsed.dryRun,
         confirm: parsed.confirm,
+        isolated: parsed.isolated,
         pollSeconds: parsed.pollSeconds,
         cooldownSeconds: parsed.cooldownSeconds,
         goldDigger: parsed.goldDigger,
@@ -496,7 +508,8 @@ export function parseArgs(argv: string[]): CliCommand {
       takerFeeRate: parsed.takerFeeRate,
       live: parsed.live,
       dryRun: parsed.dryRun,
-      confirm: parsed.confirm
+      confirm: parsed.confirm,
+      isolated: parsed.isolated
     };
   }
 

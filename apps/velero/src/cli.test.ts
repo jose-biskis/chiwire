@@ -52,6 +52,22 @@ test("trade requires the pair and keeps dry-run off the live path", () => {
   assert.equal(command.dryRun, true);
   assert.equal(command.live, false);
   assert.equal(command.maxOpen, 3);
+  assert.equal(command.isolated, false);
+});
+
+test("trade --isolated opts into isolated margin", () => {
+  const command = parseArgs([
+    "node",
+    "velero",
+    "trade",
+    "RLCUSDT",
+    "--isolated"
+  ]);
+  assert.equal(command.command, "trade");
+  if (command.command !== "trade") {
+    return;
+  }
+  assert.equal(command.isolated, true);
 });
 
 test("watch parses poll and cooldown and stays dry-run until armed", () => {

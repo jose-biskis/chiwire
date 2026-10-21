@@ -56,6 +56,10 @@ export function explainBinanceError(
     return `${message} Velero needs an allowed IP — set VELERO_PROXY (e.g. http://127.0.0.1:3128 for Reja) or connect through Paso.`;
   }
 
+  if (code === -4168) {
+    return `${message} This account is in Multi-Assets mode, so isolated margin cannot be set. Velero will leave the margin mode alone.`;
+  }
+
   if (code !== -2015) {
     return message;
   }
@@ -373,15 +377,22 @@ export class BinanceFutures {
     });
   }
 
-  async setIsolated(symbol: string): Promise<void> {
+  async setMarginType(
+    symbol: string,
+    marginType: "ISOLATED" | "CROSSED"
+  ): Promise<"set" | "already" | "multi-assets"> {
     try {
       await this.signedPost("/fapi/v1/marginType", {
         symbol,
-        marginType: "ISOLATED"
+        marginType
       });
+      return "set";
     } catch (error) {
       if (error instanceof BinanceError && error.code === -4046) {
-        return;
+        return "already";
+      }
+      if (error instanceof BinanceError && error.code === -4168) {
+        return "multi-assets";
       }
       throw error;
     }

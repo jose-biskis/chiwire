@@ -55,7 +55,7 @@ export async function runWatch(command: WatchCommand): Promise<void> {
   const fleet =
     watching.symbols.length > 0 ? watching.symbols.join(" ") : "(no fleet)";
   console.log(
-    `velero  watch  ${venueLabel(watching.live)}  ${baseUrlFor(watching.live)}  ${fleet}  poll ${watching.pollSeconds}s  cooldown ${watching.cooldownSeconds}s  ${mode}`
+    `velero  watch  ${venueLabel(watching.live)}  ${baseUrlFor(watching.live)}  ${fleet}  poll ${watching.pollSeconds}s  cooldown ${watching.cooldownSeconds}s  ${mode}  ${watching.isolated ? "isolated" : "cross"}`
   );
   if (watching.goldDigger) {
     console.log(

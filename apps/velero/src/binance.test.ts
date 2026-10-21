@@ -12,6 +12,15 @@ test("-2015 on testnet points at live-key mismatch", () => {
   assert.match(text, /--live/);
 });
 
+test("-4168 names Multi-Assets instead of looking like a crash", () => {
+  const text = explainBinanceError(
+    -4168,
+    "Unable to adjust to isolated-margin mode under the Multi-Assets mode.",
+    "https://fapi.binance.com"
+  );
+  assert.match(text, /Multi-Assets/);
+});
+
 test("-2015 on live points at futures permission and IP whitelist", () => {
   const text = explainBinanceError(
     -2015,

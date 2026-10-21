@@ -65,7 +65,8 @@ its cut.
 
 ## Rules the boat will not break
 
-- Isolated margin, leverage capped at 10 (or the exchange bracket, if lower)
+- Cross margin by default; pass `--isolated` to request isolated (Binance may refuse under Multi-Assets)
+- Leverage capped at 10 (or the exchange bracket, if lower)
 - No entry if 15m SMA stack and 5m ROC disagree
 - No entry if the pair already has a position or open orders
 - No entry if open positions are at `--max-open` / `VELERO_MAX_OPEN`

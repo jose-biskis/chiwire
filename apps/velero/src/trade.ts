@@ -349,7 +349,18 @@ export async function sail(
     throw new Error("LIVE trade needs --confirm. The boat does not leave without you.");
   }
 
-  await prepared.client.setIsolated(prepared.symbol);
+  const wantedMargin = command.isolated ? "ISOLATED" : "CROSSED";
+  const margin = await prepared.client.setMarginType(
+    prepared.symbol,
+    wantedMargin
+  );
+  if (margin === "multi-assets") {
+    console.log(
+      `  Multi-Assets mode: cannot switch to ${wantedMargin}. Sailing on the account's current margin.`
+    );
+  } else {
+    console.log(`  margin ${wantedMargin.toLowerCase()}`);
+  }
   await prepared.client.setLeverage(prepared.symbol, prepared.leverage);
 
   const marketInput: {
