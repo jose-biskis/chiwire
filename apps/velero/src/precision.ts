@@ -49,8 +49,10 @@ export function protectivePrices(input: {
   tpPercent: number;
   slPercent: number;
   tickSize: number;
+  enforceTwoR?: boolean;
 }): ProtectivePrices {
   const { side, mark, last, tpPercent, slPercent, tickSize } = input;
+  const enforceTwoR = input.enforceTwoR !== false;
   if (!(mark > 0) || !(last > 0) || !(tickSize > 0)) {
     return { ok: false, reason: "Mark, last, or tick is unusable." };
   }
@@ -75,7 +77,11 @@ export function protectivePrices(input: {
     }
 
     const stopDist = low - stopLoss;
-    if (stopDist > 0 && takeProfit - high < 2 * stopDist) {
+    if (
+      enforceTwoR &&
+      stopDist > 0 &&
+      takeProfit - high < 2 * stopDist
+    ) {
       takeProfit = roundToTick(high + 2 * stopDist, tickSize, "ceil");
       widened = true;
     }
@@ -113,7 +119,11 @@ export function protectivePrices(input: {
   }
 
   const stopDist = stopLoss - high;
-  if (stopDist > 0 && low - takeProfit < 2 * stopDist) {
+  if (
+    enforceTwoR &&
+    stopDist > 0 &&
+    low - takeProfit < 2 * stopDist
+  ) {
     takeProfit = roundToTick(low - 2 * stopDist, tickSize, "floor");
     widened = true;
   }

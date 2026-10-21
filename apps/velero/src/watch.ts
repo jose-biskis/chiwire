@@ -3,7 +3,7 @@ import type { WatchCommand } from "./cli.js";
 import { baseUrlFor, maskKey, readEnv, venueLabel } from "./config.js";
 import { mergeFleet, runGoldDigger } from "./digger.js";
 import { printWatchLine } from "./format.js";
-import { sail } from "./trade.js";
+import { sail, tendPair } from "./trade.js";
 
 export function cooldownRemainingMs(now: number, until: number): number {
   return Math.max(0, until - now);
@@ -65,7 +65,7 @@ export async function runWatch(command: WatchCommand): Promise<void> {
   }
   if (watching.smartProfit) {
     console.log(
-      `smart-profit on  SL/TP from 1m/5m/15m ATR + swing (not desk percents); sits if the stop would exceed ${(watching.smartCap * 100).toFixed(0)}%`
+      `smart-profit on  wide ATR/swing SL, reachable 5m/1m TP (not 2R of the storm); watch pulls TP or banks if closed 1m flips while green; sits if SL would exceed ${(watching.smartCap * 100).toFixed(0)}%`
     );
   }
   if (!env.apiKey || !env.apiSecret) {
@@ -148,6 +148,51 @@ export async function runWatch(command: WatchCommand): Promise<void> {
       for (const symbol of [...fleet]) {
         if (abort.signal.aborted) {
           break;
+        }
+
+        if (watching.smartProfit) {
+          try {
+            const tended = await tendPair({ ...watching, symbol });
+            if (abort.signal.aborted) {
+              break;
+            }
+            if (tended.status === "keep") {
+              printWatchLine({
+                symbol,
+                status: "tend",
+                detail: `${tended.side} — ${tended.reason}`
+              });
+              continue;
+            }
+            if (tended.status === "pull") {
+              printWatchLine({
+                symbol,
+                status: "pull",
+                detail: `${tended.side} TP ${tended.takeProfit} — ${tended.reason}`
+              });
+              continue;
+            }
+            if (tended.status === "close") {
+              printWatchLine({
+                symbol,
+                status: "bank",
+                detail: `${tended.side} — ${tended.reason}`
+              });
+              cooldownUntil.set(
+                symbol,
+                Date.now() + watching.cooldownSeconds * 1000
+              );
+              continue;
+            }
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            printWatchLine({
+              symbol,
+              status: "error",
+              detail: message
+            });
+            continue;
+          }
         }
 
         const remaining = cooldownRemainingMs(

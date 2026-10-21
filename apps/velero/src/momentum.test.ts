@@ -129,7 +129,9 @@ test("risk blocks a second ticket on the same pair", () => {
         positionAmt: 8.1,
         notional: 10,
         leverage: 10,
-        isolated: true
+        isolated: true,
+        entryPrice: 1.23,
+        markPrice: 1.23
       }
     ],
     openOrders: []
@@ -147,7 +149,9 @@ test("risk blocks when the open-position berth is full", () => {
         positionAmt: 0.01,
         notional: 10,
         leverage: 10,
-        isolated: true
+        isolated: true,
+        entryPrice: 2000,
+        markPrice: 2000
       }
     ],
     openOrders: []
@@ -165,7 +169,9 @@ test("risk allows a fresh pair under the cap", () => {
         positionAmt: 0.01,
         notional: 10,
         leverage: 10,
-        isolated: true
+        isolated: true,
+        entryPrice: 2000,
+        markPrice: 2000
       }
     ],
     openOrders: []

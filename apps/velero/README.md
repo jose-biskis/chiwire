@@ -73,7 +73,7 @@ its cut.
 - Leverage capped at 10 (or the exchange bracket, if lower)
 - No entry if 15m SMA stack and 5m ROC disagree
 - No entry if the last **closed 1m** body disagrees (or is a doji) with that 15m/5m bias
-- `--smart-profit` places SL beyond 1m/5m/15m ATR noise and the recent swing (pad 0.25 ATR), TP at ~2R after fees (1.8R in chop, 2.5R if ADX ≥ 25). Sits if that stop would be over `--smart-cap` (default 5% of price, max 50%). Cannot mix with `--tp` / `--sl`
+- `--smart-profit` places SL beyond 1m/5m/15m ATR noise and the recent swing. TP is a **reachable** 5m/1m target (nearby structure / ATR, capped at 3% of price), not 2R of that stop. While the ticket is open, `watch` pulls TP closer as the tape allows, and **banks** (market close) if the last closed 1m flips against a position that is green after fees. Sits if the stop would be over `--smart-cap` (default 5% of price, max 50%). Cannot mix with `--tp` / `--sl`
 - No entry if the pair already has a position or open orders
 - No entry if open positions are at `--max-open` / `VELERO_MAX_OPEN`
 - Notional capped by `VELERO_MAX_NOTIONAL` (default 25 USDT)

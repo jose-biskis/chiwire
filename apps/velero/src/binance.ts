@@ -356,7 +356,9 @@ export class BinanceFutures {
           positionAmt: asNumber(row.positionAmt),
           notional: Math.abs(asNumber(row.notional)),
           leverage: asNumber(row.leverage, 1),
-          isolated: asString(row.marginType).toLowerCase() === "isolated"
+          isolated: asString(row.marginType).toLowerCase() === "isolated",
+          entryPrice: asNumber(row.entryPrice),
+          markPrice: asNumber(row.markPrice)
         };
       })
       .filter((row) => row.symbol !== "" && row.positionAmt !== 0);
@@ -446,6 +448,7 @@ export class BinanceFutures {
     side: "BUY" | "SELL";
     quantity: number;
     positionSide?: "LONG" | "SHORT";
+    reduceOnly?: boolean;
   }): Promise<unknown> {
     const params: Record<string, string> = {
       symbol: input.symbol,
@@ -457,7 +460,32 @@ export class BinanceFutures {
     if (input.positionSide) {
       params.positionSide = input.positionSide;
     }
+    if (input.reduceOnly) {
+      params.reduceOnly = "true";
+    }
     return this.signedPost("/fapi/v1/order", params);
+  }
+
+  async cancelAlgoOrder(algoId: number): Promise<unknown> {
+    return this.signedDelete("/fapi/v1/algoOrder", {
+      algoId: String(algoId)
+    });
+  }
+
+  async cancelOrder(symbol: string, orderId: number): Promise<unknown> {
+    return this.signedDelete("/fapi/v1/order", {
+      symbol,
+      orderId: String(orderId)
+    });
+  }
+
+  isTakeProfit(type: string): boolean {
+    return type.toUpperCase().includes("TAKE_PROFIT");
+  }
+
+  isStopLoss(type: string): boolean {
+    const upper = type.toUpperCase();
+    return upper.includes("STOP") && !this.isTakeProfit(type);
   }
 
   async closePositionStop(input: {
@@ -531,6 +559,24 @@ export class BinanceFutures {
     const query = search.toString();
     url.search = `${query}&signature=${this.sign(query)}`;
     return this.read(await this.request(url, { headers: this.headers(true) }));
+  }
+
+  async signedDelete(
+    path: string,
+    params: Record<string, string>
+  ): Promise<unknown> {
+    const url = new URL(path, this.options.baseUrl);
+    const search = new URLSearchParams(params);
+    search.set("timestamp", String(this.timestamp()));
+    search.set("recvWindow", "10000");
+    const query = search.toString();
+    url.search = `${query}&signature=${this.sign(query)}`;
+    return this.read(
+      await this.request(url, {
+        method: "DELETE",
+        headers: this.headers(true)
+      })
+    );
   }
 
   async signedPost(

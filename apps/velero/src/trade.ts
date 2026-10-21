@@ -13,8 +13,8 @@ import { printFeeCard, printPositions, printQuote } from "./format.js";
 import { opposite, orderSide, readMomentum, withoutForming } from "./momentum.js";
 import { protectivePrices, quantityFromNotional } from "./precision.js";
 import { evaluateRisk } from "./risk.js";
-import { suggestSmartPercents, type SmartProfitResult } from "./smart.js";
-import type { Side } from "./types.js";
+import { planTend, suggestSmartPercents, type SmartProfitResult } from "./smart.js";
+import type { PositionRow, Side } from "./types.js";
 
 function requireKeys(env: VeleroEnv): { apiKey: string; apiSecret: string } {
   if (!env.apiKey || !env.apiSecret) {
@@ -352,7 +352,8 @@ export async function sail(
     last: prepared.last,
     tpPercent: prepared.suggestion.tpPercent,
     slPercent: prepared.suggestion.slPercent,
-    tickSize: prepared.tickSize
+    tickSize: prepared.tickSize,
+    enforceTwoR: !command.smartProfit
   });
   if (!prices.ok) {
     return { status: "skipped", reason: prices.reason, bias };
@@ -460,6 +461,166 @@ export async function sail(
     status: "filled",
     side,
     reason: prepared.momentum.reason
+  };
+}
+
+export type TendResult =
+  | { status: "idle" }
+  | { status: "keep"; side: Side; reason: string }
+  | { status: "pull"; side: Side; reason: string; takeProfit: number }
+  | { status: "close"; side: Side; reason: string };
+
+function sideFromAmt(amount: number): Side {
+  return amount > 0 ? "LONG" : "SHORT";
+}
+
+async function cancelTakeProfits(
+  client: BinanceFutures,
+  symbol: string,
+  orders: { symbol: string; orderId: number; type: string }[]
+): Promise<void> {
+  const tps = orders.filter(
+    (row) => row.symbol === symbol && client.isTakeProfit(row.type)
+  );
+  for (const row of tps) {
+    try {
+      await client.cancelAlgoOrder(row.orderId);
+    } catch {
+      await client.cancelOrder(symbol, row.orderId);
+    }
+  }
+}
+
+export async function tendPair(command: WatchCommand): Promise<TendResult> {
+  if (!command.smartProfit) {
+    return { status: "idle" };
+  }
+
+  const env = readEnv();
+  if (!env.apiKey || !env.apiSecret) {
+    return { status: "idle" };
+  }
+  if (command.live && !command.dryRun && !env.liveAllowed) {
+    throw new Error(
+      "Refusing LIVE. Set VELERO_LIVE=true in apps/velero/.env if you really mean the real book."
+    );
+  }
+
+  const client = clientFor(env, command.live);
+  await client.syncTime();
+  const positions = await client.positions();
+  const position = positions.find((row: PositionRow) => row.symbol === command.symbol);
+  if (!position || position.positionAmt === 0) {
+    return { status: "idle" };
+  }
+
+  const side = sideFromAmt(position.positionAmt);
+  const [raw15m, raw5m, raw1m, last, filters, orders, hedge, taker] =
+    await Promise.all([
+      client.klines(command.symbol, "15m", 80),
+      client.klines(command.symbol, "5m", 40),
+      client.klines(command.symbol, "1m", 40),
+      client.lastPrice(command.symbol),
+      client.symbolFilters(command.symbol),
+      client.openOrders(command.symbol),
+      client.dualSidePosition(),
+      resolveTakerFee(client, command.symbol, env, command.takerFeeRate)
+    ]);
+  const mark = position.markPrice > 0 ? position.markPrice : await client.markPrice(command.symbol);
+  const tpOrder = orders.find((row) => client.isTakeProfit(row.type));
+  const slOrder = orders.find((row) => client.isStopLoss(row.type));
+  const currentTp = tpOrder ? Number.parseFloat(tpOrder.stopPrice) : null;
+  const currentSl = slOrder ? Number.parseFloat(slOrder.stopPrice) : null;
+  const stopDist =
+    currentSl !== null && Number.isFinite(currentSl)
+      ? Math.abs(mark - currentSl)
+      : 0;
+
+  const plan = planTend({
+    side,
+    entry: position.entryPrice,
+    mark,
+    last,
+    currentTp: currentTp !== null && Number.isFinite(currentTp) ? currentTp : null,
+    tickSize: filters.tickSize,
+    takerFeeRate: taker.rate,
+    klines15m: raw15m,
+    klines5m: raw5m,
+    klines1m: raw1m,
+    stopDist
+  });
+
+  const positionSide = hedge ? side : undefined;
+  const exitSide = orderSide(opposite(side));
+
+  if (plan.action === "keep") {
+    return { status: "keep", side, reason: plan.reason };
+  }
+
+  if (command.dryRun) {
+    if (plan.action === "close") {
+      return { status: "close", side, reason: `would close — ${plan.reason}` };
+    }
+    return {
+      status: "pull",
+      side,
+      reason: `would pull TP to ${plan.triggerPrice} — ${plan.reason}`,
+      takeProfit: plan.triggerPrice
+    };
+  }
+
+  if (command.live && !command.confirm) {
+    throw new Error("LIVE watch that can send orders needs --confirm (once, at launch).");
+  }
+
+  if (plan.action === "close") {
+    const closeInput: {
+      symbol: string;
+      side: "BUY" | "SELL";
+      quantity: number;
+      positionSide?: "LONG" | "SHORT";
+      reduceOnly?: boolean;
+    } = {
+      symbol: command.symbol,
+      side: exitSide,
+      quantity: Math.abs(position.positionAmt)
+    };
+    if (positionSide) {
+      closeInput.positionSide = positionSide;
+    } else {
+      closeInput.reduceOnly = true;
+    }
+    await client.marketOrder(closeInput);
+    try {
+      await cancelTakeProfits(client, command.symbol, orders);
+    } catch {
+      // Position is already closed; leftover algos usually drop on their own.
+    }
+    return { status: "close", side, reason: plan.reason };
+  }
+
+  await cancelTakeProfits(client, command.symbol, orders);
+  const tpInput: {
+    symbol: string;
+    side: "BUY" | "SELL";
+    type: "TAKE_PROFIT_MARKET";
+    stopPrice: number;
+    positionSide?: "LONG" | "SHORT";
+  } = {
+    symbol: command.symbol,
+    side: exitSide,
+    type: "TAKE_PROFIT_MARKET",
+    stopPrice: plan.triggerPrice
+  };
+  if (positionSide) {
+    tpInput.positionSide = positionSide;
+  }
+  await client.closePositionStop(tpInput);
+  return {
+    status: "pull",
+    side,
+    reason: plan.reason,
+    takeProfit: plan.triggerPrice
   };
 }
 

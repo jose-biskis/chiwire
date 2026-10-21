@@ -54,6 +54,33 @@ test("protectivePrices widens a stop that would round into last on a fat tick", 
   assert.equal(prices.widened, true);
 });
 
+test("protectivePrices can skip the 2R stretch for smart-profit", () => {
+  const stretched = protectivePrices({
+    side: "LONG",
+    mark: 100,
+    last: 100,
+    tpPercent: 0.004,
+    slPercent: 0.1,
+    tickSize: 0.01
+  });
+  const smart = protectivePrices({
+    side: "LONG",
+    mark: 100,
+    last: 100,
+    tpPercent: 0.004,
+    slPercent: 0.1,
+    tickSize: 0.01,
+    enforceTwoR: false
+  });
+  assert.equal(stretched.ok, true);
+  assert.equal(smart.ok, true);
+  if (!stretched.ok || !smart.ok) {
+    return;
+  }
+  assert.ok(stretched.takeProfit >= 119);
+  assert.ok(smart.takeProfit < 101);
+});
+
 test("protectivePrices sits when the tick is the whole price", () => {
   const prices = protectivePrices({
     side: "LONG",

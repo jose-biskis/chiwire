@@ -160,7 +160,7 @@ Options:
   --max-open <n>       Max concurrent positions. Default ${DEFAULT_MAX_OPEN}
   --tp <percent>       Take-profit as % of notional (0.5 = 0.5%)
   --sl <percent>       Stop-loss as % of notional
-  --smart-profit       ATR + swing SL/TP instead of desk percents
+  --smart-profit       Wide ATR SL, reachable TP; watch pulls TP / banks on 1m fade
   --smart-cap <pct>    Max smart-profit stop as % of price. Default ${DEFAULT_SMART_CAP * 100}
   --taker-fee <pct>    Taker fee in percent (0.1 = 0.10% = 0.01 USDT on 10)
   --poll <seconds>     Watch loop interval. Default ${DEFAULT_POLL_SECONDS}

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Kline } from "./types.js";
-import { suggestSmartPercents } from "./smart.js";
+import { planTend, suggestSmartPercents } from "./smart.js";
 
 function rangeBars(count: number, close: number, range: number): Kline[] {
   const bars: Kline[] = [];
@@ -55,7 +55,11 @@ test("smart-profit stop sits beyond 15m ATR noise, wider than the desk floor", (
     return;
   }
   assert.ok(plan.slPercent > 0.01, `SL ${plan.slPercent} should beat desk ~0.4%`);
-  assert.ok(plan.tpPercent > plan.slPercent);
+  assert.ok(
+    plan.tpPercent < plan.slPercent,
+    `TP ${plan.tpPercent} should be reachable, not 2R of SL ${plan.slPercent}`
+  );
+  assert.ok(plan.tpPercent > 0.002);
   assert.match(plan.note, /smart-profit/);
 });
 
@@ -134,4 +138,60 @@ test("smart-profit sits without enough closed candles", () => {
     klines1m: rangeBars(3, 100, 1)
   });
   assert.equal(plan.ok, false);
+});
+
+function paintClosed(bars: Kline[], open: number, close: number): Kline[] {
+  const out = bars.map((bar) => ({ ...bar }));
+  const index = out.length - 2;
+  const bar = out[index];
+  if (!bar) {
+    return out;
+  }
+  out[index] = {
+    ...bar,
+    open,
+    close,
+    high: Math.max(open, close, bar.high),
+    low: Math.min(open, close, bar.low)
+  };
+  return out;
+}
+
+test("planTend banks when the closed 1m flips against a green long", () => {
+  const plan = planTend({
+    side: "LONG",
+    entry: 100,
+    mark: 101.5,
+    last: 101.4,
+    currentTp: 110,
+    tickSize: 0.01,
+    takerFeeRate: 0.001,
+    klines15m: rangeBars(40, 101.5, 1),
+    klines5m: rangeBars(40, 101.5, 0.6),
+    klines1m: paintClosed(rangeBars(40, 101.5, 0.3), 101.8, 101.4),
+    stopDist: 8
+  });
+  assert.equal(plan.action, "close");
+});
+
+test("planTend pulls an impossible TP down to nearby 5m structure", () => {
+  const plan = planTend({
+    side: "LONG",
+    entry: 100,
+    mark: 100,
+    last: 100,
+    currentTp: 120,
+    tickSize: 0.01,
+    takerFeeRate: 0.001,
+    klines15m: rangeBars(40, 100, 2),
+    klines5m: rangeBars(40, 100, 1),
+    klines1m: paintClosed(rangeBars(40, 100, 0.4), 99.8, 100.1),
+    stopDist: 8
+  });
+  assert.equal(plan.action, "pull-tp");
+  if (plan.action !== "pull-tp") {
+    return;
+  }
+  assert.ok(plan.triggerPrice < 120);
+  assert.ok(plan.triggerPrice > 100);
 });

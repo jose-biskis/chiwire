@@ -26,6 +26,8 @@ export type PositionRow = {
   notional: number;
   leverage: number;
   isolated: boolean;
+  entryPrice: number;
+  markPrice: number;
 };
 
 export type OpenOrderRow = {
