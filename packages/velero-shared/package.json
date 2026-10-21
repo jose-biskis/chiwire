@@ -16,6 +16,10 @@
     "./env": {
       "types": "./dist/env.d.ts",
       "import": "./dist/env.js"
+    },
+    "./gate": {
+      "types": "./dist/gate.d.ts",
+      "import": "./dist/gate.js"
     }
   },
   "scripts": {

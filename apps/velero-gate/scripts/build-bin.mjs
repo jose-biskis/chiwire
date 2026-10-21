@@ -39,6 +39,8 @@ await build({
 rmSync(releaseDir, { recursive: true, force: true });
 mkdirSync(releaseDir, { recursive: true });
 
+// Node 22 standard-mode pkg on Linux produces a Windows exe that exits
+// immediately with code 4 and no stdout. SEA skips that bytecode path.
 run(
   "npx",
   [
@@ -47,8 +49,7 @@ run(
     bundleFile,
     "--targets",
     "node22-win-x64,node22-linux-x64",
-    "--compress",
-    "GZip",
+    "--sea",
     "--output",
     path.join(releaseDir, "VeleroHarbor")
   ],

@@ -1,7 +1,7 @@
 {
   "productName": "Velero Harbor",
   "version": "0.1.0",
-  "publishedAt": "2026-10-21T03:31:12.029Z",
+  "publishedAt": "2026-10-21T03:39:47.804Z",
   "artifacts": [
     {
       "filename": "VeleroHarbor-linux",
@@ -9,8 +9,8 @@
       "platform": "linux",
       "kind": "bin",
       "version": "0.1.0",
-      "size": 74875852,
-      "sha256": "34770d2401d1f7a11d2a84edb0f1aaea639938550bfb109e023f1ea6e6c65c06",
+      "size": 124914880,
+      "sha256": "42a655ad4eae6ef06bbe271f39f16c54a427e37c3f25cb1e1ac7197921a14406",
       "url": "/downloads/VeleroHarbor-linux"
     },
     {
@@ -19,8 +19,8 @@
       "platform": "win",
       "kind": "exe",
       "version": "0.1.0",
-      "size": 58106251,
-      "sha256": "66aba2bbd381dec96d5813e5755c1d3eca32f68a5938d5c1e106e7b75c399053",
+      "size": 87119360,
+      "sha256": "d5fcce6548bba82cdba0b2f6e83821ea7a9fdc2ca31ca6ffe6f316851a2a3c24",
       "url": "/downloads/VeleroHarbor-win.exe"
     }
   ]

@@ -8,7 +8,7 @@ import process from "node:process";
 import {
   executeGateJob,
   type GateJob
-} from "@chiwire/velero-shared";
+} from "@chiwire/velero-shared/gate";
 import { page } from "./page.js";
 import { openSse, type SseClient } from "./sse.js";
 
@@ -111,6 +111,16 @@ async function readJson(request: IncomingMessage): Promise<Record<string, unknow
   >;
 }
 
+function holdConsole(): void {
+  try {
+    if (process.stdin.readable) {
+      process.stdin.resume();
+    }
+  } catch {
+    // ignore
+  }
+}
+
 function openBrowser(url: string): void {
   if (process.env.VELERO_GATE_NO_BROWSER === "1") {
     return;
@@ -171,38 +181,43 @@ function connect(): void {
     lastError = "Harbor token is empty.";
     return;
   }
-  source = openSse(apiUrl("/api/gate/jobs"), {
-    onOpen: () => {
-      connected = true;
-      lastError = null;
-    },
-    onEvent: (event, data) => {
-      if (event !== "job") {
-        return;
-      }
-      const job = JSON.parse(data) as GateJob;
-      void handleJob(job).catch((error: unknown) => {
-        lastError = error instanceof Error ? error.message : String(error);
+  source = openSse(
+    apiUrl("/api/gate/jobs"),
+    {
+      onOpen: () => {
+        connected = true;
+        lastError = null;
+      },
+      onEvent: (event, data) => {
+        if (event !== "job") {
+          return;
+        }
+        const job = JSON.parse(data) as GateJob;
+        void handleJob(job).catch((error: unknown) => {
+          lastError = error instanceof Error ? error.message : String(error);
+          logError(error);
+        });
+      },
+      onClose: () => {
+        connected = false;
+        source = null;
+        lastError = "Desk API closed the stream.";
+        reconnectTimer = setTimeout(connect, 4000);
+      },
+      onError: (error) => {
+        connected = false;
+        source = null;
+        lastError = error.message;
         logError(error);
-      });
+        reconnectTimer = setTimeout(connect, 4000);
+      }
     },
-    onClose: () => {
-      connected = false;
-      source = null;
-      lastError = "Desk API closed the stream.";
-      reconnectTimer = setTimeout(connect, 4000);
-    },
-    onError: (error) => {
-      connected = false;
-      source = null;
-      lastError = error.message;
-      logError(error);
-      reconnectTimer = setTimeout(connect, 4000);
-    }
-  });
+    { authorization: `Bearer ${saved.token}` }
+  );
 }
 
 const port = readPort();
+holdConsole();
 const server = createServer((request, response) => {
   void (async () => {
     const method = request.method ?? "GET";
@@ -258,7 +273,8 @@ const server = createServer((request, response) => {
 server.on("error", (error) => {
   logError(error);
   lastError = error.message;
-  console.error("Keep this window open and fix the error above.");
+  console.error("Harbor could not start. Leave this window open and read the error above.");
+  holdConsole();
 });
 
 server.listen(port, "127.0.0.1", () => {
@@ -275,6 +291,7 @@ server.listen(port, "127.0.0.1", () => {
 
 process.on("uncaughtException", (error) => {
   logError(error);
+  holdConsole();
 });
 process.on("unhandledRejection", (error) => {
   logError(error);

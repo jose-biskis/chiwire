@@ -13,7 +13,11 @@ export type SseClient = {
   close: () => void;
 };
 
-export function openSse(url: string, handlers: SseHandlers): SseClient {
+export function openSse(
+  url: string,
+  handlers: SseHandlers,
+  extraHeaders: Record<string, string> = {}
+): SseClient {
   const target = new URL(url);
   const lib = target.protocol === "https:" ? https : http;
   let closed = false;
@@ -23,7 +27,8 @@ export function openSse(url: string, handlers: SseHandlers): SseClient {
     {
       headers: {
         accept: "text/event-stream",
-        "cache-control": "no-cache"
+        "cache-control": "no-cache",
+        ...extraHeaders
       }
     },
     (res) => {
@@ -33,7 +38,14 @@ export function openSse(url: string, handlers: SseHandlers): SseClient {
       }
       response = res;
       if ((res.statusCode ?? 0) >= 400) {
-        handlers.onError(new Error(`Harbor stream HTTP ${res.statusCode}`));
+        const status = res.statusCode ?? 0;
+        handlers.onError(
+          new Error(
+            status === 401
+              ? "Desk rejected the harbor token. Paste the VELERO_GATE_TOKEN hex from .env.deploy.local, then deploy the API."
+              : `Harbor stream HTTP ${status}`
+          )
+        );
         res.resume();
         return;
       }

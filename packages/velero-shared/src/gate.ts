@@ -1,5 +1,4 @@
 import { createHmac, randomUUID } from "node:crypto";
-import { fetch } from "undici";
 
 export type GateHttpMethod = "GET" | "POST" | "DELETE";
 
