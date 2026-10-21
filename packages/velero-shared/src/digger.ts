@@ -26,7 +26,8 @@ function scanClient(env: VeleroEnv): BinanceFutures {
     baseUrl: LIVE_BASE_URL,
     apiKey: null,
     apiSecret: null,
-    proxyUrl: env.proxyUrl
+    proxyUrl: env.gateFetchUrl ? null : env.proxyUrl,
+    gateFetchUrl: env.gateFetchUrl
   });
 }
 

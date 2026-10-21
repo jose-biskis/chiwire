@@ -217,6 +217,8 @@ export function App() {
   }
 
   const running = Boolean(status?.running);
+  const gate = status?.gate;
+  const harborReady = Boolean(gate?.connected) || gate?.requireGate === false;
 
   return (
     <div className="desk">
@@ -405,6 +407,17 @@ export function App() {
           </h1>
           <div className="tag">{running ? "under way" : "at anchor"}</div>
         </header>
+        <div className="harbor">
+          <span className={`running-lamp${gate?.connected ? " on" : ""}`} />
+          <div>
+            <b>{gate?.connected ? "Harbor tied up" : "Harbor adrift"}</b>
+            <p>
+              Binance must leave from your laptop. On this machine (repo):{" "}
+              <code>npm run velero-gate</code>. Paste <code>VELERO_GATE_TOKEN</code> and
+              your API key/secret there — not in this page. Then Full ahead.
+            </p>
+          </div>
+        </div>
         <div className="telegraph">
           <span className={`running-lamp${running ? " on" : ""}`} />
           {running ? (
@@ -417,7 +430,12 @@ export function App() {
               Stop
             </button>
           ) : (
-            <button type="button" className="lever" disabled={busy} onClick={() => void onStart()}>
+            <button
+              type="button"
+              className="lever"
+              disabled={busy || !harborReady}
+              onClick={() => void onStart()}
+            >
               Full ahead
             </button>
           )}

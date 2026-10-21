@@ -26,8 +26,10 @@ Or the built static server (port 3000, proxies `/api` to 3001):
 npm run start:velero-desk
 ```
 
-Keys stay in `apps/velero-cli/.env`. Starting a **live** profile from Full ahead
-sends `--live --confirm` to the CLI.
+On the **deployed** desk, keys stay in Velero Harbor on your laptop
+(`npm run velero-gate`), not in this UI. Starting a **live** profile from Full
+ahead still sends `--live --confirm` to the CLI child on the VPS; that child
+asks Harbor to talk to Binance.
 
 ## Deploy
 
@@ -36,7 +38,8 @@ npm run deploy:velero-api
 npm run deploy:velero-desk
 ```
 
-Internal: UI on host **8070**, API on **8071**. Tunnel:
+Domains: UI **velero.avilalabs.dev**, API **api.velero.avilalabs.dev**.
+Upstream binds stay **8070** / **8071** on loopback. Tunnel still works:
 
 ```sh
 npm run tunnel:velero-desk

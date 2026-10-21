@@ -141,7 +141,10 @@ const server = createServer((request, response) => {
       return;
     }
 
-    if (method === "GET" && pathname === "/api/logs/stream") {
+    if (
+      method === "GET" &&
+      (pathname === "/api/logs/stream" || pathname === "/api/gate/jobs")
+    ) {
       pipeSse(request, response, `${pathname}${url.search}`);
       return;
     }

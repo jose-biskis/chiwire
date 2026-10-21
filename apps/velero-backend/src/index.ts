@@ -3,6 +3,8 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { loadVeleroEnv } from "@chiwire/velero-shared/env";
+import type { GateJob, GateResult } from "@chiwire/velero-shared";
+import { Harbor, loopbackOnly } from "./harbor.js";
 import {
   normalizeDraft,
   ProfileStore,
@@ -64,8 +66,14 @@ async function readJson(request: IncomingMessage): Promise<Record<string, unknow
 const backendRoot = path.dirname(fileURLToPath(import.meta.url));
 loadVeleroEnv([path.resolve(backendRoot, "../../velero-cli/.env")]);
 const store = new ProfileStore(profilesPath());
-const runner = new WatchRunner();
+const harbor = new Harbor();
 const port = readPort();
+const runner = new WatchRunner(harbor, port);
+harbor.onDisconnect = () => {
+  if (runner.status().running) {
+    void runner.stop();
+  }
+};
 
 const server = createServer((request, response) => {
   void (async () => {
@@ -85,6 +93,51 @@ const server = createServer((request, response) => {
 
     if (method === "GET" && pathname === "/health") {
       json(response, 200, { ok: true, ...runner.status() });
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/gate/jobs") {
+      if (!harbor.authorize(request, url)) {
+        json(response, 401, { error: "Harbor token rejected." });
+        return;
+      }
+      harbor.attach(request, response);
+      return;
+    }
+
+    if (method === "POST" && pathname === "/api/gate/result") {
+      if (!harbor.authorize(request, url)) {
+        json(response, 401, { error: "Harbor token rejected." });
+        return;
+      }
+      const body = await readJson(request);
+      const result: GateResult = {
+        id: typeof body.id === "string" ? body.id : "",
+        ok: body.ok === true,
+        status: typeof body.status === "number" ? body.status : 0,
+        body: typeof body.body === "string" ? body.body : ""
+      };
+      if (!result.id || !harbor.complete(result)) {
+        json(response, 404, { error: "Unknown harbor job." });
+        return;
+      }
+      json(response, 200, { ok: true });
+      return;
+    }
+
+    if (method === "POST" && pathname === "/internal/binance") {
+      if (!loopbackOnly(request)) {
+        json(response, 403, { error: "Loopback only." });
+        return;
+      }
+      const body = await readJson(request);
+      const job = body as unknown as GateJob;
+      if (!job.path || !job.method || !job.baseUrl) {
+        json(response, 400, { error: "Invalid Binance job." });
+        return;
+      }
+      const result = await harbor.submit(job);
+      json(response, 200, result);
       return;
     }
 

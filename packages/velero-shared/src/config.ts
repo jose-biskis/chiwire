@@ -21,6 +21,7 @@ export type VeleroEnv = {
   maxOpen: number;
   takerFeeRate: number | null;
   proxyUrl: string | null;
+  gateFetchUrl: string | null;
 };
 
 function readNumber(name: string, fallback: number): number {
@@ -88,7 +89,8 @@ export function readEnv(): VeleroEnv {
     maxLeverage: readNumber("VELERO_MAX_LEVERAGE", DEFAULT_MAX_LEVERAGE),
     maxOpen: readNumber("VELERO_MAX_OPEN", DEFAULT_MAX_OPEN),
     takerFeeRate: readOptionalNumber("VELERO_TAKER_FEE"),
-    proxyUrl
+    proxyUrl,
+    gateFetchUrl: process.env.VELERO_GATE_FETCH?.trim() || null
   };
 }
 

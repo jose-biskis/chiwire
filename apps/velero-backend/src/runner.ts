@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
+import type { Harbor, HarborStatus } from "./harbor.js";
 import { cliLine, profileToArgv, type WatchProfile } from "./profile.js";
 
 export type LogLine = {
@@ -18,6 +19,7 @@ export type WatchStatus = {
   pid: number | null;
   startedAt: string | null;
   cli: string | null;
+  gate: HarborStatus;
 };
 
 const MAX_LOGS = 2500;
@@ -47,6 +49,11 @@ export class WatchRunner {
   private readonly logs: LogLine[] = [];
   private readonly listeners = new Set<(line: LogLine) => void>();
 
+  constructor(
+    private readonly harbor: Harbor,
+    private readonly listenPort: number
+  ) {}
+
   onLog(listener: (line: LogLine) => void): () => void {
     this.listeners.add(listener);
     return () => {
@@ -65,7 +72,8 @@ export class WatchRunner {
       profileName: this.profile?.name ?? null,
       pid: this.child?.pid ?? null,
       startedAt: this.startedAt,
-      cli: this.profile ? cliLine(this.profile) : null
+      cli: this.profile ? cliLine(this.profile) : null,
+      gate: this.harbor.status()
     };
   }
 
@@ -92,12 +100,30 @@ export class WatchRunner {
       );
     }
 
+    const gate = this.harbor.status();
+    if (gate.requireGate && !this.harbor.expectedToken()) {
+      throw new Error("Set VELERO_GATE_TOKEN on the desk API before going live from a VPS.");
+    }
+    if (gate.requireGate && !gate.connected) {
+      throw new Error(
+        "Harbor is not connected. Run Velero Harbor on your laptop so Binance sees your home IP."
+      );
+    }
+
     const bin = veleroBin();
     const argv = profileToArgv(profile);
+    const childEnv = { ...process.env };
+    if (gate.connected) {
+      childEnv.VELERO_GATE_FETCH = `http://127.0.0.1:${this.listenPort}/internal/binance`;
+      delete childEnv.BINANCE_API_KEY;
+      delete childEnv.BINANCE_API_SECRET;
+      delete childEnv.VELERO_PROXY;
+      this.push("desk", "harbor on — Binance leaves from the laptop");
+    }
     this.push("desk", `starting ${cliLine(profile)}`);
     const child = spawn(process.execPath, [bin, ...argv], {
       cwd: veleroCwd(),
-      env: process.env,
+      env: childEnv,
       stdio: ["ignore", "pipe", "pipe"]
     });
     this.child = child;

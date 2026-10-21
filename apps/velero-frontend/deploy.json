@@ -8,11 +8,15 @@
   },
   "runtime": {
     "containerPort": 3000,
-    "visibility": "internal",
+    "visibility": "domain",
     "hostPort": 8070,
     "env": {
       "API_BASE_URL": "http://velero-backend:3000"
     },
     "network": "chiwire"
+  },
+  "proxy": {
+    "type": "caddy",
+    "domain": "velero.avilalabs.dev"
   }
 }

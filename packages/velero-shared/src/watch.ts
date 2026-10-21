@@ -30,7 +30,9 @@ export function sleep(
 
 export async function runWatch(command: WatchCommand): Promise<void> {
   const env = readEnv();
-  const armed = !command.dryRun && Boolean(env.apiKey && env.apiSecret);
+  const harbor = Boolean(env.gateFetchUrl);
+  const armed =
+    !command.dryRun && (Boolean(env.apiKey && env.apiSecret) || harbor);
   const watching: WatchCommand = armed
     ? command
     : {
@@ -68,7 +70,11 @@ export async function runWatch(command: WatchCommand): Promise<void> {
       `smart-profit on  wide ATR/swing SL, reachable 5m/1m TP (not 2R of the storm); watch pulls TP or banks if closed 1m flips while green; sits if SL would exceed ${(watching.smartCap * 100).toFixed(0)}%`
     );
   }
-  if (!env.apiKey || !env.apiSecret) {
+  if (harbor) {
+    console.log(
+      "Harbor on: Binance is signed on the laptop; this process only steers."
+    );
+  } else if (!env.apiKey || !env.apiSecret) {
     console.log(
       "No API keys loaded; risk gates are off and no order will be sent."
     );

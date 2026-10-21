@@ -57,7 +57,8 @@ function clientFor(env: VeleroEnv, live: boolean): BinanceFutures {
     baseUrl: baseUrlFor(live),
     apiKey: env.apiKey,
     apiSecret: env.apiSecret,
-    proxyUrl: env.proxyUrl
+    proxyUrl: env.gateFetchUrl ? null : env.proxyUrl,
+    gateFetchUrl: env.gateFetchUrl
   });
 }
 

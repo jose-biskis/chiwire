@@ -23,6 +23,7 @@
     { "path": "./apps/velero-cli" },
     { "path": "./apps/velero-backend" },
     { "path": "./apps/velero-frontend" },
+    { "path": "./apps/velero-gate" },
     { "path": "./apps/vane" }
   ]
 }

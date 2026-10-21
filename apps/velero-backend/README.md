@@ -29,10 +29,15 @@ Or from repo root: `npm run start:velero-api`
 Starting a live profile from the desk is the confirm (the child gets
 `--live --confirm`).
 
+Deployed desks set `VELERO_REQUIRE_GATE=true`. Binance is signed on the laptop
+(**Velero Harbor**, `npm run velero-gate`). Set `VELERO_GATE_TOKEN` in
+`.env.deploy.local` and in the Harbor UI. Do not put API keys on the VPS.
+
 ## Deploy
 
 ```sh
 npm run deploy:velero-api
 ```
 
-Internal host port **8071**. Profiles persist on volume `chiwire-velero-data`.
+Domain **api.velero.avilalabs.dev** (loopback upstream **8071**). Profiles persist
+on volume `chiwire-velero-data`.

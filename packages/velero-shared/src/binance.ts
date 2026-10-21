@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { fetch, ProxyAgent, type Dispatcher } from "undici";
+import { newGateJobId, type GateHttpMethod, type GateJob, type GateResult } from "./gate.js";
 import type { Kline, OpenOrderRow, PositionRow, SymbolFilters } from "./types.js";
 
 export class BinanceError extends Error {
@@ -17,6 +18,7 @@ type ClientOptions = {
   apiKey: string | null;
   apiSecret: string | null;
   proxyUrl: string | null;
+  gateFetchUrl?: string | null;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -79,11 +81,16 @@ export function explainBinanceError(
 export class BinanceFutures {
   private timeOffsetMs = 0;
   private readonly dispatcher: Dispatcher | undefined;
+  private readonly gateFetchUrl: string | null;
 
   constructor(private readonly options: ClientOptions) {
     this.dispatcher = options.proxyUrl
       ? new ProxyAgent(options.proxyUrl)
       : undefined;
+    this.gateFetchUrl =
+      options.gateFetchUrl?.trim() ||
+      process.env.VELERO_GATE_FETCH?.trim() ||
+      null;
   }
 
   async syncTime(): Promise<void> {
@@ -541,6 +548,9 @@ export class BinanceFutures {
     path: string,
     params: Record<string, string> = {}
   ): Promise<unknown> {
+    if (this.gateFetchUrl) {
+      return this.viaGate("GET", path, params, false);
+    }
     const url = new URL(path, this.options.baseUrl);
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
@@ -552,6 +562,9 @@ export class BinanceFutures {
     path: string,
     params: Record<string, string> = {}
   ): Promise<unknown> {
+    if (this.gateFetchUrl) {
+      return this.viaGate("GET", path, params, true);
+    }
     const url = new URL(path, this.options.baseUrl);
     const search = new URLSearchParams(params);
     search.set("timestamp", String(this.timestamp()));
@@ -565,6 +578,9 @@ export class BinanceFutures {
     path: string,
     params: Record<string, string>
   ): Promise<unknown> {
+    if (this.gateFetchUrl) {
+      return this.viaGate("DELETE", path, params, true);
+    }
     const url = new URL(path, this.options.baseUrl);
     const search = new URLSearchParams(params);
     search.set("timestamp", String(this.timestamp()));
@@ -583,6 +599,9 @@ export class BinanceFutures {
     path: string,
     params: Record<string, string>
   ): Promise<unknown> {
+    if (this.gateFetchUrl) {
+      return this.viaGate("POST", path, params, true);
+    }
     const url = new URL(path, this.options.baseUrl);
     const body = new URLSearchParams(params);
     body.set("timestamp", String(this.timestamp()));
@@ -598,6 +617,41 @@ export class BinanceFutures {
         },
         body: signed
       })
+    );
+  }
+
+  private async viaGate(
+    method: GateHttpMethod,
+    path: string,
+    params: Record<string, string>,
+    signed: boolean
+  ): Promise<unknown> {
+    const job: GateJob = {
+      id: newGateJobId(),
+      signed,
+      method,
+      path,
+      params,
+      baseUrl: this.options.baseUrl
+    };
+    const response = await fetch(this.gateFetchUrl ?? "", {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(job)
+    });
+    const payload = (await response.json()) as GateResult & { error?: string };
+    if (!payload.body && !response.ok) {
+      throw new Error(
+        payload.error || `Harbor is not connected (${response.status}).`
+      );
+    }
+    return this.parseHttp(
+      payload.status || response.status,
+      payload.ok || response.ok,
+      payload.body ?? ""
     );
   }
 
@@ -632,7 +686,20 @@ export class BinanceFutures {
   private async read(
     response: Awaited<ReturnType<typeof fetch>>
   ): Promise<unknown> {
-    const text = await response.text();
+    return this.parseHttp(
+      response.status,
+      response.ok,
+      await response.text(),
+      response.statusText
+    );
+  }
+
+  private parseHttp(
+    status: number,
+    ok: boolean,
+    text: string,
+    statusText = ""
+  ): unknown {
     let payload: unknown = text;
     try {
       payload = text ? JSON.parse(text) : {};
@@ -640,14 +707,14 @@ export class BinanceFutures {
       payload = { msg: text };
     }
 
-    if (!response.ok) {
+    if (!ok) {
       const row = typeof payload === "object" && payload !== null ? payload : {};
       const record = row as Record<string, unknown>;
       throw new BinanceError(
-        asNumber(record.code, response.status),
+        asNumber(record.code, status),
         explainBinanceError(
-          asNumber(record.code, response.status),
-          asString(record.msg, response.statusText || "request failed"),
+          asNumber(record.code, status),
+          asString(record.msg, statusText || "request failed"),
           this.options.baseUrl
         )
       );

@@ -20,6 +20,12 @@ export type WatchProfile = {
   updatedAt: string;
 };
 
+export type HarborStatus = {
+  connected: boolean;
+  since: string | null;
+  requireGate: boolean;
+};
+
 export type WatchStatus = {
   running: boolean;
   profileId: string | null;
@@ -27,6 +33,7 @@ export type WatchStatus = {
   pid: number | null;
   startedAt: string | null;
   cli: string | null;
+  gate: HarborStatus;
 };
 
 export type LogLine = {
