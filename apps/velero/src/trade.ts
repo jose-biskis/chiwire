@@ -13,6 +13,7 @@ import { printFeeCard, printPositions, printQuote } from "./format.js";
 import { opposite, orderSide, readMomentum, withoutForming } from "./momentum.js";
 import { protectivePrices, quantityFromNotional } from "./precision.js";
 import { evaluateRisk } from "./risk.js";
+import { suggestSmartPercents, type SmartProfitResult } from "./smart.js";
 import type { Side } from "./types.js";
 
 function requireKeys(env: VeleroEnv): { apiKey: string; apiSecret: string } {
@@ -100,6 +101,7 @@ type Prepared = {
   pairPosition: boolean;
   tickSize: number;
   hedge: boolean;
+  smartPlan: SmartProfitResult | null;
 };
 
 function isArmed(
@@ -137,7 +139,7 @@ async function preparePair(
   const [raw15m, raw5m, raw1m] = await Promise.all([
     client.klines(command.symbol, "15m", 80),
     client.klines(command.symbol, "5m", 40),
-    client.klines(command.symbol, "1m", 5)
+    client.klines(command.symbol, "1m", command.smartProfit ? 40 : 5)
   ]);
   const klines15m =
     command.command === "watch" ? withoutForming(raw15m) : raw15m;
@@ -164,8 +166,28 @@ async function preparePair(
   if (command.slPercent !== null) {
     suggestionInput.slPercent = command.slPercent;
   }
+
+  let smartPlan: SmartProfitResult | null = null;
+  if (command.smartProfit && momentum.bias !== "FLAT") {
+    smartPlan = suggestSmartPercents({
+      side: momentum.bias,
+      mark,
+      takerFeeRate: taker.rate,
+      klines15m: raw15m,
+      klines5m: raw5m,
+      klines1m: raw1m,
+      maxSlPercent: command.smartCap
+    });
+    if (smartPlan.ok) {
+      suggestionInput.tpPercent = smartPlan.tpPercent;
+      suggestionInput.slPercent = smartPlan.slPercent;
+    }
+  }
+
   const suggestion = suggestPercents(suggestionInput);
-  suggestion.note = `${suggestion.note} Fee source: ${taker.source}.`;
+  suggestion.note = smartPlan?.ok
+    ? `${smartPlan.note} Fee source: ${taker.source}.`
+    : `${suggestion.note} Fee source: ${taker.source}.`;
 
   const size = quantityFromNotional({
     notional: command.notional,
@@ -210,7 +232,8 @@ async function preparePair(
     pairOrders,
     pairPosition,
     tickSize: filters.tickSize,
-    hedge
+    hedge,
+    smartPlan
   };
 }
 
@@ -234,6 +257,10 @@ export async function runQuote(command: QuoteCommand): Promise<void> {
   console.log("");
   if (prepared.momentum.bias === "FLAT") {
     console.log("Would not sail: no aligned momentum.");
+    return;
+  }
+  if (command.smartProfit && prepared.smartPlan && !prepared.smartPlan.ok) {
+    console.log(`Would not sail: ${prepared.smartPlan.reason}`);
     return;
   }
   console.log(`Would sail ${prepared.momentum.bias} if you run trade.`);
@@ -290,6 +317,14 @@ export async function sail(
     return {
       status: "skipped",
       reason: prepared.momentum.reason,
+      bias
+    };
+  }
+
+  if (command.smartProfit && prepared.smartPlan && !prepared.smartPlan.ok) {
+    return {
+      status: "skipped",
+      reason: prepared.smartPlan.reason,
       bias
     };
   }

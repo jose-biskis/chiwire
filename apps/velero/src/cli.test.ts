@@ -157,6 +157,55 @@ test("quote refuses a fleet", () => {
   );
 });
 
+test("watch --smart-profit is on and cannot mix with --tp/--sl", () => {
+  const command = parseArgs([
+    "node",
+    "velero",
+    "watch",
+    "RLCUSDT",
+    "--smart-profit"
+  ]);
+  assert.equal(command.command, "watch");
+  if (command.command !== "watch") {
+    return;
+  }
+  assert.equal(command.smartProfit, true);
+  assert.equal(command.smartCap, 0.05);
+
+  const raised = parseArgs([
+    "node",
+    "velero",
+    "watch",
+    "DOODUSDT",
+    "--smart-profit",
+    "--smart-cap",
+    "12"
+  ]);
+  assert.equal(raised.command, "watch");
+  if (raised.command === "watch") {
+    assert.equal(raised.smartCap, 0.12);
+  }
+
+  assert.throws(
+    () => parseArgs(["node", "velero", "watch", "RLCUSDT", "--smart-cap", "12"]),
+    /needs --smart-profit/
+  );
+
+  assert.throws(
+    () =>
+      parseArgs([
+        "node",
+        "velero",
+        "trade",
+        "RLCUSDT",
+        "--smart-profit",
+        "--tp",
+        "0.5"
+      ]),
+    /cannot be combined/
+  );
+});
+
 test("fees command is pair-less", () => {
   const command = parseArgs([
     "node",

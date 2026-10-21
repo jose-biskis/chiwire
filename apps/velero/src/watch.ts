@@ -63,6 +63,11 @@ export async function runWatch(command: WatchCommand): Promise<void> {
       `gold-digger on  LIVE tape  scan ${watching.goldScan}  top ${watching.goldTop}  every ${watching.goldEverySeconds}s  (EYE pairs join the fleet; 15m/5m/1m gates still decide the sail)`
     );
   }
+  if (watching.smartProfit) {
+    console.log(
+      `smart-profit on  SL/TP from 1m/5m/15m ATR + swing (not desk percents); sits if the stop would exceed ${(watching.smartCap * 100).toFixed(0)}%`
+    );
+  }
   if (!env.apiKey || !env.apiSecret) {
     console.log(
       "No API keys loaded; risk gates are off and no order will be sent."

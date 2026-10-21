@@ -38,7 +38,7 @@ export function roc(values: number[], period: number): number | null {
   return (last - prev) / prev;
 }
 
-export function atrPercent(klines: Kline[], period: number): number | null {
+export function atr(klines: Kline[], period: number): number | null {
   if (klines.length < period + 1 || period <= 0) {
     return null;
   }
@@ -65,12 +65,17 @@ export function atrPercent(klines: Kline[], period: number): number | null {
     return null;
   }
 
+  return sum / count;
+}
+
+export function atrPercent(klines: Kline[], period: number): number | null {
+  const value = atr(klines, period);
   const last = klines[klines.length - 1];
-  if (!last || last.close === 0) {
+  if (value === null || !last || last.close === 0) {
     return null;
   }
 
-  return sum / count / last.close;
+  return value / last.close;
 }
 
 const FAST = 20;

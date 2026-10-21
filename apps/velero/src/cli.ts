@@ -10,6 +10,7 @@ import {
   DEFAULT_GOLD_SCAN,
   DEFAULT_GOLD_TOP
 } from "./digger.js";
+import { DEFAULT_SMART_CAP } from "./smart.js";
 import { percentToRate } from "./fees.js";
 
 export type HelpCommand = {
@@ -36,6 +37,8 @@ type PairFlags = {
   slPercent: number | null;
   takerFeeRate: number | null;
   live: boolean;
+  smartProfit: boolean;
+  smartCap: number;
 };
 
 export type QuoteCommand = PairFlags & {
@@ -157,6 +160,8 @@ Options:
   --max-open <n>       Max concurrent positions. Default ${DEFAULT_MAX_OPEN}
   --tp <percent>       Take-profit as % of notional (0.5 = 0.5%)
   --sl <percent>       Stop-loss as % of notional
+  --smart-profit       ATR + swing SL/TP instead of desk percents
+  --smart-cap <pct>    Max smart-profit stop as % of price. Default ${DEFAULT_SMART_CAP * 100}
   --taker-fee <pct>    Taker fee in percent (0.1 = 0.10% = 0.01 USDT on 10)
   --poll <seconds>     Watch loop interval. Default ${DEFAULT_POLL_SECONDS}
   --cooldown <seconds> After a sail (or dry-run), sit that long. Default ${DEFAULT_COOLDOWN_SECONDS}
@@ -176,6 +181,7 @@ Examples:
   velero watch RLCUSDT,ETHUSDT,BTCUSDT --notional 10
   velero watch --gold-digger
   velero watch RLCUSDT --gold-digger --gold-top 8
+  velero watch --gold-digger --smart-profit --smart-cap 12 --notional 10
   velero fees --notional 10 --taker-fee 0.1
 
 Keys: BINANCE_API_KEY / BINANCE_API_SECRET (apps/velero/.env).
@@ -194,6 +200,8 @@ type PairBuilder = {
   slPercent: number | null;
   takerFeeRate: number | null;
   live: boolean;
+  smartProfit: boolean;
+  smartCap: number;
   dryRun: boolean;
   confirm: boolean;
   isolated: boolean;
@@ -220,6 +228,7 @@ function parsePairFlags(args: string[]): PairBuilder {
   const symbols = collectSymbols(pairTokens);
   const first = symbols[0] ?? "";
 
+  let smartCapSet = false;
   const builder: PairBuilder = {
     symbol: first,
     symbols,
@@ -230,6 +239,8 @@ function parsePairFlags(args: string[]): PairBuilder {
     slPercent: null,
     takerFeeRate: null,
     live: false,
+    smartProfit: false,
+    smartCap: DEFAULT_SMART_CAP,
     dryRun: false,
     confirm: false,
     isolated: false,
@@ -337,6 +348,25 @@ function parsePairFlags(args: string[]): PairBuilder {
       continue;
     }
 
+    if (arg === "--smart-profit") {
+      builder.smartProfit = true;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--smart-cap" || arg.startsWith("--smart-cap=")) {
+      const parsed = readFlagValue(args, index, "--smart-cap");
+      builder.smartCap = percentToRate(
+        parsePositiveNumber(parsed.value, "--smart-cap")
+      );
+      if (builder.smartCap > 0.5) {
+        throw new Error("--smart-cap max is 50% of price");
+      }
+      smartCapSet = true;
+      index = parsed.nextIndex;
+      continue;
+    }
+
     if (arg === "--gold-digger") {
       builder.goldDigger = true;
       index += 1;
@@ -377,6 +407,17 @@ function parsePairFlags(args: string[]): PairBuilder {
     }
 
     throw new Error(`Unknown option: ${arg}`);
+  }
+
+  if (
+    builder.smartProfit &&
+    (builder.tpPercent !== null || builder.slPercent !== null)
+  ) {
+    throw new Error("--smart-profit cannot be combined with --tp/--sl");
+  }
+
+  if (smartCapSet && !builder.smartProfit) {
+    throw new Error("--smart-cap needs --smart-profit");
   }
 
   return builder;
@@ -469,7 +510,9 @@ export function parseArgs(argv: string[]): CliCommand {
         tpPercent: parsed.tpPercent,
         slPercent: parsed.slPercent,
         takerFeeRate: parsed.takerFeeRate,
-        live: parsed.live
+        live: parsed.live,
+        smartProfit: parsed.smartProfit,
+        smartCap: parsed.smartCap
       };
     }
 
@@ -485,6 +528,8 @@ export function parseArgs(argv: string[]): CliCommand {
         slPercent: parsed.slPercent,
         takerFeeRate: parsed.takerFeeRate,
         live: parsed.live,
+        smartProfit: parsed.smartProfit,
+        smartCap: parsed.smartCap,
         dryRun: parsed.dryRun,
         confirm: parsed.confirm,
         isolated: parsed.isolated,
@@ -507,6 +552,8 @@ export function parseArgs(argv: string[]): CliCommand {
       slPercent: parsed.slPercent,
       takerFeeRate: parsed.takerFeeRate,
       live: parsed.live,
+      smartProfit: parsed.smartProfit,
+      smartCap: parsed.smartCap,
       dryRun: parsed.dryRun,
       confirm: parsed.confirm,
       isolated: parsed.isolated
