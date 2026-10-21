@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   decimalPlaces,
   floorToStep,
+  protectivePrices,
   quantityFromNotional,
   roundToTick
 } from "./precision.js";
@@ -33,4 +34,34 @@ test("quantityFromNotional floors to step and keeps min notional", () => {
 test("roundToTick floors and ceils", () => {
   assert.equal(roundToTick(1.23456, 0.001, "floor"), 1.234);
   assert.equal(roundToTick(1.23456, 0.001, "ceil"), 1.235);
+});
+
+test("protectivePrices widens a stop that would round into last on a fat tick", () => {
+  const prices = protectivePrices({
+    side: "LONG",
+    mark: 0.053,
+    last: 0.052,
+    tpPercent: 0.005,
+    slPercent: 0.0025,
+    tickSize: 0.001
+  });
+  assert.equal(prices.ok, true);
+  if (!prices.ok) {
+    return;
+  }
+  assert.ok(prices.stopLoss < 0.0523);
+  assert.ok(prices.takeProfit > 0.0523);
+  assert.equal(prices.widened, true);
+});
+
+test("protectivePrices sits when the tick is the whole price", () => {
+  const prices = protectivePrices({
+    side: "LONG",
+    mark: 0.001,
+    last: 0.001,
+    tpPercent: 0.005,
+    slPercent: 0.0025,
+    tickSize: 0.001
+  });
+  assert.equal(prices.ok, false);
 });

@@ -11,7 +11,7 @@ import {
 import { suggestPercents, type FeeSuggestion } from "./fees.js";
 import { printFeeCard, printPositions, printQuote } from "./format.js";
 import { opposite, orderSide, readMomentum, withoutForming } from "./momentum.js";
-import { quantityFromNotional, roundToTick } from "./precision.js";
+import { protectivePrices, quantityFromNotional } from "./precision.js";
 import { evaluateRisk } from "./risk.js";
 import type { Side } from "./types.js";
 
@@ -73,40 +73,6 @@ async function resolveTakerFee(
     }
   }
   return { rate: DEFAULT_TAKER_FEE_RATE, source: "default 0.10% (your 0.01 on 10 USDT)" };
-}
-
-function protectivePrices(input: {
-  side: Side;
-  mark: number;
-  last: number;
-  tpPercent: number;
-  slPercent: number;
-  tickSize: number;
-}): { takeProfit: number; stopLoss: number } {
-  const { side, mark, last, tpPercent, slPercent, tickSize } = input;
-  const reference = mark;
-
-  if (side === "LONG") {
-    const takeProfit = roundToTick(reference * (1 + tpPercent), tickSize, "ceil");
-    const stopLoss = roundToTick(reference * (1 - slPercent), tickSize, "floor");
-    if (stopLoss >= last || stopLoss >= mark) {
-      throw new Error("Stop rounded into price. Widen --sl or pick a looser tick.");
-    }
-    if (takeProfit <= last || takeProfit <= mark) {
-      throw new Error("Take profit rounded into price. Widen --tp.");
-    }
-    return { takeProfit, stopLoss };
-  }
-
-  const takeProfit = roundToTick(reference * (1 - tpPercent), tickSize, "floor");
-  const stopLoss = roundToTick(reference * (1 + slPercent), tickSize, "ceil");
-  if (stopLoss <= last || stopLoss <= mark) {
-    throw new Error("Stop rounded into price. Widen --sl or pick a looser tick.");
-  }
-  if (takeProfit >= last || takeProfit >= mark) {
-    throw new Error("Take profit rounded into price. Widen --tp.");
-  }
-  return { takeProfit, stopLoss };
 }
 
 export function runFees(notional: number, takerFeeRate: number | null): void {
@@ -352,6 +318,10 @@ export async function sail(
     slPercent: prepared.suggestion.slPercent,
     tickSize: prepared.tickSize
   });
+  if (!prices.ok) {
+    return { status: "skipped", reason: prices.reason, bias };
+  }
+
   const exitSide = orderSide(opposite(side));
   const positionSide = prepared.hedge ? side : undefined;
 
@@ -361,6 +331,9 @@ export async function sail(
   console.log(
     `  plan ${side} qty ${prepared.quantity}  TP ${prices.takeProfit}  SL ${prices.stopLoss}`
   );
+  if (prices.widened) {
+    console.log(`  ${prices.note}`);
+  }
 
   if (command.dryRun) {
     console.log("");
