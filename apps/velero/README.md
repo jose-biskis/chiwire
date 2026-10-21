@@ -41,7 +41,7 @@ npm run velero -- watch RLCUSDT --notional 10 --max-open 3 --dry-run
 npm run velero -- watch RLCUSDT ETHUSDT BTCUSDT --notional 10 --max-open 3
 npm run velero -- watch RLCUSDT,ETHUSDT --notional 10 --poll 30 --cooldown 300
 
-# Gold-digger: scan LIVE USDT-M for pairs worth an eye (does not auto-trade them)
+# Gold-digger: scan LIVE USDT-M; EYE pairs join this watcher's fleet
 npm run velero -- watch --gold-digger
 npm run velero -- watch RLCUSDT --gold-digger --gold-top 8 --gold-scan 36 --gold-every 180
 
@@ -78,7 +78,9 @@ its cut.
   open interest change, funding, EMA 20/50/200, market structure, RSI, MACD,
   Stochastic, Bollinger width/%b, ADX/+DI/−DI, ATR, relative volume, distance
   to 24h high/low. It only prints `EYE` when several of those agree, with the
-  justification. It will not add those pairs to the trading fleet by itself.
+  justification. Those symbols **join this watcher's fleet** (cap 20, no
+  duplicates). They still need 15m/5m alignment, a free berth, and no open
+  ticket on that pair before Velero sails.
 
 Live orders need `VELERO_LIVE=true`, `--live`, and `--confirm`.
 `watch --live` needs `--confirm` once at launch if it is allowed to send.

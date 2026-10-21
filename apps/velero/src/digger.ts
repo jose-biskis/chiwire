@@ -146,7 +146,34 @@ export async function runGoldDigger(input: {
   scan: number;
   top: number;
   signal: AbortSignal;
-}): Promise<void> {
+}): Promise<EyeSuggestion[]> {
   const suggestions = await digGold(input);
   printGoldReport(suggestions, input.scan);
+  return suggestions;
+}
+
+export function mergeFleet(input: {
+  fleet: string[];
+  additions: string[];
+  cap: number;
+}): { fleet: string[]; joined: string[]; skipped: string[] } {
+  const fleet = [...input.fleet];
+  const present = new Set(fleet);
+  const joined: string[] = [];
+  const skipped: string[] = [];
+
+  for (const symbol of input.additions) {
+    if (present.has(symbol)) {
+      continue;
+    }
+    if (fleet.length >= input.cap) {
+      skipped.push(symbol);
+      continue;
+    }
+    fleet.push(symbol);
+    present.add(symbol);
+    joined.push(symbol);
+  }
+
+  return { fleet, joined, skipped };
 }

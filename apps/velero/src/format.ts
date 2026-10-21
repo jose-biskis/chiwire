@@ -140,7 +140,7 @@ export function printGoldReport(
     }
   }
   console.log(
-    "  These are not orders. Add a pair to watch if you want the boat to sail it."
+    "  EYE pairs join the watch fleet. 15m/5m gates, max-open, and no-stack still apply before a sail."
   );
   console.log("");
 }

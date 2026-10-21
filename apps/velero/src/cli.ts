@@ -160,7 +160,7 @@ Options:
   --taker-fee <pct>    Taker fee in percent (0.1 = 0.10% = 0.01 USDT on 10)
   --poll <seconds>     Watch loop interval. Default ${DEFAULT_POLL_SECONDS}
   --cooldown <seconds> After a sail (or dry-run), sit that long. Default ${DEFAULT_COOLDOWN_SECONDS}
-  --gold-digger        Scan the LIVE book for pairs worth an eye (no auto-trade)
+  --gold-digger        Scan LIVE USDT-M; EYE pairs join the watch fleet
   --gold-top <n>       How many suggestions to print. Default ${DEFAULT_GOLD_TOP}
   --gold-scan <n>      Volume leaders to analyse. Default ${DEFAULT_GOLD_SCAN}
   --gold-every <sec>   Rescan interval. Default ${DEFAULT_GOLD_EVERY_SECONDS}

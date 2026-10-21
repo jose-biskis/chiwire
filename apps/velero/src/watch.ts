@@ -1,7 +1,7 @@
 import process from "node:process";
 import type { WatchCommand } from "./cli.js";
 import { baseUrlFor, maskKey, readEnv, venueLabel } from "./config.js";
-import { runGoldDigger } from "./digger.js";
+import { mergeFleet, runGoldDigger } from "./digger.js";
 import { printWatchLine } from "./format.js";
 import { sail } from "./trade.js";
 
@@ -52,14 +52,15 @@ export async function runWatch(command: WatchCommand): Promise<void> {
   process.on("SIGTERM", onStop);
 
   const mode = watching.dryRun ? "eyes only" : "armed";
-  const fleet =
-    watching.symbols.length > 0 ? watching.symbols.join(" ") : "(no fleet)";
+  const fleet = [...watching.symbols];
+  const fleetLabel = (): string =>
+    fleet.length > 0 ? fleet.join(" ") : "(no fleet)";
   console.log(
-    `velero  watch  ${venueLabel(watching.live)}  ${baseUrlFor(watching.live)}  ${fleet}  poll ${watching.pollSeconds}s  cooldown ${watching.cooldownSeconds}s  ${mode}  ${watching.isolated ? "isolated" : "cross"}`
+    `velero  watch  ${venueLabel(watching.live)}  ${baseUrlFor(watching.live)}  ${fleetLabel()}  poll ${watching.pollSeconds}s  cooldown ${watching.cooldownSeconds}s  ${mode}  ${watching.isolated ? "isolated" : "cross"}`
   );
   if (watching.goldDigger) {
     console.log(
-      `gold-digger on  LIVE tape  scan ${watching.goldScan}  top ${watching.goldTop}  every ${watching.goldEverySeconds}s  (suggest only — will not auto-sail them)`
+      `gold-digger on  LIVE tape  scan ${watching.goldScan}  top ${watching.goldTop}  every ${watching.goldEverySeconds}s  (EYE pairs join the fleet; 15m/5m gates still decide the sail)`
     );
   }
   if (!env.apiKey || !env.apiSecret) {
@@ -97,12 +98,36 @@ export async function runWatch(command: WatchCommand): Promise<void> {
         Date.now() - lastGoldAt >= watching.goldEverySeconds * 1000
       ) {
         try {
-          await runGoldDigger({
+          const suggestions = await runGoldDigger({
             env,
             scan: watching.goldScan,
             top: watching.goldTop,
             signal: abort.signal
           });
+          const merged = mergeFleet({
+            fleet,
+            additions: suggestions.map((row) => row.symbol),
+            cap: 20
+          });
+          fleet.length = 0;
+          fleet.push(...merged.fleet);
+          for (const symbol of merged.joined) {
+            const eye = suggestions.find((row) => row.symbol === symbol);
+            printWatchLine({
+              symbol,
+              status: "join",
+              detail: eye
+                ? `${eye.bias} ${eye.setup} score ${eye.score}`
+                : "gold-digger"
+            });
+          }
+          if (merged.skipped.length > 0) {
+            printWatchLine({
+              symbol: "gold",
+              status: "full",
+              detail: `fleet at 20, not joining ${merged.skipped.join(" ")}`
+            });
+          }
           lastGoldAt = Date.now();
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
@@ -115,7 +140,7 @@ export async function runWatch(command: WatchCommand): Promise<void> {
         }
       }
 
-      for (const symbol of watching.symbols) {
+      for (const symbol of [...fleet]) {
         if (abort.signal.aborted) {
           break;
         }
@@ -182,9 +207,7 @@ export async function runWatch(command: WatchCommand): Promise<void> {
       }
 
       const waitSeconds =
-        watching.symbols.length > 0
-          ? watching.pollSeconds
-          : watching.goldEverySeconds;
+        fleet.length > 0 ? watching.pollSeconds : watching.goldEverySeconds;
       await sleep(waitSeconds * 1000, abort.signal);
     }
   } finally {
@@ -193,7 +216,7 @@ export async function runWatch(command: WatchCommand): Promise<void> {
     printWatchLine({
       symbol: "watch",
       status: "stop",
-      detail: `anchor down  ${fleet}`
+      detail: `anchor down  ${fleetLabel()}`
     });
   }
 }
