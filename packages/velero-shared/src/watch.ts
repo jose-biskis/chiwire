@@ -1,6 +1,6 @@
 import process from "node:process";
 import type { WatchCommand } from "./cli.js";
-import { baseUrlFor, maskKey, readEnv, venueLabel } from "./config.js";
+import { baseUrlFor, canSign, maskKey, readEnv, venueLabel } from "./config.js";
 import { mergeFleet, runGoldDigger } from "./digger.js";
 import { printWatchLine } from "./format.js";
 import { sail, tendPair } from "./trade.js";
@@ -31,8 +31,7 @@ export function sleep(
 export async function runWatch(command: WatchCommand): Promise<void> {
   const env = readEnv();
   const harbor = Boolean(env.gateFetchUrl);
-  const armed =
-    !command.dryRun && (Boolean(env.apiKey && env.apiSecret) || harbor);
+  const armed = !command.dryRun && canSign(env);
   const watching: WatchCommand = armed
     ? command
     : {

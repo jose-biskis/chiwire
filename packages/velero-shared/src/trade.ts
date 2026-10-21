@@ -2,6 +2,7 @@ import { BinanceFutures } from "./binance.js";
 import type { QuoteCommand, TradeCommand, WatchCommand } from "./cli.js";
 import {
   baseUrlFor,
+  canSign,
   DEFAULT_TAKER_FEE_RATE,
   maskKey,
   readEnv,
@@ -23,12 +24,12 @@ import { planTend, suggestSmartPercents, type SmartProfitResult } from "./smart.
 import type { PositionRow, Side } from "./types.js";
 
 function requireKeys(env: VeleroEnv): { apiKey: string; apiSecret: string } {
-  if (!env.apiKey || !env.apiSecret) {
-    throw new Error(
-      "BINANCE_API_KEY and BINANCE_API_SECRET are required for this command. Copy apps/velero-cli/.env.example to apps/velero-cli/.env — never paste keys in chat."
-    );
+  if (canSign(env)) {
+    return { apiKey: env.apiKey ?? "", apiSecret: env.apiSecret ?? "" };
   }
-  return { apiKey: env.apiKey, apiSecret: env.apiSecret };
+  throw new Error(
+    "BINANCE_API_KEY and BINANCE_API_SECRET are required for this command, or connect Velero Harbor so keys stay on the laptop. Copy apps/velero-cli/.env.example to apps/velero-cli/.env — never paste keys in chat."
+  );
 }
 
 function capLeverage(requested: number, env: VeleroEnv, exchangeMax: number): number {
@@ -74,7 +75,7 @@ async function resolveTakerFee(
   if (env.takerFeeRate !== null) {
     return { rate: env.takerFeeRate, source: "VELERO_TAKER_FEE" };
   }
-  if (env.apiKey && env.apiSecret) {
+  if (canSign(env)) {
     const fromExchange = await client.takerFeeRate(symbol);
     if (fromExchange !== null) {
       return { rate: fromExchange, source: "binance commissionRate" };
@@ -132,7 +133,7 @@ async function preparePair(
     );
   }
 
-  const signed = Boolean(env.apiKey && env.apiSecret);
+  const signed = canSign(env);
   const client = clientFor(env, command.live);
   await client.syncTime();
 
@@ -352,7 +353,7 @@ export async function sail(
     };
   }
 
-  if (env.apiKey && env.apiSecret) {
+  if (canSign(env)) {
     const positions = await prepared.client.positions();
     const openOrders = await prepared.client.openOrders(prepared.symbol);
     const risk = evaluateRisk({
@@ -520,7 +521,7 @@ export async function tendPair(command: WatchCommand): Promise<TendResult> {
   }
 
   const env = readEnv();
-  if (!env.apiKey || !env.apiSecret) {
+  if (!canSign(env)) {
     return { status: "idle" };
   }
   if (command.live && !command.dryRun && !env.liveAllowed) {
@@ -666,7 +667,7 @@ export async function runStatus(live: boolean): Promise<void> {
     );
   }
 
-  const keys = requireKeys(env);
+  requireKeys(env);
   const client = clientFor(env, live);
   await client.syncTime();
   const [positions, orders] = await Promise.all([
@@ -674,7 +675,8 @@ export async function runStatus(live: boolean): Promise<void> {
     client.openOrders()
   ]);
 
-  console.log(`velero  ${venueLabel(live)}  ${maskKey(keys.apiKey)}`);
+  const who = env.gateFetchUrl ? "harbor" : maskKey(env.apiKey ?? "");
+  console.log(`velero  ${venueLabel(live)}  ${who}`);
   console.log("");
   printPositions(positions, orders);
 }

@@ -71,6 +71,10 @@ function truthy(raw: string | undefined): boolean {
   return value === "1" || value === "true" || value === "yes";
 }
 
+export function canSign(env: VeleroEnv): boolean {
+  return Boolean(env.gateFetchUrl) || Boolean(env.apiKey && env.apiSecret);
+}
+
 export function readEnv(): VeleroEnv {
   const apiKey = readSecret("BINANCE_API_KEY");
   const apiSecret = readSecret("BINANCE_API_SECRET");
