@@ -10,6 +10,7 @@ import {
   type GateJob
 } from "@chiwire/velero-shared";
 import { page } from "./page.js";
+import { openSse, type SseClient } from "./sse.js";
 
 type Saved = {
   apiBase: string;
@@ -35,23 +36,42 @@ function configPath(): string {
   return path.join(configDir(), "credentials.json");
 }
 
+function logError(error: unknown): void {
+  const message = error instanceof Error ? error.stack ?? error.message : String(error);
+  console.error(message);
+  try {
+    mkdirSync(configDir(), { recursive: true });
+    writeFileSync(path.join(configDir(), "harbor.log"), `${new Date().toISOString()} ${message}\n`, {
+      flag: "a"
+    });
+  } catch {
+    // ignore
+  }
+}
+
 function loadSaved(): Saved {
+  const defaults: Saved = {
+    apiBase: process.env.VELERO_GATE_API?.trim() || DEFAULT_API,
+    token: process.env.VELERO_GATE_TOKEN?.trim() || "",
+    apiKey: process.env.BINANCE_API_KEY?.trim() || "",
+    apiSecret: process.env.BINANCE_API_SECRET?.trim() || ""
+  };
   const file = configPath();
   if (!existsSync(file)) {
-    return {
-      apiBase: process.env.VELERO_GATE_API?.trim() || DEFAULT_API,
-      token: process.env.VELERO_GATE_TOKEN?.trim() || "",
-      apiKey: process.env.BINANCE_API_KEY?.trim() || "",
-      apiSecret: process.env.BINANCE_API_SECRET?.trim() || ""
-    };
+    return defaults;
   }
-  const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<Saved>;
-  return {
-    apiBase: parsed.apiBase?.trim() || DEFAULT_API,
-    token: parsed.token ?? "",
-    apiKey: parsed.apiKey ?? "",
-    apiSecret: parsed.apiSecret ?? ""
-  };
+  try {
+    const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<Saved>;
+    return {
+      apiBase: parsed.apiBase?.trim() || defaults.apiBase,
+      token: parsed.token ?? defaults.token,
+      apiKey: parsed.apiKey ?? defaults.apiKey,
+      apiSecret: parsed.apiSecret ?? defaults.apiSecret
+    };
+  } catch (error) {
+    logError(error);
+    return defaults;
+  }
 }
 
 function save(next: Saved): void {
@@ -108,7 +128,7 @@ let saved = loadSaved();
 let connected = false;
 let lastError: string | null = null;
 let jobs = 0;
-let source: EventSource | null = null;
+let source: SseClient | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
 function apiUrl(pathname: string): string {
@@ -151,27 +171,35 @@ function connect(): void {
     lastError = "Harbor token is empty.";
     return;
   }
-  const url = apiUrl("/api/gate/jobs");
-  const next = new EventSource(url);
-  source = next;
-  next.addEventListener("job", (event) => {
-    const job = JSON.parse((event as MessageEvent).data) as GateJob;
-    void handleJob(job).catch((error: unknown) => {
-      lastError = error instanceof Error ? error.message : String(error);
-    });
-  });
-  next.onopen = () => {
-    connected = true;
-    lastError = null;
-  };
-  next.onerror = () => {
-    connected = next.readyState === EventSource.OPEN;
-    if (next.readyState === EventSource.CLOSED) {
-      lastError = "Desk API unreachable or token rejected.";
+  source = openSse(apiUrl("/api/gate/jobs"), {
+    onOpen: () => {
+      connected = true;
+      lastError = null;
+    },
+    onEvent: (event, data) => {
+      if (event !== "job") {
+        return;
+      }
+      const job = JSON.parse(data) as GateJob;
+      void handleJob(job).catch((error: unknown) => {
+        lastError = error instanceof Error ? error.message : String(error);
+        logError(error);
+      });
+    },
+    onClose: () => {
+      connected = false;
       source = null;
+      lastError = "Desk API closed the stream.";
+      reconnectTimer = setTimeout(connect, 4000);
+    },
+    onError: (error) => {
+      connected = false;
+      source = null;
+      lastError = error.message;
+      logError(error);
       reconnectTimer = setTimeout(connect, 4000);
     }
-  };
+  });
 }
 
 const port = readPort();
@@ -227,15 +255,29 @@ const server = createServer((request, response) => {
   });
 });
 
+server.on("error", (error) => {
+  logError(error);
+  lastError = error.message;
+  console.error("Keep this window open and fix the error above.");
+});
+
 server.listen(port, "127.0.0.1", () => {
   const url = `http://127.0.0.1:${port}/`;
   console.log(`velero harbor  ${url}`);
   console.log(`desk API       ${saved.apiBase}`);
   console.log(`keys file      ${configPath()}`);
+  console.log("Leave this window open while the desk is running.");
   if (saved.token) {
     connect();
   }
   openBrowser(url);
+});
+
+process.on("uncaughtException", (error) => {
+  logError(error);
+});
+process.on("unhandledRejection", (error) => {
+  logError(error);
 });
 
 process.on("SIGINT", () => {

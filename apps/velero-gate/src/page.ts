@@ -9,9 +9,6 @@ export function page(
   saved: Saved,
   status: { connected: boolean; lastError: string | null; jobs: number }
 ): string {
-  const error = status.lastError
-    ? `<p class="error">${escapeHtml(status.lastError)}</p>`
-    : "";
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -75,20 +72,23 @@ export function page(
       .lamp {
         display: inline-block;
         width: .7rem; height: .7rem; border-radius: 50%;
-        background: ${status.connected ? "var(--phosphor)" : "var(--dim)"};
-        box-shadow: ${status.connected ? "0 0 12px var(--phosphor)" : "none"};
+        background: var(--dim);
         margin-right: .45rem;
       }
-      .error { color: var(--port); }
+      .lamp.on {
+        background: var(--phosphor);
+        box-shadow: 0 0 12px var(--phosphor);
+      }
+      .error { color: var(--port); min-height: 1.2em; }
       .hint { font-size: .78rem; color: var(--dim); line-height: 1.5; }
     </style>
   </head>
   <body>
     <main>
-      <p class="tag"><span class="lamp"></span>${status.connected ? "tied up" : "adrift"} · ${status.jobs} hops</p>
+      <p class="tag"><span id="lamp" class="lamp${status.connected ? " on" : ""}"></span><span id="state">${status.connected ? "tied up" : "adrift"} · ${status.jobs} hops</span></p>
       <h1>Velero <span>harbor</span></h1>
-      <p class="lead">Keys stay on this laptop. The VPS only steers. Binance sees your home IP.</p>
-      ${error}
+      <p class="lead">Keys stay on this laptop. The VPS only steers. Binance sees your home IP. Leave the Harbor window open.</p>
+      <p class="error" id="error">${status.lastError ? escapeHtml(status.lastError) : ""}</p>
       <form id="form">
         <label>Desk API</label>
         <input name="apiBase" value="${escapeHtml(saved.apiBase)}" />
@@ -104,6 +104,18 @@ export function page(
     </main>
     <script>
       const form = document.getElementById("form");
+      const lamp = document.getElementById("lamp");
+      const state = document.getElementById("state");
+      const errorBox = document.getElementById("error");
+
+      async function refreshStatus() {
+        const response = await fetch("/health", { cache: "no-store" });
+        const payload = await response.json();
+        lamp.classList.toggle("on", Boolean(payload.connected));
+        state.textContent = (payload.connected ? "tied up" : "adrift") + " · " + (payload.jobs ?? 0) + " hops";
+        errorBox.textContent = payload.error || "";
+      }
+
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         const data = Object.fromEntries(new FormData(form).entries());
@@ -112,9 +124,9 @@ export function page(
           headers: { "content-type": "application/json" },
           body: JSON.stringify(data)
         });
-        location.reload();
+        await refreshStatus();
       });
-      setTimeout(() => location.reload(), 8000);
+      setInterval(() => { refreshStatus().catch(() => undefined); }, 2000);
     </script>
   </body>
 </html>`;

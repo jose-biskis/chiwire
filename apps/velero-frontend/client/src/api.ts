@@ -65,7 +65,12 @@ export async function fetchLogs(limit = 400): Promise<LogLine[]> {
 export async function fetchHarborManifest(): Promise<HarborManifest> {
   const response = await fetch("/downloads/manifest.json", { cache: "no-store" });
   if (!response.ok) {
-    return { productName: "Velero Harbor", version: "0.1.0", artifacts: [] };
+    return {
+      productName: "Velero Harbor",
+      version: "0.1.0",
+      publishedAt: null,
+      artifacts: []
+    };
   }
   return (await response.json()) as HarborManifest;
 }

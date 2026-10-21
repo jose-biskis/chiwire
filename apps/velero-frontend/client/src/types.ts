@@ -49,11 +49,16 @@ export type HarborArtifact = {
   filename: string;
   label: string;
   platform: string;
+  kind: string;
+  version: string;
+  size: number;
+  sha256: string;
   url: string;
 };
 
 export type HarborManifest = {
   productName: string;
   version: string;
+  publishedAt: string | null;
   artifacts: HarborArtifact[];
 };

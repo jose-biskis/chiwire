@@ -52,6 +52,23 @@ const emptyDraft = (): ProfileDraft => ({
   goldEverySeconds: 180
 });
 
+function formatBytes(size: number): string {
+  if (!Number.isFinite(size) || size < 0) {
+    return "";
+  }
+  if (size < 1024) {
+    return `${size} B`;
+  }
+  const units = ["KB", "MB", "GB"];
+  let value = size / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unit]}`;
+}
+
 function tone(line: LogLine): string {
   const text = line.text;
   if (line.stream === "stderr" || /\berror\b/i.test(text)) {
@@ -442,7 +459,10 @@ export function App() {
               {harborDownloads.length > 0 ? (
                 harborDownloads.map((artifact) => (
                   <Button key={artifact.filename} variant="outline" size="sm" asChild>
-                    <a href={artifact.url}>{artifact.label}</a>
+                    <a href={artifact.url} download={artifact.filename} title={artifact.sha256}>
+                      {artifact.label}
+                      {artifact.size > 0 ? ` · ${formatBytes(artifact.size)}` : ""}
+                    </a>
                   </Button>
                 ))
               ) : (
