@@ -10,9 +10,15 @@
   "scripts": {
     "build": "tsc --build",
     "start": "node dist/index.js",
-    "typecheck": "tsc --build --pretty false"
+    "typecheck": "tsc --build --pretty false",
+    "build:bin": "node scripts/build-bin.mjs",
+    "publish:bin": "node scripts/publish-installers.mjs --build"
   },
   "dependencies": {
     "@chiwire/velero-shared": "*"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.12.0",
+    "esbuild": "^0.25.12"
   }
 }

@@ -78,7 +78,7 @@ See `README.md` for full details. Common commands:
 - Verify MCP servers: `curl http://localhost:3000/`, `curl http://localhost:3000/health`, and `curl -X POST http://localhost:3000/trello -H "content-type: application/json" -H "accept: application/json, text/event-stream" --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'`
 - Radiobemba: `npm run dev:radiobemba` (SSH reverse tunnels on :2222); CLI `npm run build --workspace @chiwire/bemba` then `npm run bemba -- http <port>`; verify `curl http://localhost:3000/health`
 - Velero CLI: `npm run build --workspace @chiwire/velero-shared` && `npm run build --workspace @chiwire/velero-cli` then `npm run velero -- quote RLCUSDT --notional 10` (keys in `apps/velero-cli/.env`). Observer: `npm run velero -- watch RLCUSDT --notional 10 --dry-run` (run in tmux)
-- Velero Harbor (laptop): `npm run build --workspace @chiwire/velero-shared` && `npm run build --workspace @chiwire/velero-gate` then `npm run velero-gate` — keys stay on the laptop; desk at `https://velero.avilalabs.dev` requires this when `VELERO_REQUIRE_GATE=true`
+- Velero Harbor (laptop): `npm run velero-gate` after building shared + gate. Installers: `npm run publish:velero-gate` then redeploy the desk; download from `https://velero.avilalabs.dev`
 - Velero desk: build shared + CLI + API then `npm run start:velero-api` (`:3001`); UI `npm run dev:velero-desk` → http://localhost:5175. Deploy `npm run deploy:velero-api` and `npm run deploy:velero-desk` → `https://api.velero.avilalabs.dev` / `https://velero.avilalabs.dev`; tunnel `npm run tunnel:velero-desk` → http://localhost:8070
 
 ### Running dev servers

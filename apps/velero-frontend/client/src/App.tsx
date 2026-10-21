@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   deleteProfile,
+  fetchHarborManifest,
   fetchLogs,
   fetchProfiles,
   fetchStatus,
@@ -8,7 +9,13 @@ import {
   startWatch,
   stopWatch
 } from "./api";
-import type { LogLine, ProfileDraft, WatchProfile, WatchStatus } from "./types";
+import type {
+  HarborArtifact,
+  LogLine,
+  ProfileDraft,
+  WatchProfile,
+  WatchStatus
+} from "./types";
 
 const emptyDraft = (): ProfileDraft => ({
   name: "",
@@ -78,6 +85,7 @@ export function App() {
   const [lines, setLines] = useState<LogLine[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [harborDownloads, setHarborDownloads] = useState<HarborArtifact[]>([]);
   const tapeRef = useRef<HTMLDivElement | null>(null);
   const stickRef = useRef(true);
 
@@ -104,6 +112,9 @@ export function App() {
       setError(err instanceof Error ? err.message : String(err));
     });
     void fetchLogs().then(setLines).catch(() => undefined);
+    void fetchHarborManifest()
+      .then((manifest) => setHarborDownloads(manifest.artifacts ?? []))
+      .catch(() => undefined);
 
     const source = new EventSource("/api/logs/stream");
     source.onmessage = (event) => {
@@ -412,10 +423,24 @@ export function App() {
           <div>
             <b>{gate?.connected ? "Harbor tied up" : "Harbor adrift"}</b>
             <p>
-              Binance must leave from your laptop. On this machine (repo):{" "}
-              <code>npm run velero-gate</code>. Paste <code>VELERO_GATE_TOKEN</code> and
-              your API key/secret there — not in this page. Then Full ahead.
+              Install Harbor on the laptop that should talk to Binance. Paste{" "}
+              <code>VELERO_GATE_TOKEN</code> and the API key/secret there — not on
+              this page. Then Full ahead.
             </p>
+            {harborDownloads.length > 0 ? (
+              <p className="harbor-downloads">
+                {harborDownloads.map((artifact) => (
+                  <a key={artifact.filename} href={artifact.url}>
+                    {artifact.label}
+                  </a>
+                ))}
+              </p>
+            ) : (
+              <p>
+                No installer uploaded yet. From the repo:{" "}
+                <code>npm run publish:velero-gate</code> then redeploy the desk.
+              </p>
+            )}
           </div>
         </div>
         <div className="telegraph">

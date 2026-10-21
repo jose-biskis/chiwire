@@ -1,4 +1,4 @@
-import type { LogLine, WatchProfile, WatchStatus } from "./types";
+import type { HarborManifest, LogLine, WatchProfile, WatchStatus } from "./types";
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
@@ -60,4 +60,12 @@ export async function stopWatch(): Promise<WatchStatus> {
 export async function fetchLogs(limit = 400): Promise<LogLine[]> {
   const payload = await request<{ lines: LogLine[] }>(`/api/logs?limit=${limit}`);
   return payload.lines;
+}
+
+export async function fetchHarborManifest(): Promise<HarborManifest> {
+  const response = await fetch("/downloads/manifest.json", { cache: "no-store" });
+  if (!response.ok) {
+    return { productName: "Velero Harbor", version: "0.1.0", artifacts: [] };
+  }
+  return (await response.json()) as HarborManifest;
 }

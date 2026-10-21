@@ -21,8 +21,18 @@ type Saved = {
 const DEFAULT_API = "https://api.velero.avilalabs.dev";
 const DEFAULT_PORT = 17890;
 
+function configDir(): string {
+  if (process.platform === "win32") {
+    return path.join(
+      process.env.APPDATA?.trim() || path.join(os.homedir(), "AppData", "Roaming"),
+      "velero-gate"
+    );
+  }
+  return path.join(os.homedir(), ".config", "velero-gate");
+}
+
 function configPath(): string {
-  return path.join(os.homedir(), ".config", "velero-gate", "credentials.json");
+  return path.join(configDir(), "credentials.json");
 }
 
 function loadSaved(): Saved {
@@ -82,13 +92,16 @@ async function readJson(request: IncomingMessage): Promise<Record<string, unknow
 }
 
 function openBrowser(url: string): void {
+  if (process.env.VELERO_GATE_NO_BROWSER === "1") {
+    return;
+  }
   const command =
     process.platform === "win32"
-      ? `start "" "${url}"`
+      ? `cmd /c start "" "${url}"`
       : process.platform === "darwin"
         ? `open "${url}"`
         : `xdg-open "${url}"`;
-  exec(command);
+  exec(command, () => undefined);
 }
 
 let saved = loadSaved();

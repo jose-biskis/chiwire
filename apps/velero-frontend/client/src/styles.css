@@ -111,6 +111,28 @@ body::before {
   color: var(--ivory);
 }
 
+.harbor-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.harbor-downloads a {
+  color: var(--phosphor);
+  border: 1px solid var(--phosphor-dim);
+  padding: 0.45rem 0.7rem;
+  text-decoration: none;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+}
+
+.harbor-downloads a:hover {
+  border-color: var(--ivory);
+  color: var(--ivory);
+}
+
 .telegraph {
   display: flex;
   align-items: center;

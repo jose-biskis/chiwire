@@ -44,3 +44,16 @@ export type LogLine = {
 };
 
 export type ProfileDraft = Omit<WatchProfile, "id" | "createdAt" | "updatedAt">;
+
+export type HarborArtifact = {
+  filename: string;
+  label: string;
+  platform: string;
+  url: string;
+};
+
+export type HarborManifest = {
+  productName: string;
+  version: string;
+  artifacts: HarborArtifact[];
+};

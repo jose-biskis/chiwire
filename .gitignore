@@ -37,3 +37,7 @@ paso-ca.crt
 # Published Cachicamo installer binaries (manifest.json stays committed)
 apps/cachicamo-coding-agent-website/public/downloads/*
 !apps/cachicamo-coding-agent-website/public/downloads/manifest.json
+
+# Published Velero Harbor binaries (manifest.json stays committed)
+apps/velero-frontend/client/public/downloads/*
+!apps/velero-frontend/client/public/downloads/manifest.json

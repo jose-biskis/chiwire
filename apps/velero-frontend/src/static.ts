@@ -14,7 +14,8 @@ const MIME_TYPES: Record<string, string> = {
   ".map": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".woff": "font/woff",
-  ".woff2": "font/woff2"
+  ".woff2": "font/woff2",
+  ".exe": "application/vnd.microsoft.portable-executable"
 };
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
@@ -63,10 +64,17 @@ export function tryServeClientAsset(
   }
   const ext = path.extname(candidate).toLowerCase();
   const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
-  response.writeHead(200, {
+  const download = relative.startsWith("downloads/");
+  const headers: Record<string, string> = {
     "content-type": contentType,
-    "cache-control": "public, max-age=31536000, immutable"
-  });
+    "cache-control": download
+      ? "no-store"
+      : "public, max-age=31536000, immutable"
+  };
+  if (download && ext !== ".json") {
+    headers["content-disposition"] = `attachment; filename="${path.basename(candidate)}"`;
+  }
+  response.writeHead(200, headers);
   if (request.method === "HEAD") {
     response.end();
     return true;

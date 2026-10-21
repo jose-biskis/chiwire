@@ -74,6 +74,8 @@
     "velero": "npm run start --workspace @chiwire/velero-cli --",
     "velero-gate": "npm run start --workspace @chiwire/velero-gate",
     "dev:velero-gate": "npm run build --workspace @chiwire/velero-shared && npm run build --workspace @chiwire/velero-gate && npm run start --workspace @chiwire/velero-gate",
+    "build:velero-gate:bin": "npm run build:bin --workspace @chiwire/velero-gate",
+    "publish:velero-gate": "node apps/velero-gate/scripts/publish-installers.mjs --build",
     "start:velero-api": "npm run start --workspace @chiwire/velero-backend",
     "start:velero-desk": "npm run start --workspace @chiwire/velero-frontend",
     "dev:velero-api": "npm run build --workspace @chiwire/velero-shared && npm run build --workspace @chiwire/velero-cli && npm run build --workspace @chiwire/velero-backend && PORT=3001 npm run start --workspace @chiwire/velero-backend",
