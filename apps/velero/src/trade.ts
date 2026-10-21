@@ -134,14 +134,15 @@ async function preparePair(
 
   const mark = await client.markPrice(command.symbol);
   const last = await client.lastPrice(command.symbol);
-  const [raw15m, raw5m] = await Promise.all([
+  const [raw15m, raw5m, raw1m] = await Promise.all([
     client.klines(command.symbol, "15m", 80),
-    client.klines(command.symbol, "5m", 40)
+    client.klines(command.symbol, "5m", 40),
+    client.klines(command.symbol, "1m", 5)
   ]);
   const klines15m =
     command.command === "watch" ? withoutForming(raw15m) : raw15m;
   const klines5m = command.command === "watch" ? withoutForming(raw5m) : raw5m;
-  const momentum = readMomentum(klines15m, klines5m);
+  const momentum = readMomentum(klines15m, klines5m, raw1m);
   const taker = await resolveTakerFee(
     client,
     command.symbol,

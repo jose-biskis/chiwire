@@ -58,7 +58,7 @@ export function printQuote(input: {
   console.log(`  bias ${input.momentum.bias.padEnd(5)}  ${input.momentum.reason}`);
   if (input.momentum.smaFast !== null && input.momentum.smaSlow !== null) {
     console.log(
-      `  sma  20 ${input.momentum.smaFast.toFixed(6)}   50 ${input.momentum.smaSlow.toFixed(6)}   5m ROC ${input.momentum.roc === null ? "n/a" : pct(input.momentum.roc, 2)}`
+      `  sma  20 ${input.momentum.smaFast.toFixed(6)}   50 ${input.momentum.smaSlow.toFixed(6)}   5m ROC ${input.momentum.roc === null ? "n/a" : pct(input.momentum.roc, 2)}   1m ${input.momentum.candle1m ?? "n/a"}`
     );
   }
   console.log("");
@@ -140,7 +140,7 @@ export function printGoldReport(
     }
   }
   console.log(
-    "  EYE pairs join the watch fleet. 15m/5m gates, max-open, and no-stack still apply before a sail."
+    "  EYE pairs join the watch fleet. 15m/5m/1m gates, max-open, and no-stack still apply before a sail."
   );
   console.log("");
 }

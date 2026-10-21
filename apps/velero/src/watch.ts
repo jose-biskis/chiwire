@@ -60,7 +60,7 @@ export async function runWatch(command: WatchCommand): Promise<void> {
   );
   if (watching.goldDigger) {
     console.log(
-      `gold-digger on  LIVE tape  scan ${watching.goldScan}  top ${watching.goldTop}  every ${watching.goldEverySeconds}s  (EYE pairs join the fleet; 15m/5m gates still decide the sail)`
+      `gold-digger on  LIVE tape  scan ${watching.goldScan}  top ${watching.goldTop}  every ${watching.goldEverySeconds}s  (EYE pairs join the fleet; 15m/5m/1m gates still decide the sail)`
     );
   }
   if (!env.apiKey || !env.apiSecret) {
@@ -84,7 +84,7 @@ export async function runWatch(command: WatchCommand): Promise<void> {
     }
   }
   console.log(
-    `Closed 5m/15m candles only. Cooldown is per pair. Max open is shared. Ctrl-C drops anchor.`
+    `Closed 15m/5m plus last closed 1m body. Cooldown is per pair. Max open is shared. Ctrl-C drops anchor.`
   );
   console.log("");
 

@@ -8,6 +8,7 @@ export type MomentumRead = {
   smaSlow: number | null;
   roc: number | null;
   atrPercent: number | null;
+  candle1m: Bias | null;
 };
 
 export function sma(values: number[], period: number): number | null {
@@ -98,30 +99,39 @@ function impulseBias(rateOfChange: number): Bias {
   return "FLAT";
 }
 
+function emptyRead(reason: string): MomentumRead {
+  return {
+    bias: "FLAT",
+    reason,
+    close: 0,
+    smaFast: null,
+    smaSlow: null,
+    roc: null,
+    atrPercent: null,
+    candle1m: null
+  };
+}
+
 export function readMomentum(
   klines15m: Kline[],
-  klines5m: Kline[]
+  klines5m: Kline[],
+  klines1m: Kline[] = []
 ): MomentumRead {
   const closes15 = klines15m.map((bar) => bar.close);
   const closes5 = klines5m.map((bar) => bar.close);
   const close = closes15[closes15.length - 1] ?? closes5[closes5.length - 1];
 
   if (close === undefined) {
-    return {
-      bias: "FLAT",
-      reason: "No candles. Can't sail without water.",
-      close: 0,
-      smaFast: null,
-      smaSlow: null,
-      roc: null,
-      atrPercent: null
-    };
+    return emptyRead("No candles. Can't sail without water.");
   }
 
   const smaFast = sma(closes15, FAST);
   const smaSlow = sma(closes15, SLOW);
   const rateOfChange = roc(closes5, ROC_BARS);
   const atr = atrPercent(klines15m, ATR_PERIOD);
+  const closed1m = klines1m.length > 0 ? lastClosedBar(klines1m) : undefined;
+  const candle1m =
+    klines1m.length === 0 ? null : closedCandleBias(closed1m);
 
   const trend: Bias =
     smaFast !== null && smaSlow !== null
@@ -133,67 +143,92 @@ export function readMomentum(
   const rocText =
     rateOfChange === null ? "n/a" : `${(rateOfChange * 100).toFixed(2)}%`;
 
+  const base = {
+    close,
+    smaFast,
+    smaSlow,
+    roc: rateOfChange,
+    atrPercent: atr,
+    candle1m
+  };
+
   if (trend !== "FLAT" && trend === impulse) {
+    if (klines1m.length > 0 && !closed1m) {
+      return {
+        ...base,
+        bias: "FLAT",
+        reason: `15m/5m want ${trend} (ROC ${rocText}) but no closed 1m yet. Sitting.`
+      };
+    }
+    if (klines1m.length > 0 && candle1m !== trend) {
+      const oneMin =
+        candle1m === "FLAT" ? "has no body" : `closed ${candle1m}`;
+      return {
+        ...base,
+        bias: "FLAT",
+        reason: `15m/5m want ${trend} (ROC ${rocText}) but 1m ${oneMin}. Sitting.`
+      };
+    }
+
+    const oneMinNote =
+      candle1m === null ? "" : ` Closed 1m ${candle1m} agrees.`;
     return {
+      ...base,
       bias: trend,
-      reason: `15m SMA stack ${trend} and 5m ROC ${rocText} agree.`,
-      close,
-      smaFast,
-      smaSlow,
-      roc: rateOfChange,
-      atrPercent: atr
+      reason: `15m SMA stack ${trend} and 5m ROC ${rocText} agree.${oneMinNote}`
     };
   }
 
   if (trend === "FLAT" && impulse !== "FLAT") {
     return {
+      ...base,
       bias: "FLAT",
-      reason: `5m wants ${impulse} (ROC ${rocText}) but 15m trend is mixed. Sitting on hands.`,
-      close,
-      smaFast,
-      smaSlow,
-      roc: rateOfChange,
-      atrPercent: atr
+      reason: `5m wants ${impulse} (ROC ${rocText}) but 15m trend is mixed. Sitting on hands.`
     };
   }
 
   if (impulse === "FLAT" && trend !== "FLAT") {
     return {
+      ...base,
       bias: "FLAT",
-      reason: `15m trend ${trend} but 5m has no impulse (ROC ${rocText}). Waiting.`,
-      close,
-      smaFast,
-      smaSlow,
-      roc: rateOfChange,
-      atrPercent: atr
+      reason: `15m trend ${trend} but 5m has no impulse (ROC ${rocText}). Waiting.`
     };
   }
 
   if (trend !== impulse) {
     return {
+      ...base,
       bias: "FLAT",
-      reason: `15m ${trend} vs 5m ${impulse}. Conflict — no order.`,
-      close,
-      smaFast,
-      smaSlow,
-      roc: rateOfChange,
-      atrPercent: atr
+      reason: `15m ${trend} vs 5m ${impulse}. Conflict — no order.`
     };
   }
 
   return {
+    ...base,
     bias: "FLAT",
-    reason: "No trend, no impulse. Anchored.",
-    close,
-    smaFast,
-    smaSlow,
-    roc: rateOfChange,
-    atrPercent: atr
+    reason: "No trend, no impulse. Anchored."
   };
 }
 
 export function withoutForming(klines: Kline[]): Kline[] {
   return klines.length > 1 ? klines.slice(0, -1) : klines;
+}
+
+export function lastClosedBar(klines: Kline[]): Kline | undefined {
+  return klines.length > 1 ? klines[klines.length - 2] : undefined;
+}
+
+export function closedCandleBias(bar: Kline | undefined): Bias {
+  if (!bar) {
+    return "FLAT";
+  }
+  if (bar.close > bar.open) {
+    return "LONG";
+  }
+  if (bar.close < bar.open) {
+    return "SHORT";
+  }
+  return "FLAT";
 }
 
 export function opposite(side: Side): Side {

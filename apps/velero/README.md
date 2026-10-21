@@ -2,8 +2,8 @@
 
 Binance USDT-M futures co-trader CLI. The *vela* is the candle; Velero is the
 boat. It sizes a ticket from a nominal USDT value, suggests stop/target from
-**taker fees**, reads 15m trend + 5m impulse, and refuses to open a second
-ticket on a pair that is already working.
+**taker fees**, reads 15m trend + 5m impulse + the last **closed 1m** body,
+and refuses to open a second ticket on a pair that is already working.
 
 This is a risk wrapper, not a prophet. Futures can go to zero. Default venue
 is **testnet**.
@@ -68,10 +68,11 @@ its cut.
 - Cross margin by default; pass `--isolated` to request isolated (Binance may refuse under Multi-Assets)
 - Leverage capped at 10 (or the exchange bracket, if lower)
 - No entry if 15m SMA stack and 5m ROC disagree
+- No entry if the last **closed 1m** body disagrees (or is a doji) with that 15m/5m bias
 - No entry if the pair already has a position or open orders
 - No entry if open positions are at `--max-open` / `VELERO_MAX_OPEN`
 - Notional capped by `VELERO_MAX_NOTIONAL` (default 25 USDT)
-- `watch` uses **closed** 5m/15m candles, not the forming bar
+- `watch` uses **closed** 15m/5m candles, not the forming bar; 1m always uses the last closed body (quote/trade too)
 - After a sail or dry-run fire, `watch` sits `--cooldown` seconds **per pair** (default 300)
 - Several pairs share `--max-open`; a pair that already has a ticket is skipped
 - `--gold-digger` reads the **live** tape (even if orders stay on testnet): 24h volume,
@@ -79,7 +80,7 @@ its cut.
   Stochastic, Bollinger width/%b, ADX/+DI/−DI, ATR, relative volume, distance
   to 24h high/low. It only prints `EYE` when several of those agree, with the
   justification. Those symbols **join this watcher's fleet** (cap 20, no
-  duplicates). They still need 15m/5m alignment, a free berth, and no open
+  duplicates). They still need 15m/5m/1m alignment, a free berth, and no open
   ticket on that pair before Velero sails.
 
 Live orders need `VELERO_LIVE=true`, `--live`, and `--confirm`.
