@@ -39,7 +39,7 @@ Acceptable scope forms: workspace name (`@chiwire/contimiti`), path (`apps/conti
 | velero / velero-cli | `apps/velero-cli` | `packages/velero-shared` |
 | velero-shared | `packages/velero-shared` | — |
 | velero-api / velero-backend | `apps/velero-backend` | `packages/velero-shared`, `apps/velero-cli` |
-| velero-desk / velero-frontend | `apps/velero-frontend` | — |
+| velero-desk / velero-frontend | `apps/velero-frontend` | `packages/ui` |
 | velero-gate / velero-harbor | `apps/velero-gate` | `packages/velero-shared` |
 | vane | `apps/vane` | `packages/ui` |
 | core | `packages/core` | — |

@@ -1,8 +1,9 @@
 # Velero frontend
 
 Ship's desk for the Velero watcher. Same stdout as the CLI, plus start/stop
-and named profiles. The trader is `@chiwire/velero-shared` via
-`@chiwire/velero-cli`; this UI talks to `@chiwire/velero-backend`.
+and named profiles. UI uses the **Internal** design system (`@chiwire/ui`).
+The trader is `@chiwire/velero-shared` via `@chiwire/velero-cli`; this page
+talks to `@chiwire/velero-backend`.
 
 ## Local
 

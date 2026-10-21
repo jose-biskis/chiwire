@@ -1,5 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
+  AlertDescription,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Separator,
+  Switch,
+  Textarea
+} from "@chiwire/ui/internal";
+import {
   deleteProfile,
   fetchHarborManifest,
   fetchLogs,
@@ -49,9 +65,6 @@ function tone(line: LogLine): string {
   }
   if (/\bwould\b/.test(text)) {
     return "warn";
-  }
-  if (/\b(starting|stopped|stopping)\b/.test(text)) {
-    return "brass";
   }
   return "";
 }
@@ -234,37 +247,45 @@ export function App() {
   return (
     <div className="desk">
       <aside className="drawers">
-        <h2>Charts in the drawer</h2>
-        <p className="hint">
-          Named watches. Same flags as the CLI. The tape on the right is stdout.
-        </p>
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Profiles</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Named watches. Same flags as the CLI. The tape is stdout.
+          </p>
+        </div>
         {profiles.map((profile) => (
-          <button
+          <Button
             key={profile.id}
             type="button"
-            className={`profile${profile.id === selectedId ? " selected" : ""}`}
+            variant={profile.id === selectedId ? "default" : "outline"}
+            className="h-auto w-full flex-col items-start gap-0.5 py-2 text-left"
             onClick={() => {
               setSelectedId(profile.id);
             }}
           >
-            <b>{profile.name}</b>
-            <small>
-              {profile.symbols.join(" ") || "(gold-digger)"} · {profile.notional} USDT
+            <span>{profile.name}</span>
+            <span className="text-xs font-normal opacity-80">
+              {profile.symbols.join(" ") || "(gold-digger)"} · {profile.notional}{" "}
+              USDT
               {profile.live ? " · LIVE" : " · testnet"}
-            </small>
-          </button>
+            </span>
+          </Button>
         ))}
-        <div className="form">
-          <label>Profile name</label>
-          <input
-            type="text"
+        <Separator />
+        <div className="field">
+          <Label htmlFor="profile-name">Profile name</Label>
+          <Input
+            id="profile-name"
             value={draft.name}
             onChange={(event) => {
               patch("name", event.target.value);
             }}
           />
-          <label>Pairs</label>
-          <textarea
+        </div>
+        <div className="field">
+          <Label htmlFor="pairs">Pairs</Label>
+          <Textarea
+            id="pairs"
             rows={3}
             value={draft.symbols.join(" ")}
             onChange={(event) => {
@@ -277,218 +298,216 @@ export function App() {
               );
             }}
           />
-          <div className="row">
-            <div>
-              <label>Notional</label>
-              <input
-                type="number"
-                value={draft.notional}
-                onChange={(event) => {
-                  patch("notional", Number(event.target.value));
-                }}
-              />
-            </div>
-            <div>
-              <label>Max open</label>
-              <input
-                type="number"
-                value={draft.maxOpen}
-                onChange={(event) => {
-                  patch("maxOpen", Number(event.target.value));
-                }}
-              />
-            </div>
+        </div>
+        <div className="field-row">
+          <div className="field">
+            <Label htmlFor="notional">Notional</Label>
+            <Input
+              id="notional"
+              type="number"
+              value={draft.notional}
+              onChange={(event) => {
+                patch("notional", Number(event.target.value));
+              }}
+            />
           </div>
-          <div className="row">
-            <div>
-              <label>Poll s</label>
-              <input
-                type="number"
-                value={draft.pollSeconds}
-                onChange={(event) => {
-                  patch("pollSeconds", Number(event.target.value));
-                }}
-              />
-            </div>
-            <div>
-              <label>Cooldown s</label>
-              <input
-                type="number"
-                value={draft.cooldownSeconds}
-                onChange={(event) => {
-                  patch("cooldownSeconds", Number(event.target.value));
-                }}
-              />
-            </div>
+          <div className="field">
+            <Label htmlFor="max-open">Max open</Label>
+            <Input
+              id="max-open"
+              type="number"
+              value={draft.maxOpen}
+              onChange={(event) => {
+                patch("maxOpen", Number(event.target.value));
+              }}
+            />
           </div>
-          <div className="row">
-            <div>
-              <label>Leverage</label>
-              <input
-                type="number"
-                value={draft.leverage}
-                onChange={(event) => {
-                  patch("leverage", Number(event.target.value));
+        </div>
+        <div className="field-row">
+          <div className="field">
+            <Label htmlFor="poll">Poll s</Label>
+            <Input
+              id="poll"
+              type="number"
+              value={draft.pollSeconds}
+              onChange={(event) => {
+                patch("pollSeconds", Number(event.target.value));
+              }}
+            />
+          </div>
+          <div className="field">
+            <Label htmlFor="cooldown">Cooldown s</Label>
+            <Input
+              id="cooldown"
+              type="number"
+              value={draft.cooldownSeconds}
+              onChange={(event) => {
+                patch("cooldownSeconds", Number(event.target.value));
+              }}
+            />
+          </div>
+        </div>
+        <div className="field-row">
+          <div className="field">
+            <Label htmlFor="leverage">Leverage</Label>
+            <Input
+              id="leverage"
+              type="number"
+              value={draft.leverage}
+              onChange={(event) => {
+                patch("leverage", Number(event.target.value));
+              }}
+            />
+          </div>
+          <div className="field">
+            <Label htmlFor="smart-cap">Smart cap %</Label>
+            <Input
+              id="smart-cap"
+              type="number"
+              value={draft.smartCap ?? 5}
+              onChange={(event) => {
+                patch("smartCap", Number(event.target.value));
+              }}
+            />
+          </div>
+        </div>
+        <div className="switch-row">
+          {(
+            [
+              ["live", "live"],
+              ["smartProfit", "smart-profit"],
+              ["goldDigger", "gold-digger"],
+              ["dryRun", "dry-run"],
+              ["isolated", "isolated"]
+            ] as const
+          ).map(([key, label]) => (
+            <label key={key} className="switch-item">
+              <Switch
+                checked={draft[key]}
+                onCheckedChange={(value) => {
+                  patch(key, value);
                 }}
               />
-            </div>
-            <div>
-              <label>Smart cap %</label>
-              <input
-                type="number"
-                value={draft.smartCap ?? 5}
-                onChange={(event) => {
-                  patch("smartCap", Number(event.target.value));
-                }}
-              />
-            </div>
-          </div>
-          <div className="checks">
-            <label>
-              <input
-                type="checkbox"
-                checked={draft.live}
-                onChange={(event) => {
-                  patch("live", event.target.checked);
-                }}
-              />{" "}
-              live
+              {label}
             </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={draft.smartProfit}
-                onChange={(event) => {
-                  patch("smartProfit", event.target.checked);
-                }}
-              />{" "}
-              smart-profit
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={draft.goldDigger}
-                onChange={(event) => {
-                  patch("goldDigger", event.target.checked);
-                }}
-              />{" "}
-              gold-digger
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={draft.dryRun}
-                onChange={(event) => {
-                  patch("dryRun", event.target.checked);
-                }}
-              />{" "}
-              dry-run
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={draft.isolated}
-                onChange={(event) => {
-                  patch("isolated", event.target.checked);
-                }}
-              />{" "}
-              isolated
-            </label>
-          </div>
-          <button type="button" className="lever" disabled={busy} onClick={() => void onSave()}>
-            Save profile
-          </button>
-          <button type="button" className="lever" disabled={busy} onClick={() => void onNew()}>
-            New
-          </button>
-          <button
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" disabled={busy} onClick={() => void onSave()}>
+            Save
+          </Button>
+          <Button
             type="button"
-            className="lever stop"
+            variant="secondary"
+            disabled={busy}
+            onClick={() => void onNew()}
+          >
+            New
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
             disabled={busy || !selected}
             onClick={() => void onDelete()}
           >
             Delete
-          </button>
+          </Button>
         </div>
       </aside>
-      <main>
-        <header className="nameplate">
-          <h1 className="brand">
-            Velero <span>desk</span>
-          </h1>
-          <div className="tag">{running ? "under way" : "at anchor"}</div>
-        </header>
-        <div className="harbor">
-          <span className={`running-lamp${gate?.connected ? " on" : ""}`} />
+      <main className="desk-main">
+        <header className="flex items-end justify-between gap-4 border-b px-6 py-5">
           <div>
-            <b>{gate?.connected ? "Harbor tied up" : "Harbor adrift"}</b>
-            <p>
-              Install Harbor on the laptop that should talk to Binance. Paste{" "}
-              <code>VELERO_GATE_TOKEN</code> and the API key/secret there — not on
-              this page. Then Full ahead.
+            <h1 className="text-3xl font-bold tracking-tight">Velero desk</h1>
+            <p className="text-sm text-muted-foreground">
+              Internal watch UI. Harbor signs Binance on the laptop.
             </p>
-            {harborDownloads.length > 0 ? (
-              <p className="harbor-downloads">
-                {harborDownloads.map((artifact) => (
-                  <a key={artifact.filename} href={artifact.url}>
-                    {artifact.label}
-                  </a>
-                ))}
-              </p>
-            ) : (
-              <p>
-                No installer uploaded yet. From the repo:{" "}
-                <code>npm run publish:velero-gate</code> then redeploy the desk.
-              </p>
-            )}
           </div>
-        </div>
-        <div className="telegraph">
-          <span className={`running-lamp${running ? " on" : ""}`} />
-          {running ? (
-            <button
-              type="button"
-              className="lever stop"
-              disabled={busy}
-              onClick={() => void onStop()}
-            >
-              Stop
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="lever"
-              disabled={busy || !harborReady}
-              onClick={() => void onStart()}
-            >
-              Full ahead
-            </button>
-          )}
-          <span className="tag">
-            {status?.profileName ?? "no watch"}
-            {status?.pid ? `  pid ${status.pid}` : ""}
-          </span>
-        </div>
-        {error ? <p className="error">{error}</p> : null}
-        <p className="cli-echo">{status?.cli ?? selected?.name ?? "No profile selected."}</p>
-        <div
-          className="tape-wrap"
-          ref={tapeRef}
-          onScroll={(event) => {
-            const node = event.currentTarget;
-            stickRef.current =
-              node.scrollHeight - node.scrollTop - node.clientHeight < 48;
-          }}
-        >
-          <pre className="tape">
-            {lines.length === 0
-              ? "waiting for tape…"
-              : lines.map((line) => (
-                  <div key={line.seq} className={`tape-line ${tone(line)}`}>
-                    {line.text}
-                  </div>
-                ))}
-          </pre>
+          <Badge variant={running ? "default" : "secondary"}>
+            {running ? "under way" : "at anchor"}
+          </Badge>
+        </header>
+        <div className="flex flex-col gap-4 p-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">
+                {gate?.connected ? "Harbor connected" : "Harbor disconnected"}
+              </CardTitle>
+              <CardDescription>
+                Install Harbor on the laptop that talks to Binance. Paste{" "}
+                <code>VELERO_GATE_TOKEN</code> and the API key there — not on this
+                page.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              {harborDownloads.length > 0 ? (
+                harborDownloads.map((artifact) => (
+                  <Button key={artifact.filename} variant="outline" size="sm" asChild>
+                    <a href={artifact.url}>{artifact.label}</a>
+                  </Button>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No installer uploaded yet. From the repo:{" "}
+                  <code>npm run publish:velero-gate</code> then redeploy the desk.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+          <div className="flex flex-wrap items-center gap-3">
+            {running ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={busy}
+                onClick={() => void onStop()}
+              >
+                Stop
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                disabled={busy || !harborReady}
+                onClick={() => void onStart()}
+              >
+                Start
+              </Button>
+            )}
+            <span className="text-sm text-muted-foreground">
+              {status?.profileName ?? "no watch"}
+              {status?.pid ? ` · pid ${status.pid}` : ""}
+            </span>
+          </div>
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          <p className="cli-echo">
+            {status?.cli ?? selected?.name ?? "No profile selected."}
+          </p>
+          <Card className="min-h-[52vh] flex-1">
+            <CardContent className="p-0">
+              <div
+                className="h-[min(70vh,40rem)] overflow-auto px-4 py-3"
+                ref={tapeRef}
+                onScroll={(event) => {
+                  const node = event.currentTarget;
+                  stickRef.current =
+                    node.scrollHeight - node.scrollTop - node.clientHeight < 48;
+                }}
+              >
+                <pre className="tape">
+                  {lines.length === 0
+                    ? "waiting for tape…"
+                    : lines.map((line) => (
+                        <div key={line.seq} className={`tape-line ${tone(line)}`}>
+                          {line.text}
+                        </div>
+                      ))}
+                </pre>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
