@@ -37,6 +37,8 @@ Acceptable scope forms: workspace name (`@chiwire/contimiti`), path (`apps/conti
 | radiobemba | `apps/radiobemba` | `packages/core`, `packages/radiobemba-shared`, `packages/db-migrate` |
 | bemba | `apps/bemba` | `packages/radiobemba-shared` |
 | velero | `apps/velero` | — |
+| velero-api / velero-backend | `apps/velero-backend` | `apps/velero` |
+| velero-desk / velero-frontend | `apps/velero-frontend` | — |
 | vane | `apps/vane` | `packages/ui` |
 | core | `packages/core` | — |
 | radiobemba-shared | `packages/radiobemba-shared` | — |

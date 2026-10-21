@@ -1,0 +1,16 @@
+{
+  "name": "@chiwire/velero-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Velero desk API — start/stop the CLI watcher, saved profiles, log stream.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --build --pretty false",
+    "test": "tsc --build && node --test dist/profile.test.js"
+  },
+  "dependencies": {
+    "@chiwire/velero": "*"
+  }
+}

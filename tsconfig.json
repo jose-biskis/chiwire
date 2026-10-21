@@ -20,6 +20,8 @@
     { "path": "./apps/radiobemba" },
     { "path": "./apps/bemba" },
     { "path": "./apps/velero" },
+    { "path": "./apps/velero-backend" },
+    { "path": "./apps/velero-frontend" },
     { "path": "./apps/vane" }
   ]
 }

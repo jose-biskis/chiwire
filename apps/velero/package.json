@@ -7,6 +7,10 @@
   "bin": {
     "velero": "./dist/index.js"
   },
+  "exports": {
+    "./cli": "./dist/cli.js",
+    "./env": "./dist/env.js"
+  },
   "scripts": {
     "build": "tsc --build",
     "start": "node dist/index.js",

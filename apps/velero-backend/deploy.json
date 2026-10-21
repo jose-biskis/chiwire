@@ -1,0 +1,35 @@
+{
+  "image": "chiwire/velero-backend",
+  "tag": "latest",
+  "container": "velero-backend",
+  "build": {
+    "context": "../..",
+    "dockerfile": "Dockerfile"
+  },
+  "runtime": {
+    "containerPort": 3000,
+    "visibility": "internal",
+    "hostPort": 8071,
+    "volumes": [
+      "chiwire-velero-data:/data"
+    ],
+    "env": {
+      "PORT": "3000",
+      "VELERO_PROFILES_PATH": "/data/profiles.json"
+    },
+    "envFrom": [
+      "BINANCE_API_KEY",
+      "BINANCE_API_SECRET",
+      "VELERO_LIVE",
+      "VELERO_PROXY",
+      "VELERO_MAX_NOTIONAL",
+      "VELERO_MAX_LEVERAGE",
+      "VELERO_MAX_OPEN"
+    ],
+    "envRequired": [
+      "BINANCE_API_KEY",
+      "BINANCE_API_SECRET"
+    ],
+    "network": "chiwire"
+  }
+}

@@ -94,6 +94,10 @@ Live orders need `VELERO_LIVE=true`, `--live`, and `--confirm`.
 
 Run the observer in tmux; Ctrl-C drops anchor.
 
+A deployable **desk** (same CLI under the hood, start/stop, named profiles)
+lives in `@chiwire/velero-backend` + `@chiwire/velero-frontend`. See those
+READMEs. Local UI: `npm run start:velero-api` then `npm run dev:velero-desk`.
+
 If Binance returns `restricted location`, set `VELERO_PROXY` (Reja on
 `http://127.0.0.1:3128`) or join Paso before you quote.
 
