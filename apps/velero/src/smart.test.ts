@@ -195,3 +195,49 @@ test("planTend pulls an impossible TP down to nearby 5m structure", () => {
   assert.ok(plan.triggerPrice < 120);
   assert.ok(plan.triggerPrice > 100);
 });
+
+test("planTend will not pull a long TP below entry while underwater", () => {
+  const plan = planTend({
+    side: "LONG",
+    entry: 100,
+    mark: 95,
+    last: 95,
+    currentTp: 120,
+    tickSize: 0.01,
+    takerFeeRate: 0.001,
+    klines15m: rangeBars(40, 95, 1),
+    klines5m: rangeBars(40, 95, 0.6),
+    klines1m: paintClosed(rangeBars(40, 95, 0.3), 94.8, 95.1),
+    stopDist: 8
+  });
+  assert.equal(plan.action, "pull-tp");
+  if (plan.action !== "pull-tp") {
+    return;
+  }
+  assert.ok(
+    plan.triggerPrice > 100,
+    `TP ${plan.triggerPrice} must stay green of entry 100`
+  );
+});
+
+test("planTend repairs a long TP that was parked at a loss", () => {
+  const plan = planTend({
+    side: "LONG",
+    entry: 100,
+    mark: 95,
+    last: 95,
+    currentTp: 94.5,
+    tickSize: 0.01,
+    takerFeeRate: 0.001,
+    klines15m: rangeBars(40, 95, 1),
+    klines5m: rangeBars(40, 95, 0.6),
+    klines1m: paintClosed(rangeBars(40, 95, 0.3), 94.8, 95.1),
+    stopDist: 8
+  });
+  assert.equal(plan.action, "pull-tp");
+  if (plan.action !== "pull-tp") {
+    return;
+  }
+  assert.ok(plan.triggerPrice > 100);
+  assert.match(plan.reason, /loss side/);
+});

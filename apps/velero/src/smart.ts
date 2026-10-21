@@ -255,6 +255,32 @@ function inProfitAfterFees(
   return move > takerFeeRate * 2 * 1.2;
 }
 
+export function minProfitPrice(
+  side: Side,
+  entry: number,
+  takerFeeRate: number,
+  tickSize: number
+): number | null {
+  if (!(entry > 0) || !(tickSize > 0)) {
+    return null;
+  }
+
+  const clear = Math.max(takerFeeRate * 2 * FEE_CLEAR_MULT, FEE_MIN_SL);
+  if (side === "LONG") {
+    return roundToTick(entry * (1 + clear), tickSize, "ceil");
+  }
+  const price = roundToTick(entry * (1 - clear), tickSize, "floor");
+  return price > 0 ? price : null;
+}
+
+function isProfitTp(
+  side: Side,
+  price: number,
+  floor: number
+): boolean {
+  return side === "LONG" ? price >= floor : price <= floor;
+}
+
 function closerTp(
   side: Side,
   proposed: number,
@@ -303,6 +329,11 @@ export function planTend(input: {
     stopDist: input.stopDist
   });
 
+  const floor = minProfitPrice(side, entry, takerFeeRate, tickSize);
+  if (floor === null) {
+    return { action: "keep", reason: "Entry is unusable; not moving TP." };
+  }
+
   const raw =
     side === "LONG"
       ? roundToTick(mark + tpDist, tickSize, "ceil")
@@ -312,14 +343,30 @@ export function planTend(input: {
       ? roundToTick(high + 2 * tickSize, tickSize, "ceil")
       : roundToTick(low - 2 * tickSize, tickSize, "floor");
   const proposed =
-    side === "LONG" ? Math.max(raw, minTp) : Math.min(raw, minTp);
-
-  if (
     side === "LONG"
-      ? !(proposed > high)
-      : !(proposed < low && proposed > 0)
-  ) {
-    return { action: "keep", reason: "No valid closer TP from this tape." };
+      ? Math.max(raw, minTp, floor)
+      : Math.min(raw, minTp, floor);
+
+  const legal =
+    side === "LONG"
+      ? proposed > high && isProfitTp(side, proposed, floor)
+      : proposed < low && proposed > 0 && isProfitTp(side, proposed, floor);
+
+  if (!legal) {
+    return {
+      action: "keep",
+      reason: `No take-profit above breakeven (need ${floor}, mark ${mark}). Not parking TP at a loss.`
+    };
+  }
+
+  const currentIsLoss =
+    currentTp !== null && !isProfitTp(side, currentTp, floor);
+  if (currentIsLoss) {
+    return {
+      action: "pull-tp",
+      triggerPrice: proposed,
+      reason: `resting TP ${currentTp} was on the loss side of entry ${entry}; moving to ${proposed}`
+    };
   }
 
   if (!closerTp(side, proposed, currentTp)) {
@@ -327,13 +374,13 @@ export function planTend(input: {
       action: "keep",
       reason: currentTp === null
         ? "No TP on the book to pull."
-        : `TP ${currentTp} is already as close as behaviour allows.`
+        : `TP ${currentTp} is already as close as behaviour allows, still green of entry.`
     };
   }
 
   const why = faded
-    ? `1m faded to ${candle}; pulling TP closer`
-    : "nearby 5m/1m target is closer than the resting TP";
+    ? `1m faded to ${candle}; pulling TP closer, still green of entry`
+    : "nearby 5m/1m target is closer than the resting TP, still green of entry";
   return {
     action: "pull-tp",
     triggerPrice: proposed,
