@@ -21,6 +21,15 @@ test("-4168 names Multi-Assets instead of looking like a crash", () => {
   assert.match(text, /Multi-Assets/);
 });
 
+test("-4120 points at the algo order endpoint", () => {
+  const text = explainBinanceError(
+    -4120,
+    "Order type not supported for this endpoint. Please use the Algo Order API endpoints instead.",
+    "https://fapi.binance.com"
+  );
+  assert.match(text, /algoOrder/);
+});
+
 test("-2015 on live points at futures permission and IP whitelist", () => {
   const text = explainBinanceError(
     -2015,

@@ -60,6 +60,10 @@ export function explainBinanceError(
     return `${message} This account is in Multi-Assets mode, so isolated margin cannot be set. Velero will leave the margin mode alone.`;
   }
 
+  if (code === -4120) {
+    return `${message} Conditional SL/TP must go through POST /fapi/v1/algoOrder (algoType=CONDITIONAL).`;
+  }
+
   if (code !== -2015) {
     return message;
   }
@@ -359,6 +363,12 @@ export class BinanceFutures {
   }
 
   async openOrders(symbol?: string): Promise<OpenOrderRow[]> {
+    const classic = await this.openClassicOrders(symbol);
+    const algo = await this.openAlgoOrders(symbol);
+    return [...classic, ...algo];
+  }
+
+  private async openClassicOrders(symbol?: string): Promise<OpenOrderRow[]> {
     const params = symbol ? { symbol } : {};
     const payload = await this.signedGet("/fapi/v1/openOrders", params);
     if (!Array.isArray(payload)) {
@@ -375,6 +385,32 @@ export class BinanceFutures {
         stopPrice: asString(row.stopPrice, "0")
       };
     });
+  }
+
+  private async openAlgoOrders(symbol?: string): Promise<OpenOrderRow[]> {
+    try {
+      const params: Record<string, string> = { algoType: "CONDITIONAL" };
+      if (symbol) {
+        params.symbol = symbol;
+      }
+      const payload = await this.signedGet("/fapi/v1/openAlgoOrders", params);
+      if (!Array.isArray(payload)) {
+        return [];
+      }
+
+      return payload.map((entry) => {
+        const row = asRecord(entry);
+        return {
+          symbol: asString(row.symbol),
+          orderId: asNumber(row.algoId, asNumber(row.orderId)),
+          type: asString(row.orderType, asString(row.type, "ALGO")),
+          side: asString(row.side),
+          stopPrice: asString(row.triggerPrice, asString(row.stopPrice, "0"))
+        };
+      });
+    } catch {
+      return [];
+    }
   }
 
   async setMarginType(
@@ -432,17 +468,19 @@ export class BinanceFutures {
     positionSide?: "LONG" | "SHORT";
   }): Promise<unknown> {
     const params: Record<string, string> = {
+      algoType: "CONDITIONAL",
       symbol: input.symbol,
       side: input.side,
       type: input.type,
-      stopPrice: String(input.stopPrice),
+      triggerPrice: String(input.stopPrice),
       closePosition: "true",
-      workingType: "MARK_PRICE"
+      workingType: "MARK_PRICE",
+      priceProtect: "TRUE"
     };
     if (input.positionSide) {
       params.positionSide = input.positionSide;
     }
-    return this.signedPost("/fapi/v1/order", params);
+    return this.signedPost("/fapi/v1/algoOrder", params);
   }
 
   private headers(signed: boolean): Record<string, string> {

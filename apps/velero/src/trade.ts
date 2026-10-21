@@ -412,7 +412,7 @@ export async function sail(
     throw error;
   }
 
-  console.log("  SL and TP resting (closePosition, mark price)");
+  console.log("  SL and TP resting (algo CONDITIONAL, mark price)");
   if (typeof entry === "object" && entry !== null) {
     const record = entry as Record<string, unknown>;
     if (typeof record.orderId === "number" || typeof record.orderId === "string") {
