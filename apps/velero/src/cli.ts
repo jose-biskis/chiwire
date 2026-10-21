@@ -5,6 +5,11 @@ import {
   DEFAULT_NOTIONAL,
   DEFAULT_POLL_SECONDS
 } from "./config.js";
+import {
+  DEFAULT_GOLD_EVERY_SECONDS,
+  DEFAULT_GOLD_SCAN,
+  DEFAULT_GOLD_TOP
+} from "./digger.js";
 import { percentToRate } from "./fees.js";
 
 export type HelpCommand = {
@@ -50,6 +55,10 @@ export type WatchCommand = PairFlags & {
   pollSeconds: number;
   cooldownSeconds: number;
   symbols: string[];
+  goldDigger: boolean;
+  goldTop: number;
+  goldScan: number;
+  goldEverySeconds: number;
 };
 
 export type CliCommand =
@@ -114,7 +123,7 @@ export function collectSymbols(tokens: string[]): string[] {
     }
   }
 
-  if (symbols.length === 0) {
+  if (tokens.length > 0 && symbols.length === 0) {
     throw new Error("Usage: velero quote|trade|watch <PAIR> [PAIR...]");
   }
 
@@ -135,6 +144,7 @@ Usage:
   velero quote <PAIR> [options]
   velero trade <PAIR> [options]
   velero watch <PAIR> [PAIR...] [options]
+  velero watch --gold-digger [options]
   velero fees [--notional 10] [--taker-fee 0.1]
   velero status [--live]
   velero help
@@ -148,6 +158,10 @@ Options:
   --taker-fee <pct>    Taker fee in percent (0.1 = 0.10% = 0.01 USDT on 10)
   --poll <seconds>     Watch loop interval. Default ${DEFAULT_POLL_SECONDS}
   --cooldown <seconds> After a sail (or dry-run), sit that long. Default ${DEFAULT_COOLDOWN_SECONDS}
+  --gold-digger        Scan the LIVE book for pairs worth an eye (no auto-trade)
+  --gold-top <n>       How many suggestions to print. Default ${DEFAULT_GOLD_TOP}
+  --gold-scan <n>      Volume leaders to analyse. Default ${DEFAULT_GOLD_SCAN}
+  --gold-every <sec>   Rescan interval. Default ${DEFAULT_GOLD_EVERY_SECONDS}
   --dry-run            Print the order, do not send it
   --live               Use real futures (needs VELERO_LIVE=true)
   --confirm            Required with --live before an order is sent
@@ -157,6 +171,8 @@ Examples:
   velero trade RLCUSDT --notional 10 --leverage 10 --max-open 3 --dry-run
   velero watch RLCUSDT ETHUSDT --notional 10 --max-open 3 --dry-run
   velero watch RLCUSDT,ETHUSDT,BTCUSDT --notional 10
+  velero watch --gold-digger
+  velero watch RLCUSDT --gold-digger --gold-top 8
   velero fees --notional 10 --taker-fee 0.1
 
 Keys: BINANCE_API_KEY / BINANCE_API_SECRET (apps/velero/.env).
@@ -179,6 +195,10 @@ type PairBuilder = {
   confirm: boolean;
   pollSeconds: number;
   cooldownSeconds: number;
+  goldDigger: boolean;
+  goldTop: number;
+  goldScan: number;
+  goldEverySeconds: number;
 };
 
 function parsePairFlags(args: string[]): PairBuilder {
@@ -194,10 +214,7 @@ function parsePairFlags(args: string[]): PairBuilder {
   }
 
   const symbols = collectSymbols(pairTokens);
-  const first = symbols[0];
-  if (!first) {
-    throw new Error("Usage: velero quote|trade|watch <PAIR> [PAIR...]");
-  }
+  const first = symbols[0] ?? "";
 
   const builder: PairBuilder = {
     symbol: first,
@@ -212,7 +229,11 @@ function parsePairFlags(args: string[]): PairBuilder {
     dryRun: false,
     confirm: false,
     pollSeconds: DEFAULT_POLL_SECONDS,
-    cooldownSeconds: DEFAULT_COOLDOWN_SECONDS
+    cooldownSeconds: DEFAULT_COOLDOWN_SECONDS,
+    goldDigger: false,
+    goldTop: DEFAULT_GOLD_TOP,
+    goldScan: DEFAULT_GOLD_SCAN,
+    goldEverySeconds: DEFAULT_GOLD_EVERY_SECONDS
   };
   while (index < args.length) {
     const arg = args[index]!;
@@ -305,6 +326,45 @@ function parsePairFlags(args: string[]): PairBuilder {
       continue;
     }
 
+    if (arg === "--gold-digger") {
+      builder.goldDigger = true;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--gold-top" || arg.startsWith("--gold-top=")) {
+      const parsed = readFlagValue(args, index, "--gold-top");
+      const value = Number.parseInt(parsed.value, 10);
+      if (!Number.isInteger(value) || value <= 0) {
+        throw new Error(`Invalid --gold-top: ${parsed.value}`);
+      }
+      builder.goldTop = value;
+      index = parsed.nextIndex;
+      continue;
+    }
+
+    if (arg === "--gold-scan" || arg.startsWith("--gold-scan=")) {
+      const parsed = readFlagValue(args, index, "--gold-scan");
+      const value = Number.parseInt(parsed.value, 10);
+      if (!Number.isInteger(value) || value <= 0) {
+        throw new Error(`Invalid --gold-scan: ${parsed.value}`);
+      }
+      builder.goldScan = value;
+      index = parsed.nextIndex;
+      continue;
+    }
+
+    if (arg === "--gold-every" || arg.startsWith("--gold-every=")) {
+      const parsed = readFlagValue(args, index, "--gold-every");
+      const value = Number.parseInt(parsed.value, 10);
+      if (!Number.isInteger(value) || value <= 0) {
+        throw new Error(`Invalid --gold-every: ${parsed.value}`);
+      }
+      builder.goldEverySeconds = value;
+      index = parsed.nextIndex;
+      continue;
+    }
+
     throw new Error(`Unknown option: ${arg}`);
   }
 
@@ -366,10 +426,26 @@ export function parseArgs(argv: string[]): CliCommand {
 
   if (command === "quote" || command === "trade" || command === "watch") {
     const parsed = parsePairFlags(args);
+    if (command !== "watch" && parsed.goldDigger) {
+      throw new Error("--gold-digger only works on watch");
+    }
+
+    if (command !== "watch" && parsed.symbols.length === 0) {
+      throw new Error(`Usage: velero ${command} <PAIR>`);
+    }
+
     if (command !== "watch" && parsed.symbols.length > 1) {
       throw new Error(
         `${command} takes one pair. Use: velero watch ${parsed.symbols.join(" ")}`
       );
+    }
+
+    if (
+      command === "watch" &&
+      parsed.symbols.length === 0 &&
+      !parsed.goldDigger
+    ) {
+      throw new Error("watch needs a pair or --gold-digger");
     }
 
     if (command === "quote") {
@@ -401,7 +477,11 @@ export function parseArgs(argv: string[]): CliCommand {
         dryRun: parsed.dryRun,
         confirm: parsed.confirm,
         pollSeconds: parsed.pollSeconds,
-        cooldownSeconds: parsed.cooldownSeconds
+        cooldownSeconds: parsed.cooldownSeconds,
+        goldDigger: parsed.goldDigger,
+        goldTop: parsed.goldTop,
+        goldScan: parsed.goldScan,
+        goldEverySeconds: parsed.goldEverySeconds
       };
     }
 

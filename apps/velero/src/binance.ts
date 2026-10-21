@@ -137,6 +137,113 @@ export class BinanceFutures {
     return price;
   }
 
+  async perpetualUsdtSymbols(): Promise<string[]> {
+    const payload = asRecord(await this.publicGet("/fapi/v1/exchangeInfo"));
+    const symbols = payload.symbols;
+    if (!Array.isArray(symbols)) {
+      return [];
+    }
+
+    const skipBase = new Set(["USDC", "FDUSD", "TUSD", "BFUSD", "EUR", "AEUR"]);
+    const listed: string[] = [];
+    for (const entry of symbols) {
+      const row = asRecord(entry);
+      const symbol = asString(row.symbol);
+      const quote = asString(row.quoteAsset);
+      const base = asString(row.baseAsset);
+      const status = asString(row.status);
+      const contractType = asString(row.contractType);
+      if (
+        quote === "USDT" &&
+        status === "TRADING" &&
+        contractType === "PERPETUAL" &&
+        !skipBase.has(base) &&
+        symbol.endsWith("USDT")
+      ) {
+        listed.push(symbol);
+      }
+    }
+    return listed;
+  }
+
+  async tickers24h(): Promise<
+    Array<{
+      symbol: string;
+      quoteVolume: number;
+      priceChangePercent: number;
+      highPrice: number;
+      lowPrice: number;
+      lastPrice: number;
+    }>
+  > {
+    const payload = await this.publicGet("/fapi/v1/ticker/24hr");
+    if (!Array.isArray(payload)) {
+      throw new Error("Unexpected 24h ticker payload");
+    }
+
+    return payload.map((entry) => {
+      const row = asRecord(entry);
+      return {
+        symbol: asString(row.symbol),
+        quoteVolume: asNumber(row.quoteVolume),
+        priceChangePercent: asNumber(row.priceChangePercent),
+        highPrice: asNumber(row.highPrice),
+        lowPrice: asNumber(row.lowPrice),
+        lastPrice: asNumber(row.lastPrice)
+      };
+    });
+  }
+
+  async premiumIndexAll(): Promise<
+    Array<{ symbol: string; markPrice: number; lastFundingRate: number }>
+  > {
+    const payload = await this.publicGet("/fapi/v1/premiumIndex");
+    const rows = Array.isArray(payload) ? payload : [payload];
+    return rows.map((entry) => {
+      const row = asRecord(entry);
+      return {
+        symbol: asString(row.symbol),
+        markPrice: asNumber(row.markPrice),
+        lastFundingRate: asNumber(row.lastFundingRate)
+      };
+    });
+  }
+
+  async openInterest(symbol: string): Promise<number | null> {
+    try {
+      const payload = asRecord(
+        await this.publicGet("/fapi/v1/openInterest", { symbol })
+      );
+      const value = asNumber(payload.openInterest, Number.NaN);
+      return Number.isFinite(value) ? value : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async openInterestChange(symbol: string): Promise<number | null> {
+    try {
+      const payload = await this.publicGet("/futures/data/openInterestHist", {
+        symbol,
+        period: "1h",
+        limit: "12"
+      });
+      if (!Array.isArray(payload) || payload.length < 2) {
+        return null;
+      }
+      const first = asRecord(payload[0]);
+      const last = asRecord(payload[payload.length - 1] ?? payload[0]);
+      const start = asNumber(first.sumOpenInterest, Number.NaN);
+      const end = asNumber(last.sumOpenInterest, Number.NaN);
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start === 0) {
+        return null;
+      }
+      return (end - start) / start;
+    } catch {
+      return null;
+    }
+  }
+
   async symbolFilters(symbol: string): Promise<SymbolFilters> {
     const payload = asRecord(await this.publicGet("/fapi/v1/exchangeInfo"));
     const symbols = payload.symbols;

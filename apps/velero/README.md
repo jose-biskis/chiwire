@@ -41,6 +41,10 @@ npm run velero -- watch RLCUSDT --notional 10 --max-open 3 --dry-run
 npm run velero -- watch RLCUSDT ETHUSDT BTCUSDT --notional 10 --max-open 3
 npm run velero -- watch RLCUSDT,ETHUSDT --notional 10 --poll 30 --cooldown 300
 
+# Gold-digger: scan LIVE USDT-M for pairs worth an eye (does not auto-trade them)
+npm run velero -- watch --gold-digger
+npm run velero -- watch RLCUSDT --gold-digger --gold-top 8 --gold-scan 36 --gold-every 180
+
 # Print the order without sending it
 npm run velero -- trade RLCUSDT --notional 10 --leverage 10 --max-open 3 --dry-run
 
@@ -69,6 +73,11 @@ its cut.
 - `watch` uses **closed** 5m/15m candles, not the forming bar
 - After a sail or dry-run fire, `watch` sits `--cooldown` seconds **per pair** (default 300)
 - Several pairs share `--max-open`; a pair that already has a ticket is skipped
+- `--gold-digger` reads the **live** tape (even if orders stay on testnet): 24h volume,
+  open interest change, funding, EMA 20/50/200, market structure, RSI, MACD,
+  Stochastic, Bollinger width/%b, ADX/+DI/−DI, ATR, relative volume, distance
+  to 24h high/low. It only prints `EYE` when several of those agree, with the
+  justification. It will not add those pairs to the trading fleet by itself.
 
 Live orders need `VELERO_LIVE=true`, `--live`, and `--confirm`.
 `watch --live` needs `--confirm` once at launch if it is allowed to send.

@@ -1,6 +1,7 @@
 import process from "node:process";
 import type { WatchCommand } from "./cli.js";
 import { baseUrlFor, maskKey, readEnv, venueLabel } from "./config.js";
+import { runGoldDigger } from "./digger.js";
 import { printWatchLine } from "./format.js";
 import { sail } from "./trade.js";
 
@@ -51,10 +52,16 @@ export async function runWatch(command: WatchCommand): Promise<void> {
   process.on("SIGTERM", onStop);
 
   const mode = watching.dryRun ? "eyes only" : "armed";
-  const fleet = watching.symbols.join(" ");
+  const fleet =
+    watching.symbols.length > 0 ? watching.symbols.join(" ") : "(no fleet)";
   console.log(
     `velero  watch  ${venueLabel(watching.live)}  ${baseUrlFor(watching.live)}  ${fleet}  poll ${watching.pollSeconds}s  cooldown ${watching.cooldownSeconds}s  ${mode}`
   );
+  if (watching.goldDigger) {
+    console.log(
+      `gold-digger on  LIVE tape  scan ${watching.goldScan}  top ${watching.goldTop}  every ${watching.goldEverySeconds}s  (suggest only — will not auto-sail them)`
+    );
+  }
   if (!env.apiKey || !env.apiSecret) {
     console.log(
       "No API keys loaded; risk gates are off and no order will be sent."
@@ -81,9 +88,33 @@ export async function runWatch(command: WatchCommand): Promise<void> {
   console.log("");
 
   const cooldownUntil = new Map<string, number>();
+  let lastGoldAt = 0;
 
   try {
     while (!abort.signal.aborted) {
+      if (
+        watching.goldDigger &&
+        Date.now() - lastGoldAt >= watching.goldEverySeconds * 1000
+      ) {
+        try {
+          await runGoldDigger({
+            env,
+            scan: watching.goldScan,
+            top: watching.goldTop,
+            signal: abort.signal
+          });
+          lastGoldAt = Date.now();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          printWatchLine({
+            symbol: "gold",
+            status: "error",
+            detail: message
+          });
+          lastGoldAt = Date.now();
+        }
+      }
+
       for (const symbol of watching.symbols) {
         if (abort.signal.aborted) {
           break;
@@ -150,7 +181,11 @@ export async function runWatch(command: WatchCommand): Promise<void> {
         }
       }
 
-      await sleep(watching.pollSeconds * 1000, abort.signal);
+      const waitSeconds =
+        watching.symbols.length > 0
+          ? watching.pollSeconds
+          : watching.goldEverySeconds;
+      await sleep(waitSeconds * 1000, abort.signal);
     }
   } finally {
     process.off("SIGINT", onStop);

@@ -113,6 +113,27 @@ test("watch accepts several pairs as args or a comma list", () => {
   assert.deepEqual(commas.symbols, ["RLCUSDT", "ETHUSDT"]);
 });
 
+test("watch --gold-digger can run with no pairs", () => {
+  const command = parseArgs([
+    "node",
+    "velero",
+    "watch",
+    "--gold-digger",
+    "--gold-top",
+    "5",
+    "--gold-scan",
+    "20"
+  ]);
+  assert.equal(command.command, "watch");
+  if (command.command !== "watch") {
+    return;
+  }
+  assert.equal(command.goldDigger, true);
+  assert.deepEqual(command.symbols, []);
+  assert.equal(command.goldTop, 5);
+  assert.equal(command.goldScan, 20);
+});
+
 test("quote refuses a fleet", () => {
   assert.throws(
     () => parseArgs(["node", "velero", "quote", "RLCUSDT", "ETHUSDT"]),

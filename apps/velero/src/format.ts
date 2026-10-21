@@ -1,5 +1,6 @@
 import type { FeeSuggestion } from "./fees.js";
 import { rateToPercent } from "./fees.js";
+import type { EyeSuggestion } from "./indicators.js";
 import type { MomentumRead } from "./momentum.js";
 import type { OpenOrderRow, PositionRow } from "./types.js";
 
@@ -112,4 +113,34 @@ export function printWatchLine(input: {
   console.log(
     `${watchStamp(input.at)}  ${input.symbol.padEnd(12)} ${input.status.padEnd(6)} ${input.detail}`
   );
+}
+
+export function printGoldReport(
+  suggestions: EyeSuggestion[],
+  scanned: number
+): void {
+  console.log("");
+  console.log(
+    `${watchStamp()}  gold-digger  scanned top ${scanned} by 24h volume on LIVE USDT-M`
+  );
+  if (suggestions.length === 0) {
+    console.log(
+      "  No confluence worth an eye. The beach is crowded or the tape is mush."
+    );
+    console.log("");
+    return;
+  }
+
+  for (const row of suggestions) {
+    console.log(
+      `  EYE  ${row.symbol.padEnd(12)} ${row.bias.padEnd(5)}  ${row.setup}  score ${row.score}`
+    );
+    for (const reason of row.reasons) {
+      console.log(`       — ${reason}`);
+    }
+  }
+  console.log(
+    "  These are not orders. Add a pair to watch if you want the boat to sail it."
+  );
+  console.log("");
 }
